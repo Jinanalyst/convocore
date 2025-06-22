@@ -64,6 +64,13 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const loadMessages = async (conversationId: string) => {
     try {
+      // Skip loading if no proper conversation ID
+      if (!conversationId || conversationId === 'chat_demo') {
+        console.log('Demo mode - not loading messages from database');
+        setMessages([]);
+        return;
+      }
+
       // Check if we have Supabase configuration
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         console.log('Supabase not configured, using local storage instead');
@@ -81,7 +88,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error loading messages from Supabase:', error);
+        console.warn('Could not load messages from Supabase (expected if not configured):', error.message);
         setMessages([]);
         return;
       }
@@ -95,7 +102,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('Error loading messages:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('Could not load messages (expected if Supabase not configured):', error instanceof Error ? error.message : 'Unknown error');
       // Fallback to empty messages if Supabase not configured
       setMessages([]);
     }
@@ -112,6 +119,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean) => {
     if (!content.trim()) return;
 
+    console.log('🚀 Sending message:', { content, model, chatId });
+
     // Detect if user is calling a specific agent
     const detectedAgent = detectAgentFromMessage(content);
     
@@ -127,9 +136,16 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     setIsLoading(true);
 
     try {
+      // Create a chatId if we don't have one
+      const currentChatId = chatId || `chat_${Date.now()}`;
+      
       // Save user message to database if we have a chatId
-      if (chatId) {
-        await saveMessage(chatId, content, 'user');
+      if (currentChatId !== 'chat_demo') {
+        try {
+          await saveMessage(currentChatId, content, 'user');
+        } catch (error) {
+          console.log('Could not save message to database (expected in demo mode):', error);
+        }
       }
 
       // Prepare the message content for API
@@ -145,6 +161,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         content: apiContent 
       }];
 
+      console.log('📤 Calling chat API with', apiMessages.length, 'messages');
+
       // Call the chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -154,8 +172,9 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         body: JSON.stringify({
           messages: apiMessages,
           model,
+          chatId: currentChatId,
           temperature: 0.7,
-          maxTokens: 4096, // Increased for agent responses
+          maxTokens: 4096,
         }),
       });
 
@@ -173,8 +192,28 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           setMessages(prev => [...prev, errorMessage]);
           return; // Don't increment usage if rate limited
         }
-        
-        throw new Error(errorData.details || 'Failed to get AI response');
+
+        // Handle API configuration errors
+        if (response.status === 503) {
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: `🔧 **Configuration Issue**\n\n${errorData.details || errorData.error}\n\nPlease check your environment variables and restart the development server.`,
+            role: 'assistant',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+          return;
+        }
+
+        // Handle other API errors with details
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: `⚠️ **Error (${response.status})**\n\n${errorData.details || errorData.error || 'Unknown error occurred'}\n\n${errorData.suggestion || 'Please try again or contact support.'}`,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return;
       }
 
       const data = await response.json();
@@ -205,8 +244,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       setMessages(prev => [...prev, aiMessage]);
 
       // Save AI response to database if we have a chatId
-      if (chatId) {
-        await saveMessage(chatId, data.response, 'assistant');
+      if (currentChatId !== 'chat_demo') {
+        await saveMessage(currentChatId, data.response, 'assistant');
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -327,6 +366,22 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     return iconMap[iconName] || Bot;
   };
 
+  const handleTextToSpeech = (text: string) => {
+    if (isSpeaking) {
+      // Stop speaking
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      // Start speaking
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   if (!chatId && messages.length === 0) {
     return (
       <div className={cn("flex flex-col h-full bg-gray-50 dark:bg-zinc-950", className)}>
@@ -398,7 +453,6 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
               <ChatLimitIndicator className="max-w-2xl mx-auto mb-3 sm:mb-4" />
               
               <AIInputDemo
-                placeholder="Type your message to start a conversation..."
                 onSubmit={handleSendMessage}
                 onFileUpload={handleFileUpload}
                 onVoiceInput={handleVoiceInput}
@@ -413,152 +467,139 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-zinc-500">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              "flex gap-4 max-w-4xl",
-              message.role === 'user' ? "ml-auto" : "mr-auto"
-            )}
-          >
-            {/* Avatar */}
-            <div className={cn(
-              "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-                             message.role === 'user' 
-                 ? "bg-gray-900 dark:bg-white order-2" 
-                 : message.agent 
-                   ? `${message.agent.color} text-white`
-                   : "bg-gray-100 dark:bg-zinc-900"
-            )}>
-                             {message.role === 'user' ? (
-                 <User className="w-4 h-4 text-white dark:text-gray-900" />
-               ) : message.agent ? (
-                 (() => {
-                   const AgentIcon = getAgentIcon(message.agent.icon);
-                   return <AgentIcon className="w-4 h-4" />;
-                 })()
-               ) : (
-                 <ConvocoreLogo showText={false} size="sm" />
-               )}
+      {/* Messages Area with Scrollbar */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-thin">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4 max-w-md mx-auto">
+              <ConvocoreLogo className="mx-auto h-16 w-16 text-muted-foreground/50" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium text-muted-foreground">
+                  Welcome to Convocore AI
+                </h3>
+                <p className="text-sm text-muted-foreground/80">
+                  Start a conversation by typing a message below. You can use specialized agents by mentioning them with @ (e.g., @codegen, @writer, @debugger).
+                </p>
+              </div>
             </div>
-
-            {/* Message Content */}
-            <div className={cn(
-              "flex-1 space-y-2",
-              message.role === 'user' ? "order-1" : ""
-            )}>
-                             <div className={cn(
-                 "p-4 rounded-lg",
-                 message.role === 'user'
-                   ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 ml-12"
-                   : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800"
-               )}>
-                {/* Agent Header */}
-                {message.agent && message.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-zinc-700">
-                    <div className={cn("w-5 h-5 rounded flex items-center justify-center text-white", message.agent.color)}>
-                      {(() => {
-                        const AgentIcon = getAgentIcon(message.agent.icon);
-                        return <AgentIcon className="w-3 h-3" />;
-                      })()}
+          </div>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <div key={message.id} className="message-container">
+                {/* Message bubble implementation stays the same */}
+                <div className={cn(
+                  "flex items-start gap-3",
+                  message.role === 'user' ? "justify-end" : "justify-start"
+                )}>
+                  {message.role === 'assistant' && (
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      {message.agent ? (
+                        getAgentIcon(message.agent.icon)
+                      ) : (
+                        <Bot className="w-4 h-4 text-primary" />
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {message.agent.displayName}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {message.agent.description}
-                    </span>
+                  )}
+                  
+                  <div className={cn(
+                    "max-w-[80%] rounded-lg px-4 py-3 space-y-2",
+                    message.role === 'user' 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-muted"
+                  )}>
+                    {message.agent && message.role === 'assistant' && (
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        {getAgentIcon(message.agent.icon)}
+                        <span>{message.agent.displayName}</span>
+                      </div>
+                    )}
+                    
+                    <div className="whitespace-pre-wrap text-sm">
+                      {message.content}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimestamp(message.timestamp)}
+                      </span>
+                      
+                      {message.role === 'assistant' && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleCopyMessage(message.content)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleRegenerateResponse(message.id)}
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleTextToSpeech(message.content)}
+                          >
+                            {isSpeaking ? (
+                              <VolumeX className="w-3 h-3" />
+                            ) : (
+                              <Volume2 className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  
+                  {message.role === 'user' && (
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Message Actions */}
-              <div className={cn(
-                "flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400",
-                message.role === 'user' ? "justify-end mr-12" : "ml-12"
-              )}>
-                <span>{formatTimestamp(message.timestamp)}</span>
-                
-                {message.role === 'assistant' && (
-                  <div className="flex items-center gap-1 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-zinc-700"
-                      onClick={() => handleCopyMessage(message.content)}
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-zinc-700"
-                      onClick={() => handleRegenerateResponse(message.id)}
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-green-100 dark:hover:bg-green-900 text-green-600 dark:text-green-400"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                    </Button>
+            ))}
+            
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-primary animate-pulse" />
+                </div>
+                <div className="bg-muted rounded-lg px-4 py-3">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div className="flex gap-4 max-w-4xl mr-auto">
-                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-900 flex items-center justify-center">
-              <ConvocoreLogo showText={false} size="sm" />
-            </div>
-            <div className="flex-1 ml-12">
-                             <div className="p-4 rounded-lg bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Convocore is thinking...</span>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-6 border-t border-gray-200 dark:border-zinc-800">
-        {/* Chat Limit Indicator */}
-        <ChatLimitIndicator className="max-w-4xl mx-auto mb-4" />
-        
+      {/* Usage indicator */}
+      <div className="px-4 py-2 border-t">
+        <ChatLimitIndicator />
+      </div>
+
+      {/* Input Area - Reduced Size */}
+      <div className="p-4 border-t bg-background">
         <AIInputDemo
-          placeholder="Type your message..."
           onSubmit={handleSendMessage}
           onFileUpload={handleFileUpload}
           onVoiceInput={handleVoiceInput}
-          className="max-w-4xl mx-auto"
+          className="w-full"
         />
       </div>
     </div>

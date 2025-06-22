@@ -121,14 +121,14 @@ export function AIInputDemo({
 
   return (
     <div className={cn("w-full max-w-4xl mx-auto", className)}>
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {/* Model Selector - Mobile-optimized */}
         <div className={`flex items-center justify-between ${
           isMobile ? 'px-1' : 'px-0'
         }`}>
           <div className="flex items-center gap-2">
             <span className={`font-medium text-gray-700 dark:text-gray-300 ${
-              isMobile ? 'text-sm' : 'text-base'
+              isMobile ? 'text-sm' : 'text-sm'
             }`}>
               Model:
             </span>
@@ -143,17 +143,17 @@ export function AIInputDemo({
             type="button"
             onClick={() => setIncludeWebSearch(!includeWebSearch)}
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200
+              flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200
               ${includeWebSearch 
                 ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
                 : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400'
               }
               hover:scale-105 active:scale-95 touch-feedback
-              ${isMobile ? 'text-xs px-2 py-1.5' : 'text-sm'}
+              text-xs
             `}
             aria-label={includeWebSearch ? "Disable web search" : "Enable web search"}
           >
-            <Globe className={isMobile ? "w-3 h-3" : "w-4 h-4"} />
+            <Globe className="w-3 h-3" />
             {!isMobile && (
               <span className="font-medium">
                 {includeWebSearch ? "Web Search On" : "Web Search"}
@@ -214,13 +214,13 @@ export function AIInputDemo({
               w-full border-none focus:ring-0 focus:outline-none 
               resize-none bg-transparent
               ${isMobile 
-                ? 'text-base p-3 min-h-[44px]' 
-                : 'text-base p-4 min-h-[48px]'
+                ? 'text-base p-2 min-h-[36px]' 
+                : 'text-base p-3 min-h-[40px]'
               }
             `}
             style={{ 
-              minHeight: isMobile ? '44px' : '48px',
-              maxHeight: isMobile ? '120px' : '200px',
+              minHeight: isMobile ? '36px' : '40px',
+              maxHeight: isMobile ? '100px' : '140px',
               fontSize: '16px' // Prevent zoom on iOS
             }}
           />

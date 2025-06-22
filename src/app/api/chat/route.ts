@@ -3,7 +3,7 @@ import { advancedAIAgent } from '@/lib/advanced-ai-agent';
 import { initializeAIAgent } from '@/lib/ai-agent-initialization';
 import { nanoid } from 'nanoid';
 import type { ConversationContext, ChatMessage } from '@/lib/advanced-ai-agent';
-import { sendChatMessage, getModelConfig, type AIServiceConfig } from '@/lib/ai-service';
+import { sendChatMessage, getModelConfig, type AIServiceConfig, AI_MODELS } from '@/lib/ai-service';
 import { detectAgentFromMessage } from '@/lib/model-agents';
 import { MemoryService } from '@/lib/memory-service';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -56,6 +56,25 @@ export async function POST(request: NextRequest) {
         { error: 'Messages array is required' },
         { status: 400 }
       );
+    }
+
+    console.log('📨 Chat API Request:', {
+      model,
+      messageCount: messages.length,
+      lastMessage: messages[messages.length - 1]?.content?.substring(0, 100)
+    });
+
+    // Check API configuration status
+    const apiStatus = await aiService.validateConfiguration();
+    console.log('🔑 API Configuration Status:', apiStatus);
+
+    if (!apiStatus.openai && !apiStatus.anthropic) {
+      console.error('❌ No AI API keys configured');
+      return NextResponse.json({
+        error: 'AI service not configured',
+        details: 'Please configure OPENAI_API_KEY or ANTHROPIC_API_KEY in your environment variables',
+        configStatus: apiStatus
+      }, { status: 503 });
     }
 
     // Get user ID from session or wallet
@@ -116,6 +135,7 @@ export async function POST(request: NextRequest) {
     // If an agent is detected, use its system prompt
     if (detectedAgent) {
       systemPrompt = detectedAgent.systemPrompt;
+      console.log(`🤖 Agent detected: ${detectedAgent.name} (${detectedAgent.tag})`);
       
       // Clean the message by removing the agent tag
       const cleanedContent = userContent.replace(new RegExp(detectedAgent.tag, 'gi'), '').trim();
@@ -131,9 +151,6 @@ Focus on providing actionable, detailed solutions that match your capabilities. 
 
       // Update the user message content
       userMessage.content = enhancedMessage;
-      
-      // Log agent usage for analytics
-      console.log(`Agent ${detectedAgent.name} (${detectedAgent.tag}) activated for user request`);
     } else {
       // Default system prompt for general conversations
       systemPrompt = `You are Convocore AI, a helpful and knowledgeable assistant. You provide accurate, helpful responses while being conversational and engaging. You can help with a wide range of topics including coding, writing, analysis, and general questions.
@@ -166,8 +183,49 @@ When responding:
       processedMessages.unshift(contextMessage);
     }
 
-    // Get AI response
-    const aiResponse = await aiService.generateResponse(processedMessages, model);
+    console.log('🧠 Calling AI service with', processedMessages.length, 'messages');
+
+    // Convert processed messages to proper ChatMessage format
+    const chatMessages: ChatMessage[] = processedMessages.map(msg => ({
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: msg.content
+    }));
+
+    // Get AI response with enhanced error handling
+    let aiResponse: string;
+    try {
+      aiResponse = await aiService.generateResponse(chatMessages, model);
+      console.log('✅ AI response generated successfully');
+    } catch (aiError) {
+      console.error('🚨 AI Service Error:', aiError);
+      
+      // Provide more specific error messages
+      const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown AI service error';
+      
+      if (errorMessage.includes('API key not configured')) {
+        return NextResponse.json({
+          error: 'AI API key not configured',
+          details: 'Please check your environment variables for OPENAI_API_KEY or ANTHROPIC_API_KEY',
+          apiStatus
+        }, { status: 503 });
+      } else if (errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+        return NextResponse.json({
+          error: 'API quota exceeded',
+          details: 'The AI service has reached its usage limit. Please try again later or upgrade your plan.',
+        }, { status: 429 });
+      } else if (errorMessage.includes('Invalid API key')) {
+        return NextResponse.json({
+          error: 'Invalid API key',
+          details: 'The configured API key is invalid. Please check your environment variables.',
+        }, { status: 401 });
+      } else {
+        return NextResponse.json({
+          error: 'AI service error',
+          details: errorMessage,
+          suggestion: 'Please check your API configuration and try again.'
+        }, { status: 500 });
+      }
+    }
 
     // Save AI response to memory
     if (userId !== 'anonymous') {
@@ -187,36 +245,36 @@ When responding:
         tag: detectedAgent.tag,
         displayName: detectedAgent.displayName,
         capabilities: detectedAgent.capabilities
-      } : null
+      } : null,
+      apiStatus
     });
 
   } catch (error) {
-    console.error('Chat API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate response' },
-      { status: 500 }
-    );
+    console.error('💥 Chat API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    return NextResponse.json({
+      error: 'API request failed',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Health check endpoint with agent status
-    const agents = advancedAIAgent.getAvailableAgents();
-    const { toolRegistry } = initializeAIAgent();
+    // Health check endpoint with basic status
+    const apiStatus = {
+      openaiConfigured: !!process.env.OPENAI_API_KEY,
+      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
+      timestamp: new Date().toISOString()
+    };
     
     return NextResponse.json({
       status: 'healthy',
-      agents: agents.map(agent => ({
-        id: agent.id,
-        name: agent.name,
-        description: agent.description,
-        model: agent.model,
-        capabilities: agent.capabilities.length,
-        tools: agent.tools.length
-      })),
-      total_agents: agents.length,
-      available_tools: toolRegistry.getAvailableTools().length,
+      message: 'Chat API is running',
+      apiStatus,
+      availableModels: Object.keys(AI_MODELS),
       timestamp: new Date().toISOString(),
       version: '2.0.0'
     });

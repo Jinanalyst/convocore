@@ -93,8 +93,8 @@ export const AIInputTextarea = ({
   onChange,
   className,
   placeholder = 'What would you like to know?',
-  minHeight = 48,
-  maxHeight = 164,
+  minHeight = 40,
+  maxHeight = 120,
   ...props
 }: AIInputTextareaProps) => {
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
