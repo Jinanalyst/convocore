@@ -35,7 +35,7 @@ interface Chat {
   id: string;
   title: string;
   lastMessage: string;
-  timestamp: Date | string | number;
+  timestamp: Date;
   isActive?: boolean;
 }
 
@@ -115,6 +115,30 @@ export function Sidebar({
 
   const loadChats = async () => {
     try {
+      setIsLoading(true);
+      
+      // Always show some demo chats for now (for testing)
+      const demoChats: Chat[] = [
+        {
+          id: 'demo-1',
+          title: 'Welcome to Convocore',
+          lastMessage: 'Hello! How can I help you today?',
+          timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        },
+        {
+          id: 'demo-2',
+          title: 'Getting Started Guide',
+          lastMessage: 'Let me know what you\'d like to explore...',
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        },
+        {
+          id: 'demo-3',
+          title: 'Code Generation Help',
+          lastMessage: 'I can help you write and debug code...',
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        },
+      ];
+
       // Check authentication methods
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
@@ -122,93 +146,88 @@ export function Sidebar({
       if (walletConnected) {
         // Load wallet-based chats
         const walletChats = JSON.parse(localStorage.getItem('wallet_chats') || '[]');
-        const formattedChats = walletChats.map((chat: any) => ({
-          ...chat,
-          timestamp: new Date(chat.timestamp || Date.now())
-        }));
-        setChats(formattedChats);
-        setRecentChats(formattedChats.slice(0, 5));
-        return;
+        if (walletChats.length > 0) {
+          const formattedChats = walletChats.map((chat: any) => ({
+            ...chat,
+            timestamp: new Date(chat.timestamp || Date.now())
+          }));
+          setChats([...formattedChats, ...demoChats]);
+          setRecentChats([...formattedChats, ...demoChats].slice(0, 5));
+          setIsLoading(false);
+          return;
+        }
       }
 
       if (magicLinkAuth) {
         // Load magic link chats
         const magicLinkChats = JSON.parse(localStorage.getItem('magic_link_chats') || '[]');
-        const formattedChats = magicLinkChats.map((chat: any) => ({
-          ...chat,
-          timestamp: new Date(chat.timestamp || Date.now())
-        }));
-        setChats(formattedChats);
-        setRecentChats(formattedChats.slice(0, 5));
-        return;
+        if (magicLinkChats.length > 0) {
+          const formattedChats = magicLinkChats.map((chat: any) => ({
+            ...chat,
+            timestamp: new Date(chat.timestamp || Date.now())
+          }));
+          setChats([...formattedChats, ...demoChats]);
+          setRecentChats([...formattedChats, ...demoChats].slice(0, 5));
+          setIsLoading(false);
+          return;
+        }
       }
 
-      // Load regular authenticated user chats
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Load demo chats for non-authenticated users
-        const demoChats: Chat[] = [
-          {
-            id: '1',
-            title: 'Welcome to Convocore',
-            lastMessage: 'Hello! How can I help you today?',
-            timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-          },
-          {
-            id: '2',
-            title: 'Getting Started',
-            lastMessage: 'Let me know what you\'d like to explore...',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          },
-        ];
-        setChats(demoChats);
-        setRecentChats(demoChats);
-        return;
+      // Try to load from Supabase
+      try {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: conversations, error } = await supabase
+            .from('conversations')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(50);
+
+          if (!error && conversations && conversations.length > 0) {
+            const formattedChats: Chat[] = conversations.map(conv => ({
+              id: conv.id,
+              title: conv.title || 'Untitled Chat',
+              lastMessage: conv.summary || 'No messages yet',
+              timestamp: new Date(conv.updated_at),
+              isActive: conv.id === activeChatId
+            }));
+
+            setChats([...formattedChats, ...demoChats]);
+            setRecentChats([...formattedChats, ...demoChats].slice(0, 5));
+            setFavoriteChats(formattedChats.slice(0, 3));
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (supabaseError) {
+        console.log('Supabase not available, using demo chats');
       }
 
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error('Error loading conversations:', error);
-        return;
-      }
-
-      const formattedChats: Chat[] = (conversations || []).map(conv => ({
-        id: conv.id,
-        title: conv.title || 'Untitled Chat',
-        lastMessage: conv.summary || 'No messages yet',
-        timestamp: new Date(conv.updated_at),
-        isActive: conv.id === activeChatId
-      }));
-
-      setChats(formattedChats);
-      setRecentChats(formattedChats.slice(0, 5));
-      
-      // Set favorite chats (for now, just the most recent ones)
-      setFavoriteChats(formattedChats.slice(0, 3));
+      // Fallback to demo chats
+      setChats(demoChats);
+      setRecentChats(demoChats);
+      setFavoriteChats(demoChats.slice(0, 2));
+      setIsLoading(false);
 
     } catch (error) {
       console.error('Error loading chats:', error);
-      // Fallback to demo chats
-      const demoChats: Chat[] = [
+      // Final fallback
+      const fallbackChats: Chat[] = [
         {
-          id: '1',
+          id: 'fallback-1',
           title: 'Welcome to Convocore',
           lastMessage: 'Hello! How can I help you today?',
           timestamp: new Date(),
         },
       ];
-      setChats(demoChats);
-      setRecentChats(demoChats);
+      setChats(fallbackChats);
+      setRecentChats(fallbackChats);
+      setIsLoading(false);
     }
   };
 
@@ -248,7 +267,12 @@ export function Sidebar({
       localStorage.setItem('library_items', JSON.stringify(defaultItems));
       setLibraryItems(defaultItems);
     } else {
-      setLibraryItems(savedItems);
+      // Ensure dates are properly converted
+      const formattedItems = savedItems.map((item: any) => ({
+        ...item,
+        createdAt: new Date(item.createdAt)
+      }));
+      setLibraryItems(formattedItems);
     }
   };
 

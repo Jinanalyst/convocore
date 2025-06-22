@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChatInterface } from "@/components/blocks/chat-interface"
+import { MainLayout } from "@/components/layout/main-layout";
 
 export const metadata: Metadata = {
   title: "AI Chat - Advanced Conversational AI with Code Generation | Convocore",
@@ -37,5 +37,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChatPage() {
-  return <ChatInterface />
+  return <MainLayout />;
 } 
