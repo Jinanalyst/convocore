@@ -81,14 +81,14 @@ export function PricingSection() {
               key={plan.name}
               className={`relative bg-white dark:bg-zinc-800 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
                 plan.popular 
-                  ? "border-gray-900 dark:border-gray-700 shadow-lg ring-2 ring-gray-900/20 dark:ring-gray-700/20" 
+                  ? "border-black shadow-lg" 
                   : "border-gray-200 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600"
               }`}
             >
               {/* Popular Badge */}
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gray-900 dark:bg-gray-800 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  <span className="bg-black text-white px-4 py-1 rounded-full text-sm font-medium">
                     Most Popular
                   </span>
                 </div>
@@ -118,7 +118,7 @@ export function PricingSection() {
                   <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                     Daily Requests
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-300">
+                  <div className="text-lg font-semibold text-black dark:text-white">
                     {plan.dailyLimit}
                   </div>
                 </div>
@@ -140,10 +140,10 @@ export function PricingSection() {
                 {/* CTA Button */}
                 <Button
                   variant={plan.buttonVariant}
-                  className={`w-full py-3 font-medium transition-all duration-200 ${
+                  className={`w-full py-3 font-medium ${
                     plan.popular 
-                      ? "bg-gray-900 hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700 text-white border-gray-900 dark:border-gray-800 hover:border-gray-800 dark:hover:border-gray-700" 
-                      : "border-gray-900 dark:border-gray-700 text-gray-900 dark:text-gray-300 hover:bg-gray-900 dark:hover:bg-gray-800 hover:text-white"
+                      ? "bg-black hover:bg-gray-800 text-white" 
+                      : "border-black text-black hover:bg-black hover:text-white"
                   }`}
                 >
                   {plan.buttonText}
