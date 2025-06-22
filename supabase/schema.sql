@@ -10,13 +10,15 @@ CREATE TYPE message_role AS ENUM ('user', 'assistant', 'system');
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.users (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    email TEXT NOT NULL,
+    email TEXT,
     full_name TEXT,
     avatar_url TEXT,
     subscription_tier subscription_tier DEFAULT 'free',
     subscription_status subscription_status DEFAULT 'active',
     subscription_expires_at TIMESTAMPTZ,
-    tron_wallet_address TEXT,
+    wallet_address TEXT,
+    wallet_type TEXT,
+    tron_wallet_address TEXT, -- Keep for backward compatibility
     api_requests_used INTEGER DEFAULT 0,
     api_requests_limit INTEGER DEFAULT 10, -- Free tier: 10 requests/day
     created_at TIMESTAMPTZ DEFAULT NOW(),

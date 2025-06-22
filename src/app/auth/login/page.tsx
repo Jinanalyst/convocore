@@ -68,7 +68,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleWalletLogin = async (walletAddress: string) => {
+  const handleWalletLogin = async (walletAddress: string, walletType: string) => {
     setLoading(true);
     setError(null);
 
@@ -81,13 +81,14 @@ export default function LoginPage() {
         return;
       }
 
-      // Store wallet address in user metadata or separate table
+      // Store wallet address and type in user metadata or separate table
       if (data.user) {
         await supabase
           .from('users')
           .upsert({
             id: data.user.id,
             wallet_address: walletAddress,
+            wallet_type: walletType,
             subscription_tier: 'free',
             created_at: new Date().toISOString(),
           });
