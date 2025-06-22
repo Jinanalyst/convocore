@@ -11,9 +11,19 @@ import {
   RotateCcw, 
   User,
   Bot,
-  Sparkles
+  Sparkles,
+  Code,
+  Bug,
+  Palette,
+  Image,
+  PenTool,
+  Database,
+  TrendingUp,
+  Rocket,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
 
 interface Message {
   id: string;
@@ -21,6 +31,7 @@ interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   isTyping?: boolean;
+  agent?: ConvoAgent;
 }
 
 interface ChatAreaProps {
@@ -34,34 +45,45 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Mock messages for demo
+  // Load real messages from Supabase
   useEffect(() => {
     if (chatId) {
-      // In a real app, fetch messages for the specific chat
-      setMessages([
-        {
-          id: "1",
-          content: "Hello! I'm Convocore, your AI assistant. How can I help you today?",
-          role: "assistant",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5)
-        },
-        {
-          id: "2", 
-          content: "Can you help me understand how to use the TRON wallet integration for payments?",
-          role: "user",
-          timestamp: new Date(Date.now() - 1000 * 60 * 4)
-        },
-        {
-          id: "3",
-          content: "Absolutely! The TRON wallet integration allows you to make payments using USDT on the TRON network. Here's how it works:\n\n1. **Connect your wallet**: Click on the wallet icon in your profile dropdown\n2. **Verify balance**: Ensure you have sufficient USDT for your subscription\n3. **Subscribe**: Choose your plan (Pro $20/month or Premium $40/month)\n4. **Automated payments**: Smart contracts handle monthly renewals automatically\n\nThe integration supports TronLink and other popular TRON wallets. Would you like me to walk you through connecting your wallet?",
-          role: "assistant", 
-          timestamp: new Date(Date.now() - 1000 * 60 * 3)
-        }
-      ]);
+      loadMessages(chatId);
     } else {
       setMessages([]);
     }
   }, [chatId]);
+
+  const loadMessages = async (conversationId: string) => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error loading messages:', error);
+        return;
+      }
+
+      const formattedMessages: Message[] = messagesData?.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        role: msg.role as 'user' | 'assistant',
+        timestamp: new Date(msg.created_at),
+      })) || [];
+
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      // Fallback to empty messages if Supabase not configured
+      setMessages([]);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,22 +96,38 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const handleSendMessage = async (content: string, model: string) => {
     if (!content.trim()) return;
 
+    // Detect if user is calling a specific agent
+    const detectedAgent = detectAgentFromMessage(content);
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
       role: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      agent: detectedAgent || undefined
     };
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
+      // Save user message to database if we have a chatId
+      if (chatId) {
+        await saveMessage(chatId, content, 'user');
+      }
+
+      // Prepare the message content for API
+      let apiContent = content;
+      if (detectedAgent) {
+        // Format message with agent-specific system prompt
+        apiContent = formatMessageWithAgent(content, detectedAgent);
+      }
+
       // Prepare messages for API
-      const apiMessages = [...messages, userMessage].map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      const apiMessages = [...messages, { 
+        role: 'user' as const, 
+        content: apiContent 
+      }];
 
       // Call the chat API
       const response = await fetch('/api/chat', {
@@ -101,7 +139,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           messages: apiMessages,
           model,
           temperature: 0.7,
-          maxTokens: 2048,
+          maxTokens: 4096, // Increased for agent responses
         }),
       });
 
@@ -116,10 +154,16 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         id: (Date.now() + 1).toString(),
         content: data.data.content,
         role: 'assistant',
-        timestamp: new Date()
+        timestamp: new Date(),
+        agent: detectedAgent || undefined
       };
       
       setMessages(prev => [...prev, aiMessage]);
+
+      // Save AI response to database if we have a chatId
+      if (chatId) {
+        await saveMessage(chatId, data.data.content, 'assistant');
+      }
     } catch (error) {
       console.error('Chat error:', error);
       
@@ -137,6 +181,27 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     }
 
     onSendMessage?.(content, model);
+  };
+
+  const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          content,
+          role,
+        });
+
+      if (error) {
+        console.error('Error saving message:', error);
+      }
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
   };
 
   const handleCopyMessage = (content: string) => {
@@ -159,6 +224,22 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getAgentIcon = (iconName: string) => {
+    const iconMap: Record<string, any> = {
+      Code,
+      Bug,
+      Palette,
+      Image,
+      PenTool,
+      Database,
+      TrendingUp,
+      Rocket,
+      Bot,
+      MessageCircle
+    };
+    return iconMap[iconName] || Bot;
   };
 
   if (!chatId && messages.length === 0) {
@@ -233,10 +314,17 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
               "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
                              message.role === 'user' 
                  ? "bg-gray-900 dark:bg-white order-2" 
-                 : "bg-gray-100 dark:bg-zinc-900"
+                 : message.agent 
+                   ? `${message.agent.color} text-white`
+                   : "bg-gray-100 dark:bg-zinc-900"
             )}>
                              {message.role === 'user' ? (
                  <User className="w-4 h-4 text-white dark:text-gray-900" />
+               ) : message.agent ? (
+                 (() => {
+                   const AgentIcon = getAgentIcon(message.agent.icon);
+                   return <AgentIcon className="w-4 h-4" />;
+                 })()
                ) : (
                  <ConvocoreLogo showText={false} size="sm" />
                )}
@@ -253,6 +341,24 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 ml-12"
                    : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800"
                )}>
+                {/* Agent Header */}
+                {message.agent && message.role === 'assistant' && (
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-zinc-700">
+                    <div className={cn("w-5 h-5 rounded flex items-center justify-center text-white", message.agent.color)}>
+                      {(() => {
+                        const AgentIcon = getAgentIcon(message.agent.icon);
+                        return <AgentIcon className="w-3 h-3" />;
+                      })()}
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {message.agent.displayName}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {message.agent.description}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>

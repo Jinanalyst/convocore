@@ -1,31 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
 import { SettingsModal } from "@/components/modals/settings-modal";
 import { cn } from "@/lib/utils";
 
+interface Chat {
+  id: string;
+  title: string;
+  lastMessage: string;
+  timestamp: Date;
+}
+
 export default function ConvocorePage() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chats, setChats] = useState<Chat[]>([]);
 
-  const handleNewChat = () => {
-    setActiveChatId(null);
+  // Load chats on component mount
+  useEffect(() => {
+    loadChats();
+  }, []);
+
+  const loadChats = async () => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          title,
+          updated_at,
+          messages (
+            content,
+            created_at
+          )
+        `)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error loading chats:', error);
+        return;
+      }
+
+      const formattedChats: Chat[] = conversations?.map(conv => ({
+        id: conv.id,
+        title: conv.title,
+        lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
+        timestamp: new Date(conv.updated_at),
+      })) || [];
+
+      setChats(formattedChats);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+    }
+  };
+
+  const handleNewChat = async () => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: `New Chat ${new Date().toLocaleDateString()}`,
+          model: 'gpt-4o'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating new chat:', error);
+        return;
+      }
+
+      // Add to local state
+      const newChat: Chat = {
+        id: newConversation.id,
+        title: newConversation.title,
+        lastMessage: 'Start a new conversation...',
+        timestamp: new Date(newConversation.created_at),
+      };
+
+      setChats(prev => [newChat, ...prev]);
+      setActiveChatId(newConversation.id);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      // Fallback to just clearing active chat
+      setActiveChatId(null);
+    }
   };
 
   const handleSelectChat = (chatId: string) => {
     setActiveChatId(chatId);
   };
 
-  const handleDeleteChat = (chatId: string) => {
+  const handleDeleteChat = async (chatId: string) => {
     if (activeChatId === chatId) {
       setActiveChatId(null);
     }
-    // In a real app, this would delete the chat from the backend
-    console.log("Deleting chat:", chatId);
+    
+    // Remove from local state immediately for better UX
+    setChats(prev => prev.filter(chat => chat.id !== chatId));
   };
 
   const handleSendMessage = (message: string, model: string) => {
@@ -55,15 +146,8 @@ export default function ConvocorePage() {
   const getCurrentChatTitle = () => {
     if (!activeChatId) return undefined;
     
-    // Mock data - in real app this would come from state/context
-    const chatTitles: Record<string, string> = {
-      "1": "Getting Started with Convocore",
-      "2": "TRON Wallet Integration", 
-      "3": "Content Creation Tips",
-      "4": "API Documentation"
-    };
-    
-    return chatTitles[activeChatId];
+    const currentChat = chats.find(chat => chat.id === activeChatId);
+    return currentChat?.title;
   };
 
   return (

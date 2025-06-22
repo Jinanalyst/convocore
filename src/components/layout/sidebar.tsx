@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
+import { SettingsModal } from "@/components/modals/settings-modal";
+import { SearchModal } from "@/components/modals/search-modal";
+import { LibraryModal } from "@/components/modals/library-modal";
+import { ModelInfoModal } from "@/components/modals/model-info-modal";
 import { 
   Plus, 
   MessageSquare, 
@@ -11,7 +15,10 @@ import {
   Settings, 
   Trash2,
   Edit3,
-  MoreHorizontal
+  MoreHorizontal,
+  Bot,
+  BookOpen,
+  History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +38,22 @@ interface SidebarProps {
   activeChatId?: string;
 }
 
+interface LibraryItem {
+  id: string;
+  title: string;
+  type: 'prompt' | 'conversation' | 'template';
+  description: string;
+  createdAt: Date;
+}
+
+interface ModelInfo {
+  name: string;
+  description: string;
+  capabilities: string[];
+  contextLength: number;
+  pricing: string;
+}
+
 export function Sidebar({ 
   className, 
   onNewChat, 
@@ -40,34 +63,102 @@ export function Sidebar({
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [showModelModal, setShowModelModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  // Mock chat data - in real app this would come from props or context
-  const [chats] = useState<Chat[]>([
-    {
-      id: "1",
-      title: "Getting Started with Convocore",
-      lastMessage: "How do I use the AI model settings?",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    },
-    {
-      id: "2", 
-      title: "TRON Wallet Integration",
-      lastMessage: "Help me connect my TRON wallet for payments",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    },
-    {
-      id: "3",
-      title: "Content Creation Tips",
-      lastMessage: "What are the best practices for writing prompts?",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    },
-    {
-      id: "4",
-      title: "API Documentation",
-      lastMessage: "How do I integrate the Convocore API?",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    },
-  ]);
+  // Real chat data from Supabase
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load real data on component mount
+  useEffect(() => {
+    loadChats();
+    loadLibraryItems();
+  }, []);
+
+  const loadChats = async () => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          title,
+          model,
+          created_at,
+          updated_at,
+          messages (
+            content,
+            created_at
+          )
+        `)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error loading chats:', error);
+        return;
+      }
+
+      const formattedChats: Chat[] = conversations?.map(conv => ({
+        id: conv.id,
+        title: conv.title,
+        lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
+        timestamp: new Date(conv.updated_at),
+      })) || [];
+
+      setChats(formattedChats);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+      // Fallback to empty array if Supabase not configured
+      setChats([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadLibraryItems = async () => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      // For now, we'll create some default library items
+      // In a real app, you'd have a library table in your database
+      const defaultLibraryItems: LibraryItem[] = [
+        {
+          id: '1',
+          title: 'Code Review Prompt',
+          type: 'prompt',
+          description: 'Comprehensive code review template for various programming languages',
+          createdAt: new Date(),
+        },
+        {
+          id: '2',
+          title: 'Technical Writing Assistant',
+          type: 'template',
+          description: 'Template for creating technical documentation and API guides',
+          createdAt: new Date(),
+        },
+        {
+          id: '3',
+          title: 'Blockchain Development Chat',
+          type: 'conversation',
+          description: 'Saved conversation about TRON smart contract development',
+          createdAt: new Date(),
+        },
+      ];
+
+      setLibraryItems(defaultLibraryItems);
+    } catch (error) {
+      console.error('Error loading library items:', error);
+      setLibraryItems([]);
+    }
+  };
 
   const filteredChats = chats.filter(chat =>
     chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,12 +175,88 @@ export function Sidebar({
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
-  const handleChatAction = (e: React.MouseEvent, action: 'edit' | 'delete', chatId: string) => {
+  const handleChatAction = async (e: React.MouseEvent, action: 'edit' | 'delete', chatId: string) => {
     e.stopPropagation();
     if (action === 'delete') {
-      onDeleteChat?.(chatId);
+      try {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        const { error } = await supabase
+          .from('conversations')
+          .delete()
+          .eq('id', chatId);
+
+        if (error) {
+          console.error('Error deleting chat:', error);
+          return;
+        }
+
+        // Update local state
+        setChats(prev => prev.filter(chat => chat.id !== chatId));
+        onDeleteChat?.(chatId);
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+      }
     }
     // Edit functionality can be added later
+  };
+
+  const handleNewChat = async () => {
+    try {
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: `New Chat ${new Date().toLocaleDateString()}`,
+          model: 'gpt-4o'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating new chat:', error);
+        return;
+      }
+
+      // Add to local state
+      const newChat: Chat = {
+        id: newConversation.id,
+        title: newConversation.title,
+        lastMessage: 'Start a new conversation...',
+        timestamp: new Date(newConversation.created_at),
+      };
+
+      setChats(prev => [newChat, ...prev]);
+      onNewChat?.();
+      onSelectChat?.(newConversation.id);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      // Fallback to callback if Supabase not configured
+      onNewChat?.();
+    }
+  };
+
+  const handleSearch = () => {
+    setShowSearchModal(true);
+  };
+
+  const handleLibrary = () => {
+    setShowLibraryModal(true);
+  };
+
+  const handleModelInfo = () => {
+    setShowModelModal(true);
   };
 
   return (
@@ -105,7 +272,7 @@ export function Sidebar({
       {/* New Chat Button */}
       <div className="p-4">
         <Button 
-          onClick={onNewChat}
+          onClick={handleNewChat}
           className="w-full justify-start gap-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
         >
           <Plus className="w-4 h-4" />
@@ -115,16 +282,28 @@ export function Sidebar({
 
       {/* Navigation Menu */}
       <div className="px-4 pb-4 space-y-1">
-        <Button variant="ghost" className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300">
+        <Button 
+          variant="ghost" 
+          onClick={handleSearch}
+          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+        >
           <Search className="w-4 h-4" />
           Search
         </Button>
-        <Button variant="ghost" className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300">
+        <Button 
+          variant="ghost" 
+          onClick={handleLibrary}
+          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+        >
           <Library className="w-4 h-4" />
           Library
         </Button>
-        <Button variant="ghost" className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300">
-          <Settings className="w-4 h-4" />
+        <Button 
+          variant="ghost" 
+          onClick={handleModelInfo}
+          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+        >
+          <Bot className="w-4 h-4" />
           Convocore Model
         </Button>
       </div>
@@ -230,15 +409,49 @@ export function Sidebar({
       </div>
 
       {/* Bottom Section */}
-              <div className="p-4 border-t border-gray-200 dark:border-zinc-800">
+      <div className="p-4 border-t border-gray-200 dark:border-zinc-800">
         <Button 
           variant="ghost" 
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300"
+          onClick={() => setShowSettingsModal(true)}
+          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
         >
           <Settings className="w-4 h-4" />
           Settings
         </Button>
       </div>
+
+      {/* Modals */}
+      <SettingsModal 
+        open={showSettingsModal} 
+        onOpenChange={setShowSettingsModal} 
+      />
+
+      {/* Search Modal */}
+      {showSearchModal && (
+        <SearchModal 
+          open={showSearchModal}
+          onOpenChange={setShowSearchModal}
+          chats={chats}
+          onSelectChat={onSelectChat}
+        />
+      )}
+
+      {/* Library Modal */}
+      {showLibraryModal && (
+        <LibraryModal 
+          open={showLibraryModal}
+          onOpenChange={setShowLibraryModal}
+          items={libraryItems}
+        />
+      )}
+
+      {/* Model Info Modal */}
+      {showModelModal && (
+        <ModelInfoModal 
+          open={showModelModal}
+          onOpenChange={setShowModelModal}
+        />
+      )}
     </div>
   );
 } 
