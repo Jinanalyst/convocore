@@ -64,6 +64,13 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const loadMessages = async (conversationId: string) => {
     try {
+      // Check if we have Supabase configuration
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.log('Supabase not configured, using local storage instead');
+        setMessages([]);
+        return;
+      }
+
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
@@ -74,7 +81,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error loading messages:', error);
+        console.error('Error loading messages from Supabase:', error);
+        setMessages([]);
         return;
       }
 
@@ -87,7 +95,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.error('Error loading messages:', error instanceof Error ? error.message : 'Unknown error');
       // Fallback to empty messages if Supabase not configured
       setMessages([]);
     }
@@ -188,7 +196,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.data.content,
+        content: data.response,
         role: 'assistant',
         timestamp: new Date(),
         agent: detectedAgent || undefined
@@ -198,7 +206,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       // Save AI response to database if we have a chatId
       if (chatId) {
-        await saveMessage(chatId, data.data.content, 'assistant');
+        await saveMessage(chatId, data.response, 'assistant');
       }
     } catch (error) {
       console.error('Chat error:', error);

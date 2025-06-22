@@ -133,9 +133,8 @@ export function AIInputDemo({
               Model:
             </span>
             <ModelSelector
-              value={selectedModel}
-              onValueChange={setSelectedModel}
-              className={isMobile ? 'text-sm' : ''}
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
             />
           </div>
           
