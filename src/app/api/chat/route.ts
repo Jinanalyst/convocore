@@ -8,6 +8,10 @@ import { detectAgentFromMessage } from '@/lib/model-agents';
 import { MemoryService } from '@/lib/memory-service';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { getRateLimit, canMakeRequest, incrementUsage } from '@/lib/auth';
+import { createClient } from '@supabase/supabase-js';
+import { aiService } from '@/lib/ai-service';
+import { CONVO_AGENTS, getAgentByTag, formatMessageWithAgent } from '@/lib/model-agents';
+import { memoryService } from '@/lib/memory-service';
 
 // Ensure AI agent is initialized
 ensureInitialized();
@@ -48,121 +52,153 @@ function extractUserIdFromRequest(request: NextRequest): string | null {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      messages, 
-      model = 'gpt-4', 
-      max_tokens = 4000, 
-      temperature = 0.7,
-      agent_id = 'general-assistant',
-      session_id,
-      user_id = 'anonymous',
-      enable_tools = true 
-    } = body;
+    const { messages, model = 'gpt-4o', chatId } = body;
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ 
-        error: 'Messages array is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Messages array is required' },
+        { status: 400 }
+      );
     }
 
-    // Get the last user message
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage || lastMessage.role !== 'user') {
-      return NextResponse.json({ 
-        error: 'Last message must be from user' 
-      }, { status: 400 });
+    // Get user ID from session or wallet
+    let userId = 'anonymous';
+    
+    // Try to get user from Supabase auth
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          userId = user.id;
+        }
+      } catch (error) {
+        console.log('Supabase auth not available:', error);
+      }
     }
 
-    // Convert messages to our ChatMessage format
-    const chatMessages: ChatMessage[] = messages.map((msg: any) => ({
-      id: msg.id || nanoid(),
+    // Get the latest user message
+    const userMessage = messages[messages.length - 1];
+    
+    // Save user message to memory
+    if (userId !== 'anonymous') {
+      try {
+        await memoryService.saveMessage(userId, 'user', userMessage.content);
+      } catch (error) {
+        console.error('Failed to save user message:', error);
+      }
+    }
+
+    // Get conversation context for memory-aware responses
+    let conversationContext = '';
+    if (userId !== 'anonymous') {
+      try {
+        conversationContext = await memoryService.getConversationContext(userId);
+      } catch (error) {
+        console.error('Failed to get conversation context:', error);
+      }
+    }
+
+    // Enhanced agent detection and handling
+    const userContent = userMessage.content;
+    let systemPrompt = '';
+    let detectedAgent = null;
+    
+    // Check for any agent mentions in the message
+    for (const agent of CONVO_AGENTS) {
+      if (userContent.toLowerCase().includes(agent.tag.toLowerCase())) {
+        detectedAgent = agent;
+        break;
+      }
+    }
+
+    // If an agent is detected, use its system prompt
+    if (detectedAgent) {
+      systemPrompt = detectedAgent.systemPrompt;
+      
+      // Clean the message by removing the agent tag
+      const cleanedContent = userContent.replace(new RegExp(detectedAgent.tag, 'gi'), '').trim();
+      
+      // Create enhanced message with agent context
+      const enhancedMessage = `${detectedAgent.systemPrompt}
+
+User Request: ${cleanedContent}
+
+Please respond as ${detectedAgent.name} (${detectedAgent.displayName}) with your specialized expertise in: ${detectedAgent.capabilities.join(', ')}. 
+
+Focus on providing actionable, detailed solutions that match your capabilities. If the request doesn't align with your specialization, acknowledge it and provide general guidance while suggesting a more appropriate agent if available.`;
+
+      // Update the user message content
+      userMessage.content = enhancedMessage;
+      
+      // Log agent usage for analytics
+      console.log(`Agent ${detectedAgent.name} (${detectedAgent.tag}) activated for user request`);
+    } else {
+      // Default system prompt for general conversations
+      systemPrompt = `You are Convocore AI, a helpful and knowledgeable assistant. You provide accurate, helpful responses while being conversational and engaging. You can help with a wide range of topics including coding, writing, analysis, and general questions.
+
+Available specialized agents that users can invoke with @ mentions:
+${CONVO_AGENTS.map(agent => `- ${agent.tag}: ${agent.description}`).join('\n')}
+
+If a user wants to use a specialized agent, they can mention it with @ in their message (e.g., "@codegen help me build a React component").
+
+When responding:
+1. Be helpful and accurate
+2. Provide clear explanations
+3. Include relevant examples when appropriate
+4. Suggest specialized agents if the user's request would benefit from their expertise`;
+    }
+
+    // Prepare messages for AI with context
+    const processedMessages = messages.map((msg: { role: string; content: string; timestamp?: string | number }) => ({
       role: msg.role,
       content: msg.content,
       timestamp: new Date(msg.timestamp || Date.now())
     }));
 
-    // Create conversation context
-    const context: ConversationContext = {
-      sessionId: session_id || nanoid(),
-      userId: user_id,
-      messages: chatMessages,
-      currentAgent: agent_id,
-      activeTools: [],
-      userPreferences: {
-        preferred_model: model,
-        max_tokens,
-        temperature,
-        enable_tools,
-        auto_execute_safe_tools: true,
-        privacy_level: 'medium',
-        response_style: 'balanced'
-      },
-      environmentContext: {
-        platform: 'web',
-        device_type: 'desktop',
-        browser: request.headers.get('user-agent') || 'unknown',
-        timezone: 'UTC',
-        language: 'en',
-        capabilities: ['text', 'tools']
+    // Add system context if available and not using specialized agent
+    if (!detectedAgent && (systemPrompt || conversationContext)) {
+      const contextMessage = {
+        role: 'system' as const,
+        content: [systemPrompt, conversationContext].filter(Boolean).join('\n\n')
+      };
+      processedMessages.unshift(contextMessage);
+    }
+
+    // Get AI response
+    const aiResponse = await aiService.generateResponse(processedMessages, model);
+
+    // Save AI response to memory
+    if (userId !== 'anonymous') {
+      try {
+        await memoryService.saveMessage(userId, 'assistant', aiResponse);
+      } catch (error) {
+        console.error('Failed to save AI response:', error);
       }
-    };
+    }
 
-    // Process the message with the advanced AI agent
-    console.log('Processing message with advanced AI agent:', {
-      agent_id,
-      message: lastMessage.content.substring(0, 100),
-      enable_tools
-    });
-
-    const startTime = Date.now();
-    const response = await advancedAIAgent.processMessage(
-      lastMessage.content,
-      context,
-      agent_id
-    );
-
-    const processingTime = Date.now() - startTime;
-    console.log('AI processing completed:', {
-      processingTime,
-      model: response.model,
-      tokensUsed: response.tokensUsed,
-      toolsUsed: response.toolsUsed,
-      confidence: response.confidence
-    });
-
-    // Return the response in the expected format
-    return NextResponse.json({
-      content: response.content,
-      model: response.model,
-      tokens: response.tokensUsed,
-      processing_time: processingTime,
-      tools_used: response.toolsUsed,
-      confidence: response.confidence,
-      cost: response.cost,
-      suggestions: response.suggestions,
-      follow_up_questions: response.followUpQuestions,
-      metadata: {
-        agent_id,
-        session_id: context.sessionId,
-        timestamp: new Date().toISOString(),
-        capabilities_used: response.toolsUsed.length,
-        response_quality: response.confidence > 0.8 ? 'high' : 'medium'
-      }
+    return NextResponse.json({ 
+      response: aiResponse,
+      model: model,
+      chatId: chatId || `chat_${Date.now()}`,
+      agentUsed: detectedAgent ? {
+        name: detectedAgent.name,
+        tag: detectedAgent.tag,
+        displayName: detectedAgent.displayName,
+        capabilities: detectedAgent.capabilities
+      } : null
     });
 
   } catch (error) {
-    console.error('Error in chat API:', error);
-    
-    // Return detailed error information for debugging
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    return NextResponse.json({ 
-      error: 'Failed to process chat request',
-      details: errorMessage,
-      debug: process.env.NODE_ENV === 'development' ? errorStack : undefined,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+    console.error('Chat API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate response' },
+      { status: 500 }
+    );
   }
 }
 

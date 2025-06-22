@@ -33,7 +33,7 @@ import { ShareModal } from "@/components/modals/share-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
-import NextLink from "next/link";
+import Link from "next/link";
 
 interface HeaderProps {
   className?: string;
@@ -238,9 +238,9 @@ export function Header({
             }
           `}
         >
-          <Link href="/pricing">
+          <NextLink href="/pricing">
             {isMobile ? "Upgrade" : "Upgrade to Pro"}
-          </Link>
+          </NextLink>
         </Button>
       </div>
 
@@ -302,7 +302,7 @@ export function Header({
             `}
           >
             <DropdownMenuItem 
-              onClick={onProfile}
+              onClick={handleProfileClick}
               className={`
                 flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800
                 cursor-pointer touch-feedback
@@ -314,7 +314,7 @@ export function Header({
             </DropdownMenuItem>
             
             <DropdownMenuItem 
-              onClick={onSettings}
+              onClick={() => onSettings?.()}
               className={`
                 flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800
                 cursor-pointer touch-feedback
@@ -328,7 +328,7 @@ export function Header({
             <DropdownMenuSeparator className="my-1 bg-gray-200 dark:bg-zinc-700" />
             
             <DropdownMenuItem 
-              onClick={onLogout}
+              onClick={() => onLogout?.()}
               className={`
                 flex items-center gap-2 p-3 hover:bg-red-50 dark:hover:bg-red-900/20
                 text-red-600 dark:text-red-400 cursor-pointer touch-feedback
@@ -385,7 +385,7 @@ export function Header({
               {currentChatId && onShare && (
                 <button
                   onClick={() => {
-                    onShare();
+                    onShare?.();
                     setShowMobileMenu(false);
                   }}
                   className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
@@ -397,7 +397,7 @@ export function Header({
 
               <button
                 onClick={() => {
-                  onProfile();
+                  handleProfileClick();
                   setShowMobileMenu(false);
                 }}
                 className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
@@ -408,7 +408,7 @@ export function Header({
 
               <button
                 onClick={() => {
-                  onSettings();
+                  onSettings?.();
                   setShowMobileMenu(false);
                 }}
                 className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
@@ -418,19 +418,19 @@ export function Header({
               </button>
 
               {/* Upgrade Button for Mobile */}
-              <Link
+              <NextLink
                 href="/pricing"
                 onClick={() => setShowMobileMenu(false)}
                 className="flex items-center gap-3 p-3 text-left bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-lg transition-colors touch-feedback min-h-[48px] font-medium"
               >
                 <Zap className="h-5 w-5" />
                 <span>Upgrade to Pro</span>
-              </Link>
+              </NextLink>
 
               {/* Sign Out */}
               <button
                 onClick={() => {
-                  onLogout();
+                  onLogout?.();
                   setShowMobileMenu(false);
                 }}
                 className="flex items-center gap-3 p-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors touch-feedback min-h-[48px] mt-4"
