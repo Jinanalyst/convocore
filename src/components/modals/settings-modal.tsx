@@ -23,6 +23,7 @@ import {
   Save
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BillingModal } from "@/components/modals/billing-modal";
 
 interface SettingsModalProps {
   open?: boolean;
@@ -63,6 +64,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [showBillingModal, setShowBillingModal] = useState(false);
 
   // Load settings from localStorage and Supabase on mount
   useEffect(() => {
@@ -607,12 +609,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowBillingModal(true)}
+                >
                   <CreditCard className="w-4 h-4 mr-2" />
                   View Billing History
                 </Button>
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowBillingModal(true)}
+                >
                   <Wallet className="w-4 h-4 mr-2" />
                   Manage Wallet
                 </Button>
@@ -684,6 +694,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
         </div>
       </DialogContent>
+      
+      {/* Billing Modal */}
+      <BillingModal 
+        open={showBillingModal} 
+        onOpenChange={setShowBillingModal} 
+      />
     </Dialog>
   );
 } 
