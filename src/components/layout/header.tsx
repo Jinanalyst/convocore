@@ -20,13 +20,15 @@ import {
   Link,
   Moon,
   Sun,
-  Bell
+  Bell,
+  ArrowUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/modals/profile-modal";
 import { ShareModal } from "@/components/modals/share-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { notificationService } from "@/lib/notification-service";
+import NextLink from "next/link";
 
 interface HeaderProps {
   className?: string;
@@ -190,8 +192,24 @@ export function Header({
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
+      {/* Center - Upgrade Button */}
+      <div className="flex-1 flex justify-center">
+        {(userInfo.subscriptionTier === 'free' || userInfo.connectionStatus === 'Demo Mode') && (
+          <NextLink href="/pricing">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+            >
+              <ArrowUp className="w-4 h-4" />
+              Upgrade Available
+            </Button>
+          </NextLink>
+        )}
+      </div>
+
+      {/* Right Side - Action Buttons */}
+      <div className="flex-1 flex items-center justify-end gap-2">
         {/* Share Button */}
         <DropdownMenu open={showShareMenu} onOpenChange={setShowShareMenu}>
           <DropdownMenuTrigger asChild>
