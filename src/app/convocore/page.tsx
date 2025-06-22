@@ -204,6 +204,43 @@ export default function ConvocorePage() {
     // In a real app, this would send the message to the AI service
   };
 
+  const handleUseLibraryItem = (item: any) => {
+    console.log("Using library item:", item);
+    
+    if (item.content) {
+      // Copy the content to clipboard
+      navigator.clipboard.writeText(item.content).then(() => {
+        console.log("Template copied to clipboard:", item.title);
+        
+        // Create a new chat with the template title
+        handleNewChat();
+        
+        // In a real implementation, you would also:
+        // 1. Pre-fill the chat input with the template content
+        // 2. Show a toast notification: "Template copied and ready to use!"
+        // 3. Parse template variables like {{task}}, {{api_spec}}, etc.
+        
+        // For now, we'll use the notification service if available
+        if (typeof window !== 'undefined' && (window as any).showNotification) {
+          (window as any).showNotification({
+            title: 'Template Ready',
+            message: `${item.title} has been copied to clipboard and a new chat started.`,
+            type: 'success'
+          });
+        }
+      }).catch(err => {
+        console.error('Failed to copy template:', err);
+        if (typeof window !== 'undefined' && (window as any).showNotification) {
+          (window as any).showNotification({
+            title: 'Copy Failed',
+            message: 'Failed to copy template to clipboard.',
+            type: 'error'
+          });
+        }
+      });
+    }
+  };
+
   const handleShare = () => {
     console.log("Sharing chat");
     // In a real app, this would generate a shareable link or export
@@ -271,6 +308,7 @@ export default function ConvocorePage() {
           onNewChat={handleNewChat}
           onSelectChat={handleSelectChat}
           onDeleteChat={handleDeleteChat}
+          onUseLibraryItem={handleUseLibraryItem}
           activeChatId={activeChatId || undefined}
         />
       </div>

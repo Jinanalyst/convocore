@@ -343,7 +343,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-zinc-500">
         {messages.map((message) => (
           <div
             key={message.id}

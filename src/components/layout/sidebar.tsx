@@ -35,6 +35,7 @@ interface SidebarProps {
   onNewChat?: () => void;
   onSelectChat?: (chatId: string) => void;
   onDeleteChat?: (chatId: string) => void;
+  onUseLibraryItem?: (item: LibraryItem) => void;
   activeChatId?: string;
 }
 
@@ -43,6 +44,7 @@ interface LibraryItem {
   title: string;
   type: 'prompt' | 'conversation' | 'template';
   description: string;
+  content?: string;
   createdAt: Date;
 }
 
@@ -59,6 +61,7 @@ export function Sidebar({
   onNewChat, 
   onSelectChat, 
   onDeleteChat,
+  onUseLibraryItem,
   activeChatId 
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -173,28 +176,46 @@ export function Sidebar({
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      // For now, we'll create some default library items
-      // In a real app, you'd have a library table in your database
+      // Convocore Library Items with prompts and templates
       const defaultLibraryItems: LibraryItem[] = [
         {
           id: '1',
-          title: 'Code Review Prompt',
+          title: '🧠 Convocore Ideation Prompt',
           type: 'prompt',
-          description: 'Comprehensive code review template for various programming languages',
+          description: 'Generate 5 innovative agent ideas based on the task provided.',
+          content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
           createdAt: new Date(),
         },
         {
           id: '2',
-          title: 'Technical Writing Assistant',
+          title: '📄 Convocore API Template',
           type: 'template',
-          description: 'Template for creating technical documentation and API guides',
+          description: 'Summarize API endpoints into easy-to-read docs with example requests.',
+          content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
           createdAt: new Date(),
         },
         {
           id: '3',
-          title: 'Blockchain Development Chat',
-          type: 'conversation',
-          description: 'Saved conversation about TRON smart contract development',
+          title: '🔍 Convocore Debug Assistant',
+          type: 'prompt',
+          description: 'Diagnose and suggest fixes for the given error message and code.',
+          content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
+          createdAt: new Date(),
+        },
+        {
+          id: '4',
+          title: '💬 ConvoAgent Role Trainer',
+          type: 'template',
+          description: 'Define tone, behavior, and logic for a new conversational agent.',
+          content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
+          createdAt: new Date(),
+        },
+        {
+          id: '5',
+          title: '🎨 Convocore Brand Voice Generator',
+          type: 'prompt',
+          description: 'Generate a consistent brand voice for product, blog, and UI.',
+          content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
           createdAt: new Date(),
         },
       ];
@@ -484,10 +505,11 @@ export function Sidebar({
 
       {/* Library Modal */}
       {showLibraryModal && (
-        <LibraryModal 
+                <LibraryModal
           open={showLibraryModal}
           onOpenChange={setShowLibraryModal}
           items={libraryItems}
+          onUseItem={onUseLibraryItem}
         />
       )}
 
