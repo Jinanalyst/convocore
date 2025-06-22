@@ -169,8 +169,8 @@ export default function ConvocorePage() {
     }
   };
 
-  const handleSendMessage = (message: string, model: string) => {
-    console.log("Sending message:", message, "with model:", model);
+  const handleSendMessage = (message: string, model: string, includeWebSearch?: boolean) => {
+    console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
     // In a real app, this would send the message to the AI service
   };
 

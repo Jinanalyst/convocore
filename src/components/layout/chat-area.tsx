@@ -37,7 +37,7 @@ interface Message {
 interface ChatAreaProps {
   className?: string;
   chatId?: string;
-  onSendMessage?: (message: string, model: string) => void;
+  onSendMessage?: (message: string, model: string, includeWebSearch?: boolean) => void;
 }
 
 export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
@@ -93,7 +93,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (content: string, model: string) => {
+  const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean) => {
     if (!content.trim()) return;
 
     // Detect if user is calling a specific agent
@@ -180,7 +180,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       setIsLoading(false);
     }
 
-    onSendMessage?.(content, model);
+    onSendMessage?.(content, model, includeWebSearch);
   };
 
   const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
@@ -220,6 +220,47 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       ));
       setIsLoading(false);
     }, 1500);
+  };
+
+  const handleFileUpload = (file: File) => {
+    console.log('File uploaded:', file.name, file.type, file.size);
+    // In a real implementation, this would process the file
+    const fileMessage: Message = {
+      id: Date.now().toString(),
+      content: `📎 Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+      role: 'user',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, fileMessage]);
+  };
+
+  const handleVoiceInput = () => {
+    console.log('Voice input requested');
+    // In a real implementation, this would start voice recording
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice transcript:', transcript);
+        // Auto-submit the voice message
+        handleSendMessage(transcript, 'gpt-4o');
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        alert('Speech recognition error: ' + event.error);
+      };
+      
+      recognition.start();
+    } else {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
   };
 
   const formatTimestamp = (date: Date) => {
@@ -290,6 +331,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           <AIInputDemo
             placeholder="Type your message to start a conversation..."
             onSubmit={handleSendMessage}
+            onFileUpload={handleFileUpload}
+            onVoiceInput={handleVoiceInput}
             className="max-w-4xl mx-auto"
           />
         </div>
@@ -439,6 +482,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         <AIInputDemo
           placeholder="Type your message..."
           onSubmit={handleSendMessage}
+          onFileUpload={handleFileUpload}
+          onVoiceInput={handleVoiceInput}
           className="max-w-4xl mx-auto"
         />
       </div>

@@ -26,18 +26,40 @@ const models = [
 ];
 
 interface AIInputDemoProps {
-  onSubmit?: (message: string, model: string) => void;
+  onSubmit?: (message: string, model: string, includeWebSearch?: boolean) => void;
+  onFileUpload?: (file: File) => void;
+  onVoiceInput?: () => void;
   placeholder?: string;
   className?: string;
 }
 
 export function AIInputDemo({ 
   onSubmit, 
+  onFileUpload,
+  onVoiceInput,
   placeholder = "Ask ConvoAI anything...",
   className 
 }: AIInputDemoProps) {
   const [model, setModel] = useState<string>(models[0].id);
   const [message, setMessage] = useState("");
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && onFileUpload) {
+      onFileUpload(file);
+    }
+  };
+
+  const handleVoiceInput = () => {
+    if (onVoiceInput) {
+      onVoiceInput();
+    }
+  };
+
+  const toggleWebSearch = () => {
+    setWebSearchEnabled(!webSearchEnabled);
+  };
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
@@ -45,8 +67,8 @@ export function AIInputDemo({
     const messageText = formData.get('message') as string;
     
     if (messageText.trim()) {
-      onSubmit?.(messageText, model);
-      console.log('Submitted message:', messageText, 'Model:', model);
+      onSubmit?.(messageText, model, webSearchEnabled);
+      console.log('Submitted message:', messageText, 'Model:', model, 'Web search:', webSearchEnabled);
       
       // Reset the form
       setMessage("");
@@ -70,15 +92,26 @@ export function AIInputDemo({
         />
         <AIInputToolbar>
           <AIInputTools>
-            <AIInputButton title="Attach file">
+            <AIInputButton title="Attach file" onClick={() => document.getElementById('file-upload')?.click()}>
               <Paperclip size={16} />
             </AIInputButton>
-            <AIInputButton title="Voice input">
+            <input
+              id="file-upload"
+              type="file"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              accept="image/*,.pdf,.doc,.docx,.txt"
+            />
+            <AIInputButton title="Voice input" onClick={handleVoiceInput}>
               <Mic size={16} />
             </AIInputButton>
-            <AIInputButton title="Web search">
+            <AIInputButton 
+              title={webSearchEnabled ? "Web search enabled" : "Enable web search"}
+              onClick={toggleWebSearch}
+              className={webSearchEnabled ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : ""}
+            >
               <Search size={16} />
-              <span>Search</span>
+              <span>{webSearchEnabled ? "Search On" : "Search"}</span>
             </AIInputButton>
             <AIInputModelSelect value={model} onValueChange={setModel}>
               <AIInputModelSelectTrigger>

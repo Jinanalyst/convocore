@@ -17,7 +17,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
 
-  const handleAIInputSubmit = (message: string, model: string) => {
+  const handleAIInputSubmit = async (message: string, model: string, includeWebSearch?: boolean) => {
     if (!message.trim()) return;
 
     // Update selected model if different
@@ -36,17 +36,72 @@ export function ChatInterface() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: `I received your message: "${message}". This is a demo response from ConvoAI using ${model}. In a real implementation, this would connect to the selected AI service.`,
-        sender: "ai",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, aiMessage]);
+    try {
+      let responseContent = "";
+      
+      if (includeWebSearch) {
+        // Simulate web search + AI response
+        responseContent = `🌐 **Web Search Enabled**\n\nI searched the web for information about "${message}" and found relevant results. Here's what I found:\n\n• Recent developments and current information\n• Multiple perspectives from reliable sources\n• Up-to-date data and statistics\n\nBased on the web search results, here's my comprehensive response using ${model}:\n\n${message.includes('?') ? 'This is a detailed answer' : 'This is relevant information'} incorporating the latest web information. In a real implementation, this would include actual search results and AI-generated insights.`;
+      } else {
+        // Regular AI response
+        responseContent = `I received your message: "${message}". This is a response from ConvoAI using ${model}. In a real implementation, this would connect to the selected AI service and provide intelligent responses based on the model's training data.`;
+      }
+
+      // Simulate AI response delay
+      setTimeout(() => {
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          content: responseContent,
+          sender: "ai",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiMessage]);
+        setIsLoading(false);
+      }, includeWebSearch ? 2500 : 1500); // Longer delay for web search
+    } catch (error) {
+      console.error('Error sending message:', error);
       setIsLoading(false);
-    }, 1500);
+    }
+  };
+
+  const handleFileUpload = (file: File) => {
+    console.log('File uploaded:', file.name, file.type, file.size);
+    // In a real implementation, this would process the file
+    const fileMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: `📎 Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, fileMessage]);
+  };
+
+  const handleVoiceInput = () => {
+    console.log('Voice input requested');
+    // In a real implementation, this would start voice recording
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice transcript:', transcript);
+        // You could auto-fill the input or submit directly
+        handleAIInputSubmit(transcript, selectedModel);
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+      };
+      
+      recognition.start();
+    } else {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
   };
 
   return (
@@ -128,6 +183,8 @@ export function ChatInterface() {
         <div className="container mx-auto px-4 py-4">
           <AIInputDemo 
             onSubmit={handleAIInputSubmit}
+            onFileUpload={handleFileUpload}
+            onVoiceInput={handleVoiceInput}
             placeholder="What can I do for you?"
             className="max-w-4xl mx-auto"
           />
