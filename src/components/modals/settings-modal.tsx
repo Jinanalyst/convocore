@@ -54,8 +54,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       shareUsage: false
     }
   });
+  const [userInfo, setUserInfo] = useState({
+    name: '',
+    email: '',
+    walletAddress: '',
+    walletType: '',
+    subscriptionTier: 'free',
+    isWalletUser: false
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Load settings from localStorage and Supabase on mount
   useEffect(() => {
@@ -67,27 +76,61 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const loadSettings = async () => {
     setIsLoading(true);
     try {
+      // Check if user is wallet-authenticated
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const walletAddress = localStorage.getItem('wallet_address') || '';
+      const walletType = localStorage.getItem('wallet_type') || '';
+
+      if (walletConnected) {
+        // Load wallet user info
+        setUserInfo({
+          name: `Wallet User`,
+          email: '',
+          walletAddress,
+          walletType,
+          subscriptionTier: 'free',
+          isWalletUser: true
+        });
+      }
+
       // Load from localStorage first for immediate UI update
       const localSettings = localStorage.getItem('convocore-settings');
       if (localSettings) {
         const parsed = JSON.parse(localSettings);
         setSettings(prev => ({ ...prev, ...parsed }));
+        // Apply theme immediately
+        applyTheme(parsed.theme || 'system');
       }
 
-      // Then try to load from Supabase
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userSettings, error } = await supabase
-          .from('users')
-          .select('settings')
-          .eq('id', user.id)
-          .single();
+      // For Supabase users, load from database
+      if (!walletConnected) {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Load user info
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('full_name, email, subscription_tier, settings')
+            .eq('id', user.id)
+            .single();
 
-        if (!error && userSettings?.settings) {
-          setSettings(prev => ({ ...prev, ...userSettings.settings }));
+          if (!userError && userData) {
+            setUserInfo({
+              name: userData.full_name || 'User',
+              email: userData.email || user.email || '',
+              walletAddress: '',
+              walletType: '',
+              subscriptionTier: userData.subscription_tier || 'free',
+              isWalletUser: false
+            });
+
+            if (userData.settings) {
+              setSettings(prev => ({ ...prev, ...userData.settings }));
+              applyTheme(userData.settings.theme || 'system');
+            }
+          }
         }
       }
     } catch (error) {
@@ -107,22 +150,30 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         applyTheme(newSettings.theme);
       }
 
-      // Save to Supabase
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error } = await supabase
-          .from('users')
-          .upsert({
-            id: user.id,
-            settings: newSettings,
-            updated_at: new Date().toISOString()
-          });
+      // Apply language changes
+      if (newSettings.language !== settings.language) {
+        applyLanguage(newSettings.language);
+      }
 
-        if (error) {
-          console.error('Error saving settings to Supabase:', error);
+      // For Supabase users, save to database
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      if (!walletConnected) {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error } = await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              settings: newSettings,
+              updated_at: new Date().toISOString()
+            });
+
+          if (error) {
+            console.error('Error saving settings to Supabase:', error);
+          }
         }
       }
     } catch (error) {
@@ -148,6 +199,43 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   };
 
+  const applyLanguage = (language: string) => {
+    // Set document language attribute
+    document.documentElement.lang = language;
+    
+    // Store in localStorage for persistence
+    localStorage.setItem('convocore-language', language);
+    
+    // You could also integrate with i18n libraries here
+    console.log(`Language changed to: ${language}`);
+    
+    // For now, we'll just show a notification that language changed
+    // In a real app, you'd reload the interface with new language strings
+  };
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  };
+
+  const handleNotificationToggle = async (type: 'push', value: boolean) => {
+    if (type === 'push' && value) {
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        alert('Please enable notifications in your browser settings to receive push notifications.');
+        return;
+      }
+    }
+    
+    setSettings(prev => ({ 
+      ...prev, 
+      notifications: { ...prev.notifications, [type]: value }
+    }));
+  };
+
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'account', label: 'Account', icon: User },
@@ -160,11 +248,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveStatus('idle');
     try {
-      await saveSettings(settings);
-      onOpenChange?.(false);
+      await Promise.all([
+        saveSettings(settings),
+        saveUserInfo()
+      ]);
+      setSaveStatus('success');
+      setTimeout(() => {
+        onOpenChange?.(false);
+      }, 1000);
     } catch (error) {
       console.error('Error saving settings:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
       setIsSaving(false);
     }
@@ -174,8 +271,36 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
     // Auto-save certain settings immediately
-    if (updates.theme) {
+    if (updates.theme || updates.language) {
       saveSettings(newSettings);
+    }
+  };
+
+  const saveUserInfo = async () => {
+    try {
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      if (!walletConnected) {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error } = await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              full_name: userInfo.name,
+              email: userInfo.email,
+              updated_at: new Date().toISOString()
+            });
+
+          if (error) {
+            console.error('Error saving user info:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving user info:', error);
     }
   };
 
@@ -221,22 +346,49 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Information</h3>
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-900 dark:text-white">Full Name</label>
-                  <input 
-                    type="text" 
-                    defaultValue="John Doe"
-                    className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-900 dark:text-white">Email</label>
-                  <input 
-                    type="email" 
-                    defaultValue="john@example.com"
-                    className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                {userInfo.isWalletUser ? (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Wallet Address</label>
+                      <input 
+                        type="text" 
+                        value={userInfo.walletAddress}
+                        readOnly
+                        className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Wallet Type</label>
+                      <input 
+                        type="text" 
+                        value={userInfo.walletType}
+                        readOnly
+                        className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md text-sm"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Full Name</label>
+                      <input 
+                        type="text" 
+                        value={userInfo.name}
+                        onChange={(e) => setUserInfo(prev => ({ ...prev, name: e.target.value }))}
+                        className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Email</label>
+                      <input 
+                        type="email" 
+                        value={userInfo.email}
+                        onChange={(e) => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
+                        className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -245,12 +397,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Pro Plan</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">$20 USDT/month</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                      {userInfo.subscriptionTier} Plan
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {userInfo.subscriptionTier === 'free' ? 'Free tier' : 
+                       userInfo.subscriptionTier === 'pro' ? '$20 USDT/month' : 
+                       '$40 USDT/month'}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Next billing: Dec 15, 2024</p>
-                    <Button variant="outline" size="sm" className="mt-1">Manage</Button>
+                    {userInfo.subscriptionTier !== 'free' && (
+                      <p className="text-sm text-gray-700 dark:text-gray-300">Next billing: Dec 15, 2024</p>
+                    )}
+                    <Button variant="outline" size="sm" className="mt-1">
+                      {userInfo.subscriptionTier === 'free' ? 'Upgrade' : 'Manage'}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -265,10 +427,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <label className="text-sm font-medium text-gray-900 dark:text-white">Default AI Model</label>
               <select 
                 value={settings.aiModel.defaultModel}
-                onChange={(e) => setSettings(prev => ({ 
-                  ...prev, 
-                  aiModel: { ...prev.aiModel, defaultModel: e.target.value }
-                }))}
+                onChange={(e) => updateSettings({ 
+                  aiModel: { ...settings.aiModel, defaultModel: e.target.value }
+                })}
                 className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="gpt-4o">GPT-4o</option>
@@ -291,10 +452,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 max="1" 
                 step="0.1"
                 value={settings.aiModel.temperature}
-                onChange={(e) => setSettings(prev => ({ 
-                  ...prev, 
-                  aiModel: { ...prev.aiModel, temperature: parseFloat(e.target.value) }
-                }))}
+                onChange={(e) => updateSettings({ 
+                  aiModel: { ...settings.aiModel, temperature: parseFloat(e.target.value) }
+                })}
                 className="mt-2 w-full"
               />
             </div>
@@ -307,10 +467,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 min="100" 
                 max="4000"
                 value={settings.aiModel.maxTokens}
-                onChange={(e) => setSettings(prev => ({ 
-                  ...prev, 
-                  aiModel: { ...prev.aiModel, maxTokens: parseInt(e.target.value) }
-                }))}
+                onChange={(e) => updateSettings({ 
+                  aiModel: { ...settings.aiModel, maxTokens: parseInt(e.target.value) }
+                })}
                 className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -320,10 +479,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <input 
                   type="checkbox" 
                   checked={settings.aiModel.streamResponse}
-                  onChange={(e) => setSettings(prev => ({ 
-                    ...prev, 
-                    aiModel: { ...prev.aiModel, streamResponse: e.target.checked }
-                  }))}
+                  onChange={(e) => updateSettings({ 
+                    aiModel: { ...settings.aiModel, streamResponse: e.target.checked }
+                  })}
                   className="rounded border-gray-300 dark:border-zinc-600" 
                 />
                 <span className="ml-2 text-sm font-medium text-gray-900 dark:text-white">Stream responses</span>
@@ -392,10 +550,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <input 
                     type="checkbox" 
                     checked={settings.notifications.push}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      notifications: { ...prev.notifications, push: e.target.checked }
-                    }))}
+                    onChange={(e) => handleNotificationToggle('push', e.target.checked)}
                     className="rounded border-gray-300 dark:border-zinc-600" 
                   />
                 </label>
@@ -553,9 +708,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Button variant="outline" onClick={() => onOpenChange?.(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+              <Button onClick={handleSave} disabled={isSaving} className={cn(
+                "gap-2",
+                saveStatus === 'success' && "bg-green-600 hover:bg-green-700",
+                saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
+              )}>
                 <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Saving...' : 
+                 saveStatus === 'success' ? 'Saved!' :
+                 saveStatus === 'error' ? 'Error!' :
+                 'Save Changes'}
               </Button>
             </div>
           </div>
