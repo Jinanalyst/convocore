@@ -4,11 +4,11 @@ import { cookies } from 'next/headers';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
     const { format } = await request.json();
-    const { chatId } = params;
+    const { chatId } = await params;
 
     if (!chatId) {
       return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });

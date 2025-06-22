@@ -13,39 +13,27 @@ import {
 const models = [
   {
     id: "gpt-4o",
-    name: "GPT-4o",
-    description: "Latest flagship model with multimodal capabilities",
-    provider: "OpenAI",
+    name: "Convocore Omni",
+    description: "플래그십 모델, 멀티모달, 고성능, 빠름",
+    provider: "Convocore",
   },
   {
     id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    description: "Balanced model for complex tasks with good speed",
-    provider: "OpenAI",
-  },
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    description: "Fast, cost-effective model for simple tasks",
-    provider: "OpenAI",
+    name: "Convocore Turbo",
+    description: "고속 응답 + 고품질 균형, 코드/텍스트 최적화",
+    provider: "Convocore",
   },
   {
     id: "claude-3-opus-20240229",
-    name: "Claude 3 Opus",
-    description: "Most powerful model for highly complex reasoning",
-    provider: "Anthropic",
+    name: "Convocore Alpha",
+    description: "가장 정밀한 추론 능력, 장문 작문, 고급 분석",
+    provider: "Convocore",
   },
   {
     id: "claude-3-sonnet-20240229",
-    name: "Claude 3 Sonnet",
-    description: "Balanced model with excellent performance",
-    provider: "Anthropic",
-  },
-  {
-    id: "claude-3-haiku-20240307",
-    name: "Claude 3 Haiku",
-    description: "Fastest model for quick tasks and high throughput",
-    provider: "Anthropic",
+    name: "Convocore Nova",
+    description: "균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합",
+    provider: "Convocore",
   },
 ];
 

@@ -14,9 +14,9 @@ interface ModelInfoModalProps {
 export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
   const models = [
     {
-      name: "GPT-4o",
-      provider: "OpenAI",
-      description: "Latest flagship model with advanced reasoning and multimodal capabilities",
+      name: "Convocore Omni",
+      provider: "Convocore",
+      description: "플래그십 모델, 멀티모달, 고성능, 빠름",
       features: ["Text & Image Processing", "Code Generation", "Advanced Reasoning", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -24,9 +24,9 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
       color: "bg-green-500"
     },
     {
-      name: "Claude 3 Opus",
-      provider: "Anthropic",
-      description: "Most capable Claude model with exceptional performance on complex tasks",
+      name: "Convocore Alpha",
+      provider: "Convocore",
+      description: "가장 정밀한 추론 능력, 장문 작문, 고급 분석",
       features: ["Superior Reasoning", "Creative Writing", "Code Analysis", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Medium",
@@ -34,9 +34,9 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
       color: "bg-purple-500"
     },
     {
-      name: "GPT-4 Turbo",
-      provider: "OpenAI",
-      description: "Optimized for speed and efficiency while maintaining high quality",
+      name: "Convocore Turbo",
+      provider: "Convocore",
+      description: "고속 응답 + 고품질 균형, 코드/텍스트 최적화",
       features: ["Balanced Performance", "Code & Text", "JSON Mode", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -44,9 +44,9 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
       color: "bg-blue-500"
     },
     {
-      name: "Claude 3 Sonnet",
-      provider: "Anthropic",
-      description: "Balanced model offering good performance with faster response times",
+      name: "Convocore Nova",
+      provider: "Convocore",
+      description: "균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합",
       features: ["Balanced Capabilities", "Efficient Processing", "Code & Writing", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Fast",
@@ -246,11 +246,11 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
                 <p>• Try <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">@uiwizard design a pricing page</code> for beautiful UI components</p>
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-1">Base Models:</h4>
-                <p>• <strong>GPT-4o:</strong> Best for general tasks, multimodal inputs, and balanced performance</p>
-                <p>• <strong>Claude 3 Opus:</strong> Ideal for complex reasoning, creative writing, and detailed analysis</p>
-                <p>• <strong>GPT-4 Turbo:</strong> Great for code generation and when you need faster responses</p>
-                <p>• <strong>Claude 3 Sonnet:</strong> Perfect balance of capability and speed for most conversations</p>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">Convocore Models:</h4>
+                <p>• <strong>Convocore Omni:</strong> Best for general tasks, multimodal inputs, and balanced performance</p>
+                <p>• <strong>Convocore Alpha:</strong> Ideal for complex reasoning, creative writing, and detailed analysis</p>
+                <p>• <strong>Convocore Turbo:</strong> Great for code generation and when you need faster responses</p>
+                <p>• <strong>Convocore Nova:</strong> Perfect balance of capability and speed for most conversations</p>
               </div>
             </div>
           </div>

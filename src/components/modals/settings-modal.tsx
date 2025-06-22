@@ -432,12 +432,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 })}
                 className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-                <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                <option value="gpt-4o">Convocore Omni</option>
+                <option value="gpt-4-turbo">Convocore Turbo</option>
+                <option value="claude-3-opus-20240229">Convocore Alpha</option>
+                <option value="claude-3-sonnet-20240229">Convocore Nova</option>
               </select>
             </div>
             

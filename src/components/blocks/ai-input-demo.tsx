@@ -13,16 +13,15 @@ import {
   AIInputToolbar,
   AIInputTools
 } from "@/components/ui/ai-input";
+import { VoiceModal } from "@/components/modals/voice-modal";
 import { Paperclip, Mic, Search, Send } from 'lucide-react';
 import { type FormEventHandler, useState } from 'react';
 
 const models = [
-  { id: 'gpt-4o', name: 'GPT-4o' },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
-  { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet' },
-  { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
+  { id: 'gpt-4o', name: 'Convocore Omni', description: 'Flagship model, multimodal, high performance' },
+  { id: 'gpt-4-turbo', name: 'Convocore Turbo', description: 'High-speed response + quality balance' },
+  { id: 'claude-3-opus-20240229', name: 'Convocore Alpha', description: 'Most precise reasoning, advanced analysis' },
+  { id: 'claude-3-sonnet-20240229', name: 'Convocore Nova', description: 'Balanced performance, practical daily tasks' },
 ];
 
 interface AIInputDemoProps {
@@ -43,6 +42,7 @@ export function AIInputDemo({
   const [model, setModel] = useState<string>(models[0].id);
   const [message, setMessage] = useState("");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,6 +52,7 @@ export function AIInputDemo({
   };
 
   const handleVoiceInput = () => {
+    setIsVoiceModalOpen(true);
     if (onVoiceInput) {
       onVoiceInput();
     }
@@ -134,6 +135,21 @@ export function AIInputDemo({
           </AIInputSubmit>
         </AIInputToolbar>
       </AIInput>
+      
+      {/* Voice Modal */}
+      <VoiceModal 
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        selectedModel={model}
+        onSubmit={(voiceText) => {
+          // Add the voice transcript to the message input
+          setMessage(voiceText);
+          // Optionally auto-submit the voice message
+          if (onSubmit && voiceText.trim()) {
+            onSubmit(voiceText, model, webSearchEnabled);
+          }
+        }}
+      />
     </div>
   );
 } 

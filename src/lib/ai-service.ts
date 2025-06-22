@@ -12,47 +12,33 @@ export interface AIServiceConfig {
   stream?: boolean;
 }
 
-// Default model configurations
+// Convocore model configurations
 export const AI_MODELS = {
   'gpt-4o': {
     provider: 'openai' as const,
-    name: 'GPT-4o',
-    description: 'Latest flagship model with multimodal capabilities',
+    name: 'Convocore Omni',
+    description: '플래그십 모델, 멀티모달, 고성능, 빠름',
     maxTokens: 4096,
     contextLength: 128000,
   },
   'gpt-4-turbo': {
     provider: 'openai' as const,
-    name: 'GPT-4 Turbo',
-    description: 'Balanced model for complex tasks with good speed',
+    name: 'Convocore Turbo',
+    description: '고속 응답 + 고품질 균형, 코드/텍스트 최적화',
     maxTokens: 4096,
     contextLength: 128000,
   },
-  'gpt-3.5-turbo': {
-    provider: 'openai' as const,
-    name: 'GPT-3.5 Turbo',
-    description: 'Fast, cost-effective model for simple tasks',
-    maxTokens: 4096,
-    contextLength: 16000,
-  },
   'claude-3-opus-20240229': {
     provider: 'anthropic' as const,
-    name: 'Claude 3 Opus',
-    description: 'Most powerful model for highly complex reasoning tasks',
+    name: 'Convocore Alpha',
+    description: '가장 정밀한 추론 능력, 장문 작문, 고급 분석',
     maxTokens: 4096,
     contextLength: 200000,
   },
   'claude-3-sonnet-20240229': {
     provider: 'anthropic' as const,
-    name: 'Claude 3 Sonnet',
-    description: 'Balanced model with excellent performance and speed',
-    maxTokens: 4096,
-    contextLength: 200000,
-  },
-  'claude-3-haiku-20240307': {
-    provider: 'anthropic' as const,
-    name: 'Claude 3 Haiku',
-    description: 'Fastest model for quick tasks and high throughput',
+    name: 'Convocore Nova',
+    description: '균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합',
     maxTokens: 4096,
     contextLength: 200000,
   },
