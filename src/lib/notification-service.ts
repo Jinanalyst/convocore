@@ -25,18 +25,20 @@ class NotificationService {
   private permission: NotificationPermission = 'default';
 
   constructor() {
-    this.checkPermission();
-    this.loadStoredNotifications();
+    if (typeof window !== 'undefined') {
+      this.checkPermission();
+      this.loadStoredNotifications();
+    }
   }
 
   private async checkPermission() {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = Notification.permission;
     }
   }
 
   async requestPermission(): Promise<boolean> {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = await Notification.requestPermission();
       return this.permission === 'granted';
     }
@@ -44,6 +46,8 @@ class NotificationService {
   }
 
   private loadStoredNotifications() {
+    if (typeof window === 'undefined') return;
+    
     try {
       const stored = localStorage.getItem('convocore-notifications');
       if (stored) {
@@ -60,6 +64,8 @@ class NotificationService {
   }
 
   private saveNotifications() {
+    if (typeof window === 'undefined') return;
+    
     try {
       localStorage.setItem('convocore-notifications', JSON.stringify(this.notifications));
     } catch (error) {
@@ -106,7 +112,7 @@ class NotificationService {
     this.notifyListeners();
 
     // Show browser notification if permission granted and page is not visible
-    if (this.permission === 'granted' && document.hidden) {
+    if (typeof window !== 'undefined' && this.permission === 'granted' && document.hidden) {
       this.showBrowserNotification(newNotification);
     }
 
@@ -114,8 +120,10 @@ class NotificationService {
   }
 
   private showBrowserNotification(notification: Notification) {
+    if (typeof window === 'undefined') return;
+    
     try {
-      const browserNotification = new Notification(notification.title, {
+      const browserNotification = new window.Notification(notification.title, {
         body: notification.message,
         icon: '/favicon.ico',
         badge: '/favicon.ico',

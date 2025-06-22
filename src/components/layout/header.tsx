@@ -86,12 +86,14 @@ export function Header({
   useEffect(() => {
     loadUserInfo();
 
-    // Subscribe to notifications
-    const unsubscribe = notificationService.subscribe((state) => {
-      setUnreadCount(state.unreadCount);
-    });
+    // Subscribe to notifications (client-side only)
+    if (typeof window !== 'undefined') {
+      const unsubscribe = notificationService.subscribe((state) => {
+        setUnreadCount(state.unreadCount);
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    }
   }, []);
 
   const loadUserInfo = async () => {
