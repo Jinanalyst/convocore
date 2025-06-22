@@ -23,6 +23,8 @@ import {
   Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProfileModal } from "@/components/modals/profile-modal";
+import { ShareModal } from "@/components/modals/share-modal";
 
 interface HeaderProps {
   className?: string;
@@ -31,6 +33,7 @@ interface HeaderProps {
   onProfile?: () => void;
   onLogout?: () => void;
   currentChatTitle?: string;
+  currentChatId?: string;
 }
 
 export function Header({ 
@@ -39,10 +42,13 @@ export function Header({
   onSettings, 
   onProfile, 
   onLogout,
-  currentChatTitle 
+  currentChatTitle,
+  currentChatId
 }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -53,14 +59,17 @@ export function Header({
   const handleShareOption = (type: 'link' | 'export') => {
     setShowShareMenu(false);
     if (type === 'link') {
-      // Generate shareable link
-      const shareUrl = `${window.location.origin}/shared/${Date.now()}`;
-      navigator.clipboard.writeText(shareUrl);
-      // Show toast notification in real app
+      // Open share modal
+      setShowShareModal(true);
     } else {
-      // Export chat as text/PDF
-      onShare?.();
+      // Open share modal with export tab
+      setShowShareModal(true);
     }
+  };
+
+  const handleProfileClick = () => {
+    setShowProfileModal(true);
+    onProfile?.();
   };
 
   return (
@@ -127,7 +136,7 @@ export function Header({
               </div>
             </div>
             
-            <DropdownMenuItem onClick={onProfile}>
+            <DropdownMenuItem onClick={handleProfileClick}>
               <User className="w-4 h-4 mr-2" />
               Profile & Account
             </DropdownMenuItem>
@@ -180,6 +189,18 @@ export function Header({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Modals */}
+      <ProfileModal 
+        open={showProfileModal} 
+        onOpenChange={setShowProfileModal} 
+      />
+      <ShareModal 
+        open={showShareModal} 
+        onOpenChange={setShowShareModal}
+        chatId={currentChatId}
+        chatTitle={currentChatTitle}
+      />
     </header>
   );
 } 

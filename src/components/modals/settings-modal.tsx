@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +36,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [settings, setSettings] = useState({
     theme: 'system',
     language: 'en',
+    autoSave: true,
     notifications: {
       email: true,
       push: false,
@@ -53,6 +54,99 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       shareUsage: false
     }
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load settings from localStorage and Supabase on mount
+  useEffect(() => {
+    if (open) {
+      loadSettings();
+    }
+  }, [open]);
+
+  const loadSettings = async () => {
+    setIsLoading(true);
+    try {
+      // Load from localStorage first for immediate UI update
+      const localSettings = localStorage.getItem('convocore-settings');
+      if (localSettings) {
+        const parsed = JSON.parse(localSettings);
+        setSettings(prev => ({ ...prev, ...parsed }));
+      }
+
+      // Then try to load from Supabase
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userSettings, error } = await supabase
+          .from('users')
+          .select('settings')
+          .eq('id', user.id)
+          .single();
+
+        if (!error && userSettings?.settings) {
+          setSettings(prev => ({ ...prev, ...userSettings.settings }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveSettings = async (newSettings: typeof settings) => {
+    try {
+      // Save to localStorage immediately
+      localStorage.setItem('convocore-settings', JSON.stringify(newSettings));
+      
+      // Apply theme changes immediately
+      if (newSettings.theme !== settings.theme) {
+        applyTheme(newSettings.theme);
+      }
+
+      // Save to Supabase
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('users')
+          .upsert({
+            id: user.id,
+            settings: newSettings,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Error saving settings to Supabase:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+  };
+
+  const applyTheme = (theme: string) => {
+    const root = document.documentElement;
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // System theme
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+  };
 
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
@@ -64,10 +158,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     { id: 'billing', label: 'Billing', icon: CreditCard },
   ] as const;
 
-  const handleSave = () => {
-    console.log('Saving settings:', settings);
-    // In a real app, this would save to backend
-    onOpenChange?.(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveSettings(settings);
+      onOpenChange?.(false);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateSettings = (updates: Partial<typeof settings>) => {
+    const newSettings = { ...settings, ...updates };
+    setSettings(newSettings);
+    // Auto-save certain settings immediately
+    if (updates.theme) {
+      saveSettings(newSettings);
+    }
   };
 
   const renderTabContent = () => {
@@ -79,7 +188,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <label className="text-sm font-medium text-gray-900 dark:text-white">Language</label>
               <select 
                 value={settings.language}
-                onChange={(e) => setSettings(prev => ({ ...prev, language: e.target.value }))}
+                onChange={(e) => updateSettings({ language: e.target.value })}
                 className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 <option value="en">English</option>
@@ -94,7 +203,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <label className="text-sm font-medium text-gray-900 dark:text-white">Auto-save conversations</label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Automatically save your conversations for future reference</p>
               <label className="flex items-center mt-2">
-                <input type="checkbox" defaultChecked className="rounded border-gray-300 dark:border-zinc-600" />
+                <input 
+                  type="checkbox" 
+                  checked={settings.autoSave}
+                  onChange={(e) => updateSettings({ autoSave: e.target.checked })}
+                  className="rounded border-gray-300 dark:border-zinc-600" 
+                />
                 <span className="ml-2 text-sm">Enable auto-save</span>
               </label>
             </div>
@@ -236,7 +350,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       name="theme"
                       value={value}
                       checked={settings.theme === value}
-                      onChange={(e) => setSettings(prev => ({ ...prev, theme: e.target.value }))}
+                      onChange={(e) => updateSettings({ theme: e.target.value })}
                       className="border-gray-300 dark:border-zinc-600" 
                     />
                     <Icon className="w-4 h-4 ml-2 mr-1" />
@@ -439,9 +553,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Button variant="outline" onClick={() => onOpenChange?.(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="gap-2">
+              <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>

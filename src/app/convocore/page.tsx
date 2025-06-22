@@ -171,6 +171,7 @@ export default function ConvocorePage() {
         {/* Header */}
         <Header
           currentChatTitle={getCurrentChatTitle()}
+          currentChatId={activeChatId || undefined}
           onShare={handleShare}
           onSettings={handleSettings}
           onProfile={handleProfile}
