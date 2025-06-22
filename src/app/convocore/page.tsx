@@ -27,6 +27,24 @@ export default function ConvocorePage() {
 
   const loadChats = async () => {
     try {
+      // Check if user is authenticated via wallet or Supabase
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected) {
+        // For wallet users, load chats from localStorage or provide demo data
+        const savedChats = localStorage.getItem('wallet_chats');
+        if (savedChats) {
+          const parsedChats = JSON.parse(savedChats);
+          setChats(parsedChats);
+        } else {
+          // Start with empty chat list for new wallet users
+          setChats([]);
+        }
+        console.log('Loaded chats for wallet user');
+        return;
+      }
+
+      // For Supabase authenticated users
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
@@ -59,11 +77,36 @@ export default function ConvocorePage() {
       setChats(formattedChats);
     } catch (error) {
       console.error('Error loading chats:', error);
+      // Fallback to empty chats
+      setChats([]);
     }
   };
 
   const handleNewChat = async () => {
     try {
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected) {
+        // For wallet users, create chat locally
+        const newChatId = `wallet_chat_${Date.now()}`;
+        const newChat: Chat = {
+          id: newChatId,
+          title: `New Chat ${new Date().toLocaleDateString()}`,
+          lastMessage: 'Start a new conversation...',
+          timestamp: new Date(),
+        };
+
+        const updatedChats = [newChat, ...chats];
+        setChats(updatedChats);
+        setActiveChatId(newChatId);
+        
+        // Save to localStorage
+        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+        console.log('Created new chat for wallet user');
+        return;
+      }
+
+      // For Supabase authenticated users
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
@@ -116,7 +159,14 @@ export default function ConvocorePage() {
     }
     
     // Remove from local state immediately for better UX
-    setChats(prev => prev.filter(chat => chat.id !== chatId));
+    const updatedChats = chats.filter(chat => chat.id !== chatId);
+    setChats(updatedChats);
+    
+    // If wallet user, also update localStorage
+    const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+    if (walletConnected) {
+      localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+    }
   };
 
   const handleSendMessage = (message: string, model: string) => {
@@ -138,9 +188,38 @@ export default function ConvocorePage() {
     // In a real app, this would open profile management
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log("Logging out");
-    // In a real app, this would handle logout
+    
+    const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+    
+    if (walletConnected) {
+      // Clear wallet authentication
+      localStorage.removeItem('wallet_connected');
+      localStorage.removeItem('wallet_address');
+      localStorage.removeItem('wallet_type');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('wallet_chats');
+      
+      // Clear cookies
+      document.cookie = 'wallet_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'wallet_address=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'wallet_type=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
+      // Redirect to login
+      window.location.href = '/auth/login';
+    } else {
+      // Handle Supabase logout
+      try {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        await supabase.auth.signOut();
+        window.location.href = '/auth/login';
+      } catch (error) {
+        console.error('Error logging out:', error);
+        window.location.href = '/auth/login';
+      }
+    }
   };
 
   const getCurrentChatTitle = () => {
