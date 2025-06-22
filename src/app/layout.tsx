@@ -8,10 +8,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Convocore - AI Meets Web3",
-    default: "Convocore - Where AI Meets Web3 | Advanced AI Chat with Blockchain Payments"
+    template: "%s | Convocore",
+    default: "Convocore - AI Meets Web3"
   },
-  description: "Advanced AI chat platform with blockchain payments. Experience intelligent conversations, code generation, and Web3 integration with secure USDT payments on TRON blockchain.",
+  description: "AI chat with blockchain payments. Secure USDT payments on TRON blockchain.",
   keywords: [
     "AI chat", "conversational AI", "blockchain payments", "USDT payments", "TRON", 
     "Web3 AI", "code generation", "smart contracts", "crypto payments", "AI assistant",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Convocore Team" }],
   creator: "Convocore",
   publisher: "Convocore",
-  metadataBase: new URL('https://convocore.ai'),
+  metadataBase: new URL('https://convocore.site'),
   robots: {
     index: true,
     follow: true,
@@ -35,10 +35,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://convocore.ai',
+    url: 'https://convocore.site',
     siteName: 'Convocore',
-    title: 'Convocore - Where AI Meets Web3',
-    description: 'Advanced AI chat platform with blockchain payments. Experience intelligent conversations with secure USDT payments.',
+    title: 'Convocore - AI Meets Web3',
+    description: 'AI chat with blockchain payments. Secure USDT payments on TRON blockchain.',
     images: [
       {
         url: '/og-image.png',
@@ -50,8 +50,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Convocore - Where AI Meets Web3',
-    description: 'Advanced AI chat platform with blockchain payments. Experience intelligent conversations with secure USDT payments.',
+    title: 'Convocore - AI Meets Web3',
+    description: 'AI chat with blockchain payments. Secure USDT payments on TRON blockchain.',
     images: ['/twitter-image.png'],
     creator: '@convocore',
   },
@@ -122,8 +122,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "Convocore",
-              "description": "Advanced AI chat platform with blockchain payments",
-              "url": "https://convocore.ai",
+              "description": "AI chat with blockchain payments",
+              "url": "https://convocore.site",
               "applicationCategory": "BusinessApplication",
               "operatingSystem": "Web Browser",
               "offers": [
@@ -132,32 +132,30 @@ export default function RootLayout({
                   "name": "Free Plan",
                   "price": "0",
                   "priceCurrency": "USD",
-                  "description": "3 chats per day with basic AI features"
+                  "description": "3 chats per day"
                 },
                 {
                   "@type": "Offer", 
                   "name": "Pro Plan",
                   "price": "20",
                   "priceCurrency": "USDT",
-                  "description": "Unlimited chats with advanced AI features"
+                  "description": "Unlimited chats"
                 },
                 {
                   "@type": "Offer",
                   "name": "Premium Plan", 
                   "price": "40",
                   "priceCurrency": "USDT",
-                  "description": "All features plus priority support and advanced models"
+                  "description": "All features plus priority support"
                 }
               ],
               "featureList": [
-                "AI-powered conversations",
-                "Code generation and debugging", 
-                "Blockchain payment integration",
-                "USDT payments on TRON",
-                "Multi-language support",
+                "AI conversations",
+                "Code generation", 
+                "Blockchain payments",
+                "USDT payments",
                 "Real-time responses",
-                "Secure and private",
-                "Cross-platform compatibility"
+                "Secure and private"
               ]
             })
           }}
