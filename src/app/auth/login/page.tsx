@@ -73,30 +73,51 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      console.log('Starting wallet authentication...', { walletAddress, walletType });
+      
       // Create or get user with wallet address
       const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) {
+        console.error('Supabase auth error:', error);
         setError(error.message);
         return;
       }
 
+      console.log('Anonymous auth successful:', data.user?.id);
+
       // Store wallet address and type in user metadata or separate table
       if (data.user) {
-        await supabase
-          .from('users')
-          .upsert({
-            id: data.user.id,
-            wallet_address: walletAddress,
-            wallet_type: walletType,
-            subscription_tier: 'free',
-            created_at: new Date().toISOString(),
-          });
+        try {
+          const { error: upsertError } = await supabase
+            .from('users')
+            .upsert({
+              id: data.user.id,
+              email: null, // Allow null for wallet-only users
+              wallet_address: walletAddress,
+              wallet_type: walletType,
+              subscription_tier: 'free',
+              created_at: new Date().toISOString(),
+            });
 
-        router.push(redirectTo);
-        router.refresh();
+          if (upsertError) {
+            console.error('Error saving user data:', upsertError);
+            // Don't block login for this error, continue with redirect
+          } else {
+            console.log('User data saved successfully');
+          }
+        } catch (dbError) {
+          console.error('Database operation failed:', dbError);
+          // Continue with redirect even if database fails
+        }
+
+        console.log('Redirecting to:', redirectTo);
+        
+        // Use window.location for more reliable redirect
+        window.location.href = redirectTo;
       }
     } catch (err) {
+      console.error('Wallet authentication error:', err);
       setError('Wallet authentication failed');
     } finally {
       setLoading(false);
