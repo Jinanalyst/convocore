@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // Get user ID from headers or session
-    const userId = request.headers.get('x-user-id') || 'demo-user';
+    // const userId = request.headers.get('x-user-id') || 'demo-user';
     const walletAddress = request.headers.get('x-wallet-address');
     
     // In a real app, this would fetch from TRON blockchain API
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { txHash, amount, currency, plan } = await request.json();
-    const userId = request.headers.get('x-user-id') || 'demo-user';
+    // const userId = request.headers.get('x-user-id') || 'demo-user';
     const walletAddress = request.headers.get('x-wallet-address');
     
     // Validate required fields

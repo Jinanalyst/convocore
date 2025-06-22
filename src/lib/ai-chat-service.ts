@@ -6,7 +6,7 @@ export class AIChatService {
       // Update usage in localStorage for immediate UI updates
       if (typeof window !== 'undefined') {
         const currentUsage = localStorage.getItem('user_usage');
-        let usage = currentUsage ? JSON.parse(currentUsage) : {
+        const usage = currentUsage ? JSON.parse(currentUsage) : {
           aiRequests: 0,
           apiCalls: 0,
           tokensUsed: 0,

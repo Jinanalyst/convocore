@@ -3,7 +3,6 @@ import { sendChatMessage, getModelConfig, type ChatMessage, type AIServiceConfig
 import { detectAgentFromMessage } from '@/lib/model-agents';
 import { memoryService } from '@/lib/memory-service';
 import { createServerComponentClient } from '@/lib/supabase';
-import { cookies } from 'next/headers';
 
 // Simple language detection function
 function detectLanguage(text: string): string {

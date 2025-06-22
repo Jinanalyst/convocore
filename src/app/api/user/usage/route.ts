@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     // Get user ID from headers or session
-    const userId = request.headers.get('x-user-id') || 'demo-user';
+    // const userId = request.headers.get('x-user-id') || 'demo-user';
     
     // In a real app, this would fetch from database
     // For now, return demo data that matches the frontend

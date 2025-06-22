@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { createClientComponentClient } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ConvocoreLogo } from '@/components/ui/convocore-logo';
 import { WalletConnector } from '@/components/ui/wallet-connector';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function LoginPage() {
         }
 
         setMagicLinkSent(true);
-      } catch (err) {
+      } catch {
         setError('Failed to send magic link');
       } finally {
         setLoading(false);
@@ -64,7 +64,7 @@ export default function LoginPage() {
           router.push(redirectTo);
           router.refresh();
         }
-      } catch (err) {
+      } catch {
         setError('An unexpected error occurred');
       } finally {
         setLoading(false);
@@ -87,7 +87,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -346,7 +346,7 @@ export default function LoginPage() {
 
         <div className="text-center">
           <p className="text-sm text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link
               href="/auth/signup"
               className="text-white hover:text-gray-300 transition-colors font-medium"
@@ -357,5 +357,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 } 
