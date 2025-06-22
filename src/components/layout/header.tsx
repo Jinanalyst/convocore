@@ -25,6 +25,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/modals/profile-modal";
 import { ShareModal } from "@/components/modals/share-modal";
+import { NotificationsModal } from "@/components/modals/notifications-modal";
+import { notificationService } from "@/lib/notification-service";
 
 interface HeaderProps {
   className?: string;
@@ -49,6 +51,8 @@ export function Header({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [userInfo, setUserInfo] = useState({
     name: 'Loading...',
     email: 'Loading...',
@@ -81,6 +85,13 @@ export function Header({
   // Load user information on component mount
   useEffect(() => {
     loadUserInfo();
+
+    // Subscribe to notifications
+    const unsubscribe = notificationService.subscribe((state) => {
+      setUnreadCount(state.unreadCount);
+    });
+
+    return unsubscribe;
   }, []);
 
   const loadUserInfo = async () => {
@@ -199,6 +210,21 @@ export function Header({
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Notifications Button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setShowNotificationsModal(true)}
+          className="relative"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Button>
+
         {/* Settings Button */}
         <Button variant="ghost" size="sm" onClick={onSettings}>
           <Settings className="w-4 h-4" />
@@ -298,6 +324,10 @@ export function Header({
         onOpenChange={setShowShareModal}
         chatId={currentChatId}
         chatTitle={currentChatTitle}
+      />
+      <NotificationsModal
+        open={showNotificationsModal}
+        onOpenChange={setShowNotificationsModal}
       />
     </header>
   );

@@ -38,6 +38,18 @@ export class AIChatService {
         contextualResponse = `${randomResponse} Regarding "${prompt}", I think this is a topic worth exploring further. Would you like me to elaborate on any particular aspect?`;
       }
       
+      // Trigger notification when user is away from page
+      if (typeof window !== 'undefined' && document.hidden) {
+        // Import notification service dynamically to avoid SSR issues
+        import('./notification-service').then(({ notificationService }) => {
+          notificationService.notifyChatComplete(
+            'Chat Response Ready',
+            contextualResponse.slice(0, 100) + (contextualResponse.length > 100 ? '...' : ''),
+            undefined // chatId would be passed from the calling component
+          );
+        });
+      }
+
       return contextualResponse;
       
     } catch (error) {
