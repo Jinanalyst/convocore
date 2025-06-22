@@ -139,10 +139,10 @@ export function PricingSection() {
 
                 {/* CTA Button */}
                 <Button
-                  variant={plan.buttonVariant}
-                  className={`w-full py-3 font-medium ${
-                    plan.popular 
-                      ? "bg-black hover:bg-gray-800 text-white" 
+                  variant={plan.buttonText === "Subscribe with USDT" ? "default" : "outline"}
+                  className={`w-full py-3 font-medium transition-all duration-200 ${
+                    plan.buttonText === "Subscribe with USDT"
+                      ? "bg-black hover:bg-gray-800 text-white border-black font-semibold" 
                       : "border-black text-black hover:bg-black hover:text-white"
                   }`}
                 >
