@@ -86,6 +86,7 @@ export function Sidebar({
     try {
       // Check if wallet is connected first
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
       
       if (walletConnected) {
         // For wallet users, load chats from localStorage
@@ -102,6 +103,24 @@ export function Sidebar({
           setChats([]);
         }
         console.log('Loaded chats for wallet user');
+        return;
+      }
+
+      if (magicLinkAuth) {
+        // For magic link users, load chats from localStorage
+        const savedChats = localStorage.getItem('magic_link_chats');
+        if (savedChats) {
+          try {
+            const parsedChats = JSON.parse(savedChats);
+            setChats(parsedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            setChats([]);
+          }
+        } else {
+          setChats([]);
+        }
+        console.log('Loaded chats for magic link user');
         return;
       }
 
@@ -246,6 +265,18 @@ export function Sidebar({
     e.stopPropagation();
     if (action === 'delete') {
       try {
+        // Check authentication method
+        const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+        const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
+        
+        if (walletConnected || magicLinkAuth) {
+          // For wallet and magic link users, just update local state and delegate to parent
+          setChats(prev => prev.filter(chat => chat.id !== chatId));
+          onDeleteChat?.(chatId);
+          return;
+        }
+
+        // For Supabase users, delete from database
         const { createClientComponentClient } = await import('@/lib/supabase');
         const supabase = createClientComponentClient();
         
@@ -271,6 +302,18 @@ export function Sidebar({
 
   const handleNewChat = async () => {
     try {
+      // Check authentication method
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
+      
+      if (walletConnected || magicLinkAuth) {
+        // For wallet and magic link users, delegate to parent component
+        // The parent component will handle the localStorage operations
+        onNewChat?.();
+        return;
+      }
+
+      // For Supabase users, create in database
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       

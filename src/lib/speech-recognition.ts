@@ -90,19 +90,47 @@ export class SpeechService {
     }
   }
 
-  public startListening(
+  public async startListening(
     onResult: (transcript: string, isFinal: boolean) => void,
     onError: (error: string) => void,
     onStart?: () => void,
     onEnd?: () => void
-  ): void {
+  ): Promise<void> {
     if (!this.recognition) {
       onError('Speech recognition not supported');
       return;
     }
 
+    // Check if we're on HTTPS or localhost
+    if (typeof window !== 'undefined') {
+      const isSecure = window.location.protocol === 'https:' || 
+                      window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1';
+      
+      if (!isSecure) {
+        onError('Speech recognition requires HTTPS. Please use a secure connection.');
+        return;
+      }
+    }
+
+    try {
+      // Request microphone permission first
+      const hasPermission = await this.requestMicrophonePermission();
+      if (!hasPermission) {
+        onError('Microphone permission denied. Please enable microphone access and try again.');
+        return;
+      }
+    } catch (permissionError) {
+      onError('Failed to access microphone. Please check your permissions.');
+      return;
+    }
+
     // Reset recognition
-    this.recognition.abort();
+    try {
+      this.recognition.abort();
+    } catch (abortError) {
+      // Ignore abort errors
+    }
 
     this.recognition.onstart = () => {
       console.log('Speech recognition started');
@@ -150,6 +178,9 @@ export class SpeechService {
         case 'service-not-allowed':
           userFriendlyError = 'Speech recognition service not allowed. Please use HTTPS or enable permissions.';
           break;
+        case 'aborted':
+          userFriendlyError = 'Speech recognition was stopped.';
+          break;
         case 'bad-grammar':
           userFriendlyError = 'Speech recognition grammar error.';
           break;
@@ -168,7 +199,8 @@ export class SpeechService {
     try {
       this.recognition.start();
     } catch (error) {
-      onError('Failed to start speech recognition');
+      console.error('Failed to start speech recognition:', error);
+      onError('Failed to start speech recognition. Please try again.');
     }
   }
 

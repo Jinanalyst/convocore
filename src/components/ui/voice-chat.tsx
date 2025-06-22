@@ -181,7 +181,7 @@ export function VoiceChat({
     return () => clearTimeout(timeout);
   }, [demoMode, onStart, onStop, duration]);
 
-  const handleToggleListening = () => {
+  const handleToggleListening = async () => {
     if (demoMode) return;
     
     if (!isSupported) {
@@ -208,37 +208,46 @@ export function VoiceChat({
       setIsListening(true);
       onStart?.();
       
-      speechService.startListening(
-        (text: string, isFinal: boolean) => {
-          setTranscript(text);
-          onTranscript?.(text, isFinal);
-          
-          if (isFinal) {
-            // Automatically stop and process the final transcript
-            setIsListening(false);
-            setIsProcessing(true);
-            onStop?.(duration);
+      try {
+        await speechService.startListening(
+          (text: string, isFinal: boolean) => {
+            setTranscript(text);
+            onTranscript?.(text, isFinal);
             
-            setTimeout(() => {
-              onSubmit?.(text);
-              setDuration(0);
-            }, 500);
+            if (isFinal) {
+              // Automatically stop and process the final transcript
+              setIsListening(false);
+              setIsProcessing(true);
+              onStop?.(duration);
+              
+              setTimeout(() => {
+                onSubmit?.(text);
+                setTranscript("");
+                setDuration(0);
+                setIsProcessing(false);
+              }, 500);
+            }
+          },
+          (error: string) => {
+            setError(error);
+            setIsListening(false);
+            setDuration(0);
+          },
+          () => {
+            // Started successfully
+            console.log('Speech recognition started');
+          },
+          () => {
+            // Ended
+            setIsListening(false);
           }
-        },
-        (error: string) => {
-          setError(error);
-          setIsListening(false);
-          setDuration(0);
-        },
-        () => {
-          // Started successfully
-          console.log('Speech recognition started');
-        },
-        () => {
-          // Ended
-          setIsListening(false);
-        }
-      );
+        );
+      } catch (startError) {
+        console.error('Failed to start speech recognition:', startError);
+        setError('Failed to start speech recognition. Please try again.');
+        setIsListening(false);
+        setDuration(0);
+      }
     }
   };
 

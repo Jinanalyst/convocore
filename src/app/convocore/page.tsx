@@ -27,11 +27,12 @@ export default function ConvocorePage() {
 
   const loadChats = async () => {
     try {
-      // Check if user is authenticated via wallet or Supabase
+      // Check if user is authenticated via wallet, magic link, or Supabase
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
       
       if (walletConnected) {
-        // For wallet users, load chats from localStorage or provide demo data
+        // For wallet users, load chats from localStorage
         const savedChats = localStorage.getItem('wallet_chats');
         if (savedChats) {
           try {
@@ -46,6 +47,25 @@ export default function ConvocorePage() {
           setChats([]);
         }
         console.log('Loaded chats for wallet user');
+        return;
+      }
+
+      if (magicLinkAuth) {
+        // For magic link users, load chats from localStorage
+        const savedChats = localStorage.getItem('magic_link_chats');
+        if (savedChats) {
+          try {
+            const parsedChats = JSON.parse(savedChats);
+            setChats(parsedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            setChats([]);
+          }
+        } else {
+          // Start with empty chat list for new magic link users
+          setChats([]);
+        }
+        console.log('Loaded chats for magic link user');
         return;
       }
 
@@ -115,6 +135,7 @@ export default function ConvocorePage() {
   const handleNewChat = async () => {
     try {
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
       
       if (walletConnected) {
         // For wallet users, create chat locally
@@ -133,6 +154,26 @@ export default function ConvocorePage() {
         // Save to localStorage
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
         console.log('Created new chat for wallet user');
+        return;
+      }
+
+      if (magicLinkAuth) {
+        // For magic link users, create chat locally
+        const newChatId = `magic_chat_${Date.now()}`;
+        const newChat: Chat = {
+          id: newChatId,
+          title: `New Chat ${new Date().toLocaleDateString()}`,
+          lastMessage: 'Start a new conversation...',
+          timestamp: new Date(),
+        };
+
+        const updatedChats = [newChat, ...chats];
+        setChats(updatedChats);
+        setActiveChatId(newChatId);
+        
+        // Save to localStorage
+        localStorage.setItem('magic_link_chats', JSON.stringify(updatedChats));
+        console.log('Created new chat for magic link user');
         return;
       }
 
@@ -192,16 +233,164 @@ export default function ConvocorePage() {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
     setChats(updatedChats);
     
-    // If wallet user, also update localStorage
+    // Check authentication method and update storage accordingly
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+    const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
+    
     if (walletConnected) {
+      // If wallet user, also update localStorage
       localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+    } else if (magicLinkAuth) {
+      // If magic link user, also update localStorage
+      localStorage.setItem('magic_link_chats', JSON.stringify(updatedChats));
     }
+    // For Supabase users, the deletion is handled in the sidebar component
   };
 
-  const handleSendMessage = (message: string, model: string, includeWebSearch?: boolean) => {
+  const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
-    // In a real app, this would send the message to the AI service
+    
+    if (!activeChatId) {
+      // If no active chat, create one first
+      await handleNewChat();
+    }
+
+    if (!activeChatId) {
+      console.error("No active chat available");
+      return;
+    }
+
+    try {
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
+      
+      if (walletConnected) {
+        // For wallet users, save to localStorage
+        const savedChats = localStorage.getItem('wallet_chats');
+        let existingChats: Chat[] = [];
+        
+        if (savedChats) {
+          try {
+            existingChats = JSON.parse(savedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            existingChats = [];
+          }
+        }
+
+        // Update the current chat with the new message
+        const updatedChats = existingChats.map(chat => {
+          if (chat.id === activeChatId) {
+            return {
+              ...chat,
+              lastMessage: message.length > 50 ? message.substring(0, 50) + '...' : message,
+              timestamp: new Date()
+            };
+          }
+          return chat;
+        });
+
+        // Save back to localStorage
+        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+        setChats(updatedChats);
+        
+        console.log('Message saved for wallet user');
+        return;
+      }
+
+      if (magicLinkAuth) {
+        // For magic link users, save to localStorage with magic link prefix
+        const savedChats = localStorage.getItem('magic_link_chats');
+        let existingChats: Chat[] = [];
+        
+        if (savedChats) {
+          try {
+            existingChats = JSON.parse(savedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            existingChats = [];
+          }
+        }
+
+        // Update the current chat with the new message
+        const updatedChats = existingChats.map(chat => {
+          if (chat.id === activeChatId) {
+            return {
+              ...chat,
+              lastMessage: message.length > 50 ? message.substring(0, 50) + '...' : message,
+              timestamp: new Date()
+            };
+          }
+          return chat;
+        });
+
+        // Save back to localStorage
+        localStorage.setItem('magic_link_chats', JSON.stringify(updatedChats));
+        setChats(updatedChats);
+        
+        console.log('Message saved for magic link user');
+        return;
+      }
+
+      // For Supabase users, save to database
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        const { createClientComponentClient } = await import('@/lib/supabase');
+        const supabase = createClientComponentClient();
+        
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('User not authenticated');
+          return;
+        }
+
+        // Save message to database
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: activeChatId,
+            content: message,
+            role: 'user',
+            model: model
+          });
+
+        if (messageError) {
+          console.error('Error saving message:', messageError);
+          return;
+        }
+
+        // Update conversation timestamp
+        const { error: updateError } = await supabase
+          .from('conversations')
+          .update({ 
+            updated_at: new Date().toISOString(),
+            model: model
+          })
+          .eq('id', activeChatId);
+
+        if (updateError) {
+          console.error('Error updating conversation:', updateError);
+        }
+
+        // Update local chat state
+        const updatedChats = chats.map(chat => {
+          if (chat.id === activeChatId) {
+            return {
+              ...chat,
+              lastMessage: message.length > 50 ? message.substring(0, 50) + '...' : message,
+              timestamp: new Date()
+            };
+          }
+          return chat;
+        });
+
+        setChats(updatedChats);
+        console.log('Message saved to Supabase');
+      }
+
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
   };
 
   const handleUseLibraryItem = (item: any) => {
