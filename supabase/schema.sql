@@ -46,6 +46,15 @@ CREATE TABLE public.messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Conversation History table for memory-aware AI (as requested)
+CREATE TABLE public.convo_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    role TEXT CHECK (role IN ('user', 'assistant')) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Payments table
 CREATE TABLE public.payments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -64,6 +73,8 @@ CREATE INDEX idx_conversations_user_id ON public.conversations(user_id);
 CREATE INDEX idx_conversations_created_at ON public.conversations(created_at DESC);
 CREATE INDEX idx_messages_conversation_id ON public.messages(conversation_id);
 CREATE INDEX idx_messages_created_at ON public.messages(created_at);
+CREATE INDEX idx_convo_history_user_id ON public.convo_history(user_id);
+CREATE INDEX idx_convo_history_created_at ON public.convo_history(created_at DESC);
 CREATE INDEX idx_payments_user_id ON public.payments(user_id);
 CREATE INDEX idx_payments_transaction_hash ON public.payments(transaction_hash);
 CREATE INDEX idx_payments_status ON public.payments(status);
@@ -72,6 +83,7 @@ CREATE INDEX idx_payments_status ON public.payments(status);
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.convo_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
@@ -112,6 +124,13 @@ CREATE POLICY "Users can create messages in own conversations" ON public.message
             AND conversations.user_id = auth.uid()
         )
     );
+
+-- Conversation History policies
+CREATE POLICY "Users can view own conversation history" ON public.convo_history
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own conversation history" ON public.convo_history
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Payments policies
 CREATE POLICY "Users can view own payments" ON public.payments

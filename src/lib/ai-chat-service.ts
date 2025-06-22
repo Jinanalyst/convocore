@@ -1,8 +1,57 @@
 // AI Chat Service for Voice Integration
 export class AIChatService {
   
+  private trackUsage(type: 'aiRequests' | 'apiCalls' | 'tokensUsed', increment: number = 1) {
+    try {
+      // Update usage in localStorage for immediate UI updates
+      if (typeof window !== 'undefined') {
+        const currentUsage = localStorage.getItem('user_usage');
+        let usage = currentUsage ? JSON.parse(currentUsage) : {
+          aiRequests: 0,
+          apiCalls: 0,
+          tokensUsed: 0,
+          storageUsed: 2.4,
+          monthlyLimit: {
+            aiRequests: 'unlimited',
+            apiCalls: 'unlimited',
+            tokensUsed: 100000,
+            storageUsed: 10
+          }
+        };
+        
+        usage[type] += increment;
+        localStorage.setItem('user_usage', JSON.stringify(usage));
+        localStorage.setItem(type === 'aiRequests' ? 'ai_requests' : 
+                          type === 'apiCalls' ? 'api_calls' : 'tokens_used', 
+                          usage[type].toString());
+        
+        // Update global usage counter if available
+        if ((window as any).updateUsageCount) {
+          (window as any).updateUsageCount(type, increment);
+        }
+      }
+      
+      // Also send to API for server-side tracking
+      fetch('/api/user/usage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, increment })
+      }).catch(error => {
+        console.warn('Failed to track usage on server:', error);
+      });
+    } catch (error) {
+      console.warn('Failed to track usage:', error);
+    }
+  }
+  
   async generateResponse(prompt: string): Promise<string> {
     try {
+      // Track AI request usage
+      this.trackUsage('aiRequests', 1);
+      this.trackUsage('tokensUsed', prompt.length); // Rough token estimation
+      
       // For now, we'll simulate an AI response
       // In a real implementation, this would call your AI service (OpenAI, Anthropic, etc.)
       
@@ -58,8 +107,29 @@ export class AIChatService {
     }
   }
 
-  async submitToRealAI(prompt: string, model: string = 'gpt-4o'): Promise<string> {
+  async submitToRealAI(prompt: string, model: string = 'gpt-4o', includeMemory: boolean = true): Promise<string> {
     try {
+      // Track AI request and API call usage
+      this.trackUsage('aiRequests', 1);
+      this.trackUsage('apiCalls', 1);
+      this.trackUsage('tokensUsed', prompt.length); // Rough token estimation
+      
+      // Get memory context if user is authenticated and memory is enabled
+      let enhancedPrompt = prompt;
+      if (includeMemory && typeof window !== 'undefined') {
+        try {
+          const response = await fetch('/api/memory?action=context&limit=6');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.context) {
+              enhancedPrompt = `${data.context}\n\nHuman: ${prompt}`;
+            }
+          }
+        } catch (error) {
+          console.warn('Could not fetch memory context:', error);
+        }
+      }
+      
       // Map Convocore model names to actual API model IDs
       const modelMapping: { [key: string]: string } = {
         'gpt-4o': 'gpt-4o',
@@ -76,7 +146,7 @@ export class AIChatService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: prompt,
+          message: enhancedPrompt,
           model: apiModel,
           conversationId: null, // for voice, we'll use a new conversation each time
           stream: false // ensure we get a complete response for voice

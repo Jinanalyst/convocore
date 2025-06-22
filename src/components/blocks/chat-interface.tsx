@@ -2,6 +2,7 @@
 
 import { ConvoAILogo } from "@/components/ui/convo-ai-logo";
 import { AIInputDemo } from "@/components/blocks/ai-input-demo";
+import { MemoryStatus } from "@/components/ui/memory-status";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Bot, MessageCircle } from "lucide-react";
@@ -145,9 +146,19 @@ export function ChatInterface() {
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
                 Welcome to Convocore
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
                 Your intelligent conversational AI platform. Start a conversation, explore our library, or configure your AI model settings.
               </p>
+              
+              {/* Memory Status */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mb-8"
+              >
+                <MemoryStatus className="max-w-md mx-auto" />
+              </motion.div>
 
               {/* Feature Cards */}
               <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">

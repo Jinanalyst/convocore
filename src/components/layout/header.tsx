@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/modals/profile-modal";
 import { ShareModal } from "@/components/modals/share-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
+import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
 import NextLink from "next/link";
 
@@ -54,6 +55,7 @@ export function Header({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showBillingModal, setShowBillingModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userInfo, setUserInfo] = useState({
     name: 'Loading...',
@@ -285,7 +287,7 @@ export function Header({
               Profile & Account
             </DropdownMenuItem>
             
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowBillingModal(true)}>
               <CreditCard className="w-4 h-4 mr-2" />
               Billing & Usage
             </DropdownMenuItem>
@@ -348,6 +350,10 @@ export function Header({
       <NotificationsModal
         open={showNotificationsModal}
         onOpenChange={setShowNotificationsModal}
+      />
+      <BillingModal
+        open={showBillingModal}
+        onOpenChange={setShowBillingModal}
       />
     </header>
   );

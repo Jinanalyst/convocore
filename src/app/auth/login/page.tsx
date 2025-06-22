@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [loginMode, setLoginMode] = useState<'password' | 'magic'>('password');
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,25 +26,49 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    if (loginMode === 'magic') {
+      // Handle magic link
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          },
+        });
 
-      if (error) {
-        setError(error.message);
-        return;
-      }
+        if (error) {
+          setError(error.message);
+          return;
+        }
 
-      if (data.user) {
-        router.push(redirectTo);
-        router.refresh();
+        setMagicLinkSent(true);
+      } catch (err) {
+        setError('Failed to send magic link');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
+    } else {
+      // Handle password login
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          setError(error.message);
+          return;
+        }
+
+        if (data.user) {
+          router.push(redirectTo);
+          router.refresh();
+        }
+      } catch (err) {
+        setError('An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -125,6 +151,51 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Login Mode Toggle */}
+        <div className="flex bg-gray-900 rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => setLoginMode('password')}
+            className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+              loginMode === 'password'
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Password Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoginMode('magic')}
+            className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+              loginMode === 'magic'
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Magic Link
+          </button>
+        </div>
+
+        {/* Success Message for Magic Link */}
+        {magicLinkSent && (
+          <div className="bg-green-900/20 border border-green-500 text-green-400 px-4 py-3 rounded">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-400">Magic link sent!</h3>
+                <p className="mt-1 text-sm text-green-300">
+                  Check your email for a secure login link. Click the link to sign in instantly.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Login Form */}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
@@ -151,54 +222,73 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                placeholder="Enter your password"
-              />
-            </div>
+            {loginMode === 'password' && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                  placeholder="Enter your password"
+                />
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 bg-gray-900 border-gray-700 rounded focus:ring-gray-500"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
-                Remember me
-              </label>
-            </div>
+          {loginMode === 'password' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 bg-gray-900 border-gray-700 rounded focus:ring-gray-500"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                  Remember me
+                </label>
+              </div>
 
-            <div className="text-sm">
-              <Link
-                href="/auth/forgot-password"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Forgot your password?
-              </Link>
+              <div className="text-sm">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
+
+          {loginMode === 'magic' && (
+            <div className="text-center">
+              <p className="text-sm text-gray-400">
+                Enter your email address and we'll send you a secure login link
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || magicLinkSent}
               className="w-full bg-gray-900 hover:bg-gray-800 text-white border border-gray-700"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading 
+                ? 'Processing...' 
+                : magicLinkSent 
+                ? 'Magic Link Sent' 
+                : loginMode === 'magic' 
+                ? 'Send Magic Link' 
+                : 'Sign In'
+              }
             </Button>
 
             <div className="relative">
