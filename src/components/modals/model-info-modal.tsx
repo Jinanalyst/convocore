@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Bot, Zap, Brain, Code, MessageSquare, Star, ExternalLink, Bug, Palette, Image, PenTool, Database, TrendingUp, Rocket, MessageCircle } from 'lucide-react';
+import { Bot, Zap, Brain, Code, MessageSquare, Star, ExternalLink, Bug, Palette, Image, PenTool, Database, TrendingUp, Rocket, MessageCircle, Copy } from 'lucide-react';
 import { CONVO_AGENTS } from '@/lib/model-agents';
 import { cn } from '@/lib/utils';
 
@@ -140,17 +140,23 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
                 return (
                   <div
                     key={index}
-                    className="border border-gray-200 dark:border-zinc-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                    className="border border-gray-200 dark:border-zinc-700 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      navigator.clipboard.writeText(agent.tag);
+                      // Show a toast or notification that the tag was copied
+                    }}
+                    title={`Click to copy ${agent.tag}`}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className={cn("w-6 h-6 rounded flex items-center justify-center text-white", agent.color)}>
                         <AgentIcon className="w-3 h-3" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {agent.tag} - {agent.displayName}
                         </h4>
                       </div>
+                      <Copy className="w-3 h-3 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100" />
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                       {agent.description}

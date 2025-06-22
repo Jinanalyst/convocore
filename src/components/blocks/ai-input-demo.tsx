@@ -14,6 +14,8 @@ import {
   AIInputTools
 } from "@/components/ui/ai-input";
 import { VoiceModal } from "@/components/modals/voice-modal";
+import { AgentSuggestions } from "@/components/ui/agent-suggestions";
+import { ConvoAgent } from "@/lib/model-agents";
 import { Paperclip, Mic, Search, Send } from 'lucide-react';
 import { type FormEventHandler, useState } from 'react';
 
@@ -43,6 +45,7 @@ export function AIInputDemo({
   const [message, setMessage] = useState("");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [showAgentSuggestions, setShowAgentSuggestions] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -60,6 +63,23 @@ export function AIInputDemo({
 
   const toggleWebSearch = () => {
     setWebSearchEnabled(!webSearchEnabled);
+  };
+
+  const handleAgentSelect = (agent: ConvoAgent) => {
+    setMessage(agent.tag + " ");
+    setShowAgentSuggestions(false);
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+    
+    // Show agent suggestions when user types @
+    if (value.includes('@')) {
+      setShowAgentSuggestions(true);
+    } else {
+      setShowAgentSuggestions(false);
+    }
   };
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
@@ -83,14 +103,23 @@ export function AIInputDemo({
 
   return (
     <div className={className}>
-      <AIInput onSubmit={handleSubmit}>
-        <AIInputTextarea 
-          placeholder={placeholder}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          minHeight={48}
-          maxHeight={200}
-        />
+      <div className="relative">
+        <AIInput onSubmit={handleSubmit}>
+          <AIInputTextarea 
+            placeholder={placeholder}
+            value={message}
+            onChange={handleMessageChange}
+            minHeight={48}
+            maxHeight={200}
+          />
+          
+          {/* Agent Suggestions */}
+          {showAgentSuggestions && (
+            <AgentSuggestions
+              query={message}
+              onSelect={handleAgentSelect}
+            />
+          )}
         <AIInputToolbar>
           <AIInputTools>
             <AIInputButton title="Attach file" onClick={() => document.getElementById('file-upload')?.click()}>
@@ -134,7 +163,8 @@ export function AIInputDemo({
             <Send size={16} />
           </AIInputSubmit>
         </AIInputToolbar>
-      </AIInput>
+        </AIInput>
+      </div>
       
       {/* Voice Modal */}
       <VoiceModal 
