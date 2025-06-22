@@ -15,7 +15,7 @@ function HeroDemo() {
     <>
       <Hero
         title="Where AI Meets Web3"
-        subtitle="Chat smarter, code faster, pay seamlessly with USDT. Experience the future of intelligent conversations with advanced AI models, blockchain payments, and powerful features."
+        subtitle="AI chat with secure USDT payments on TRON blockchain."
         actions={[
           {
             label: "Start Chatting Now",
