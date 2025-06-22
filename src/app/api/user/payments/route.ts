@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TronPaymentService, detectPlanFromAmount } from '@/lib/blockchain';
+
+const tronPaymentService = TronPaymentService.getInstance();
 
 export async function GET(request: NextRequest) {
   try {
@@ -96,6 +99,57 @@ export async function POST(request: NextRequest) {
     console.error('Error recording payment:', error);
     return NextResponse.json(
       { error: 'Failed to record payment' },
+      { status: 500 }
+    );
+  }
+}
+
+// New endpoint to verify and auto-detect payment plans
+export async function PUT(request: NextRequest) {
+  try {
+    const { txHash } = await request.json();
+    const userId = request.headers.get('x-user-id') || 'demo-user';
+    
+    if (!txHash) {
+      return NextResponse.json(
+        { error: 'Transaction hash is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the transaction and detect plan automatically
+    const verification = await tronPaymentService.verifyAndProcessIncomingPayment(txHash);
+    
+    if (verification.success && verification.plan && verification.amount) {
+      // Create payment record with auto-detected plan
+      const payment = await tronPaymentService.createPayment(userId, verification.plan);
+      payment.transactionHash = txHash;
+      payment.status = 'confirmed';
+      
+      return NextResponse.json({
+        success: true,
+        payment: {
+          id: Date.now().toString(),
+          date: new Date().toISOString(),
+          amount: verification.amount,
+          currency: 'USDT',
+          plan: verification.plan === 'pro' ? 'Pro Plan' : 'Premium Plan',
+          status: 'confirmed',
+          txHash,
+          detectedPlan: verification.plan,
+          autoDetected: true
+        }
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: verification.error || 'Payment verification failed'
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return NextResponse.json(
+      { error: 'Failed to verify payment' },
       { status: 500 }
     );
   }

@@ -20,10 +20,15 @@ import {
   Database,
   TrendingUp,
   Rocket,
-  MessageCircle
+  MessageCircle,
+  FileText,
+  Volume2,
+  VolumeX,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
+import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 
 interface Message {
   id: string;
@@ -43,6 +48,9 @@ interface ChatAreaProps {
 export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState<ConvoAgent | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load real messages from Supabase
@@ -145,11 +153,39 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle rate limiting specifically
+        if (response.status === 429 && errorData.type === 'RATE_LIMIT_EXCEEDED') {
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: `🚫 ${errorData.error}\n\nYou can upgrade to Pro (20 USDT/month) or Premium (40 USDT/month) for unlimited chats. Visit our pricing page to learn more.`,
+            role: 'assistant',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+          return; // Don't increment usage if rate limited
+        }
+        
         throw new Error(errorData.details || 'Failed to get AI response');
       }
 
       const data = await response.json();
       
+      // Increment local usage tracking after successful response
+      try {
+        const currentUsage = parseInt(localStorage.getItem('daily_chat_usage') || '0');
+        localStorage.setItem('daily_chat_usage', (currentUsage + 1).toString());
+        
+        // Trigger storage event for other components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'daily_chat_usage',
+          newValue: (currentUsage + 1).toString(),
+          oldValue: currentUsage.toString()
+        }));
+      } catch (error) {
+        console.warn('Failed to update local usage tracking:', error);
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.data.content,
@@ -285,56 +321,63 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   if (!chatId && messages.length === 0) {
     return (
-      <div className={cn("flex flex-col h-full", className)}>
+      <div className={cn("flex flex-col h-full bg-gray-50 dark:bg-zinc-950", className)}>
         {/* Welcome Screen */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-2xl px-6">
-            <ConvocoreLogo size="lg" className="justify-center mb-6" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <ConvocoreLogo size="lg" className="justify-center mb-6 sm:mb-8" />
+            
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
               Welcome to Convocore
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-              Your intelligent conversational AI platform. Start a conversation, explore our library, 
-              or configure your AI model settings.
-            </p>
             
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-               <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
-                 <Sparkles className="w-8 h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Smart Conversations</h3>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                   Engage with advanced AI models for natural, intelligent conversations
-                 </p>
-               </div>
-               
-               <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
-                 <Bot className="w-8 h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Custom AI Agents</h3>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                   Create and configure specialized AI agents for specific tasks
-                 </p>
-               </div>
-               
-               <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
-                 <Copy className="w-8 h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Prompt Library</h3>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                   Access a curated collection of prompts and templates
-                 </p>
-               </div>
-             </div>
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed">
+              Your intelligent conversational AI platform. Start a conversation, explore our library, or configure your AI model settings.
+            </p>
+
+            {/* Feature Cards - Mobile Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
+              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow">
+                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Smart Conversations</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Engage with advanced AI models for natural, intelligent conversations
+                </p>
+              </div>
+              
+              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow">
+                <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Custom AI Agents</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Create and configure specialized AI agents for specific tasks
+                </p>
+              </div>
+              
+              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
+                <Copy className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Prompt Library</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Access a curated collection of prompts and templates
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Input Area */}
-        <div className="p-6 border-t border-gray-200 dark:border-zinc-800">
-          <AIInputDemo
-            placeholder="Type your message to start a conversation..."
-            onSubmit={handleSendMessage}
-            onFileUpload={handleFileUpload}
-            onVoiceInput={handleVoiceInput}
-            className="max-w-4xl mx-auto"
-          />
+        <div className="border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            {/* Chat Limit Indicator */}
+            <ChatLimitIndicator className="max-w-4xl mx-auto mb-3 sm:mb-4" />
+            
+            <AIInputDemo
+              placeholder="Type your message to start a conversation..."
+              onSubmit={handleSendMessage}
+              onFileUpload={handleFileUpload}
+              onVoiceInput={handleVoiceInput}
+              className="max-w-4xl mx-auto"
+            />
+          </div>
         </div>
       </div>
     );
@@ -479,6 +522,9 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       {/* Input Area */}
       <div className="p-6 border-t border-gray-200 dark:border-zinc-800">
+        {/* Chat Limit Indicator */}
+        <ChatLimitIndicator className="max-w-4xl mx-auto mb-4" />
+        
         <AIInputDemo
           placeholder="Type your message..."
           onSubmit={handleSendMessage}

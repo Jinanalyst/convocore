@@ -3,6 +3,7 @@ import { sendChatMessage, getModelConfig, type ChatMessage, type AIServiceConfig
 import { detectAgentFromMessage } from '@/lib/model-agents';
 import { memoryService } from '@/lib/memory-service';
 import { createServerComponentClient } from '@/lib/supabase';
+import { getRateLimit, canMakeRequest, incrementUsage } from '@/lib/auth';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
@@ -26,15 +27,41 @@ export async function POST(request: NextRequest) {
       maxTokens?: number;
     } = body;
 
-    // Get user ID for memory-aware conversations
+    // Get user ID and check rate limits
     let userId: string | null = null;
+    let userPlan: 'free' | 'pro' | 'premium' = 'free';
+    let dailyUsage = 0;
+    
     try {
       const supabase = await createServerComponentClient();
       const { data: { user } } = await supabase.auth.getUser();
       userId = user?.id || null;
+      
+      // In a real app, this would fetch user data from database
+      // For now, we'll simulate rate limiting for demo users
+      if (userId) {
+        // Check if user has exceeded daily limit
+        const rateLimit = getRateLimit(userPlan);
+        if (rateLimit > 0) {
+          // Get current usage from localStorage or database
+          const currentUsage = dailyUsage; // This would come from database
+          
+          if (currentUsage >= rateLimit) {
+            return NextResponse.json(
+              { 
+                error: `Daily chat limit exceeded. Free plan allows ${rateLimit} chats per day. Please upgrade to Pro or Premium for unlimited chats.`,
+                type: 'RATE_LIMIT_EXCEEDED',
+                limit: rateLimit,
+                used: currentUsage
+              },
+              { status: 429 }
+            );
+          }
+        }
+      }
     } catch (error) {
-      console.warn('Could not get user for memory:', error);
-      // Continue without memory for anonymous users
+      console.warn('Could not check rate limits:', error);
+      // Continue without rate limiting for anonymous users
     }
 
     // Validate required fields
@@ -65,7 +92,7 @@ export async function POST(request: NextRequest) {
     const latestUserMessage = messages.filter(m => m.role === 'user').pop();
     let processedMessages = [...messages];
 
-    // Add conversation memory for authenticated users
+    // Add conversation memory for authenticated users (using existing userId)
     let memoryContext = '';
     let userRecognition = null;
     if (userId && latestUserMessage) {
@@ -236,6 +263,16 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.warn('Failed to save conversation to memory:', error);
         // Continue without memory saving
+      }
+    }
+
+    // Increment usage for rate limiting (after successful response)
+    if (userId) {
+      try {
+        await incrementUsage(userId);
+        console.log(`Rate limiting: Incremented usage for user ${userId}`);
+      } catch (error) {
+        console.warn('Failed to increment usage for rate limiting:', error);
       }
     }
 

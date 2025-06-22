@@ -20,7 +20,7 @@ CREATE TABLE public.users (
     wallet_type TEXT,
     tron_wallet_address TEXT, -- Keep for backward compatibility
     api_requests_used INTEGER DEFAULT 0,
-    api_requests_limit INTEGER DEFAULT 10, -- Free tier: 10 requests/day
+    api_requests_limit INTEGER DEFAULT 3, -- Free tier: 3 chats/day
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -247,7 +247,7 @@ BEGIN
         api_requests_limit = CASE 
             WHEN p_subscription_tier = 'pro' THEN 999999
             WHEN p_subscription_tier = 'premium' THEN 999999
-            ELSE 10
+            ELSE 3
         END,
         updated_at = NOW()
     WHERE id = p_user_id;

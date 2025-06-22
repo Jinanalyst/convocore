@@ -258,6 +258,88 @@ export class TronPaymentService {
   private generateContractAddress(): string {
     return 'T' + Math.random().toString(36).substring(2, 34).toUpperCase();
   }
+
+  // New method to verify and process incoming payment
+  async verifyAndProcessIncomingPayment(txHash: string): Promise<{
+    success: boolean;
+    plan?: 'pro' | 'premium';
+    amount?: number;
+    error?: string;
+  }> {
+    try {
+      const tronWeb = getTronWeb();
+      if (!tronWeb) {
+        throw new Error('TronWeb not available');
+      }
+
+      // Get transaction details
+      const transaction = await tronWeb.trx.getTransaction(txHash);
+      
+      if (!transaction || !transaction.ret || transaction.ret[0].contractRet !== 'SUCCESS') {
+        return { success: false, error: 'Transaction not found or failed' };
+      }
+
+      // Check if it's a USDT transfer to our recipient address
+      const contract = transaction.raw_data.contract[0];
+      if (contract.type === 'TriggerSmartContract') {
+        const parameter = contract.parameter.value;
+        
+        // Decode the USDT transfer data
+        const contractAddress = tronWeb.address.fromHex(parameter.contract_address);
+        if (contractAddress === USDT_CONTRACT_ADDRESS) {
+          // This is a USDT transaction
+          const recipientAddress = process.env.NEXT_PUBLIC_TRON_RECIPIENT_ADDRESS || CONVO_AI_RECIPIENT_ADDRESS;
+          
+          // Decode transfer amount (simplified - in real implementation you'd decode the data field)
+          // For now, we'll use the transaction info from TronScan API
+          const amount = await this.getTransactionAmount(txHash);
+                     const plan = detectPlanFromAmount(amount);
+          
+          if (plan) {
+            return {
+              success: true,
+              plan,
+              amount
+            };
+          } else {
+            return {
+              success: false,
+              error: `Amount ${amount} USDT doesn't match any subscription plan`
+            };
+          }
+        }
+      }
+      
+      return { success: false, error: 'Not a USDT transaction to our address' };
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      return { success: false, error: 'Failed to verify transaction' };
+    }
+  }
+
+  // Helper method to get transaction amount (simplified)
+  private async getTransactionAmount(txHash: string): Promise<number> {
+    try {
+      // In a real implementation, you would:
+      // 1. Use TronScan API to get transaction details
+      // 2. Decode the smart contract data to get the exact amount
+      // For now, we'll return a placeholder
+      
+      // This is a simplified version - you'd need to implement proper USDT transaction parsing
+      const response = await fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${txHash}`);
+      const data = await response.json();
+      
+      if (data.trc20TransferInfo && data.trc20TransferInfo.length > 0) {
+        const transfer = data.trc20TransferInfo[0];
+        return parseFloat(transfer.amount_str) / Math.pow(10, transfer.decimals);
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error getting transaction amount:', error);
+      return 0;
+    }
+  }
 }
 
 // Utility functions
@@ -272,6 +354,67 @@ export function validateTronAddress(address: string): boolean {
 
 export function getPlanPrice(plan: 'pro' | 'premium'): number {
   return plan === 'pro' ? 20 : 40;
+}
+
+// New function to detect plan based on USDT amount
+export function detectPlanFromAmount(amount: number): 'pro' | 'premium' | null {
+  if (amount >= 35 && amount <= 45) {
+    return 'premium'; // 40 USDT ± 5 USDT tolerance
+  } else if (amount >= 15 && amount <= 25) {
+    return 'pro'; // 20 USDT ± 5 USDT tolerance
+  }
+  return null; // Amount doesn't match any plan
+}
+
+// New function to monitor incoming transactions
+export async function monitorIncomingPayments(
+  recipientAddress: string,
+  onPaymentReceived: (payment: {
+    amount: number;
+    plan: 'pro' | 'premium' | null;
+    txHash: string;
+    fromAddress: string;
+    timestamp: Date;
+  }) => void
+): Promise<void> {
+  try {
+    const tronWeb = getTronWeb();
+    if (!tronWeb) {
+      throw new Error('TronWeb not available');
+    }
+
+    // Get recent transactions for the recipient address
+    const transactions = await tronWeb.trx.getTransactionsFromAddress(recipientAddress, 10);
+    
+    for (const tx of transactions) {
+      if (tx.raw_data && tx.raw_data.contract && tx.raw_data.contract[0]) {
+        const contract = tx.raw_data.contract[0];
+        
+        // Check if it's a USDT transfer
+        if (contract.type === 'TransferContract' && 
+            contract.parameter && 
+            contract.parameter.value) {
+          
+          const value = contract.parameter.value;
+          if (value.to_address === recipientAddress) {
+            // This is an incoming transaction
+            const amount = value.amount / 1000000; // Convert from USDT units
+            const plan = detectPlanFromAmount(amount);
+            
+            onPaymentReceived({
+              amount,
+              plan,
+              txHash: tx.txID,
+              fromAddress: value.owner_address,
+              timestamp: new Date(tx.raw_data.timestamp)
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error monitoring payments:', error);
+  }
 }
 
 // Export singleton instance

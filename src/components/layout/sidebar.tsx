@@ -37,6 +37,8 @@ interface SidebarProps {
   onDeleteChat?: (chatId: string) => void;
   onUseLibraryItem?: (item: LibraryItem) => void;
   activeChatId?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface LibraryItem {
@@ -62,7 +64,9 @@ export function Sidebar({
   onSelectChat, 
   onDeleteChat,
   onUseLibraryItem,
-  activeChatId 
+  activeChatId,
+  isCollapsed = false,
+  onToggleCollapse
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
@@ -370,199 +374,287 @@ export function Sidebar({
   };
 
   return (
-    <div className={cn(
-      "flex flex-col h-full bg-white dark:bg-black border-r border-gray-200 dark:border-zinc-800",
-      className
-    )}>
-      {/* Header */}
-              <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
-        <ConvocoreLogo size="lg" />
-      </div>
-
-      {/* New Chat Button */}
-      <div className="p-4">
-        <Button 
-          onClick={handleNewChat}
-          className="w-full justify-start gap-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
-        >
-          <Plus className="w-4 h-4" />
-          New Chat
-        </Button>
-      </div>
-
-      {/* Navigation Menu */}
-      <div className="px-4 pb-4 space-y-1">
-        <Button 
-          variant="ghost" 
-          onClick={handleSearch}
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-        >
-          <Search className="w-4 h-4" />
-          Search
-        </Button>
-        <Button 
-          variant="ghost" 
-          onClick={handleLibrary}
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-        >
-          <Library className="w-4 h-4" />
-          Library
-        </Button>
-        <Button 
-          variant="ghost" 
-          onClick={handleModelInfo}
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-        >
-          <Bot className="w-4 h-4" />
-          Convocore Model
-        </Button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="px-4 pb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* Chat History */}
-      <div className="flex-1 overflow-hidden">
-        <div className="px-4 pb-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-            <MessageSquare className="w-4 h-4" />
-            Recent Chats
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto px-2">
-          {filteredChats.length === 0 ? (
-            <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-              {searchQuery ? "No chats found" : "No chats yet"}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {filteredChats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={cn(
-                    "group relative p-3 rounded-lg cursor-pointer transition-all duration-200",
-                    activeChatId === chat.id 
-                      ? "bg-gray-100 dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700" 
-                      : "hover:bg-gray-50 dark:hover:bg-zinc-900"
-                  )}
-                  onClick={() => onSelectChat?.(chat.id)}
-                  onMouseEnter={() => setHoveredChatId(chat.id)}
-                  onMouseLeave={() => setHoveredChatId(null)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className={cn(
-                        "font-medium text-sm truncate",
-                        activeChatId === chat.id 
-                          ? "text-gray-900 dark:text-white" 
-                          : "text-gray-900 dark:text-white"
-                      )}>
-                        {chat.title}
-                      </h4>
-                      <p className={cn(
-                        "text-xs truncate mt-1",
-                        activeChatId === chat.id 
-                          ? "text-gray-600 dark:text-gray-300" 
-                          : "text-gray-500 dark:text-gray-400"
-                      )}>
-                        {chat.lastMessage}
-                      </p>
-                      <span className={cn(
-                        "text-xs mt-1 block",
-                        activeChatId === chat.id 
-                          ? "text-gray-600 dark:text-gray-400" 
-                          : "text-gray-400 dark:text-gray-500"
-                      )}>
-                        {formatTimestamp(chat.timestamp)}
-                      </span>
-                    </div>
-                    
-                    {/* Action Buttons */}
-                    {(hoveredChatId === chat.id || activeChatId === chat.id) && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 hover:bg-gray-200 dark:hover:bg-zinc-700"
-                          onClick={(e) => handleChatAction(e, 'edit', chat.id)}
-                        >
-                          <Edit3 className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400"
-                          onClick={(e) => handleChatAction(e, 'delete', chat.id)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+    <>
+      <aside className={cn(
+        "flex flex-col bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-80",
+        "h-full overflow-hidden",
+        className
+      )}>
+        {/* Header */}
+        <div className={cn(
+          "flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-800",
+          isCollapsed && "justify-center px-2"
+        )}>
+          {!isCollapsed && (
+            <ConvocoreLogo size="md" className="flex-shrink-0" />
+          )}
+          {isCollapsed && (
+            <ConvocoreLogo size="sm" showText={false} className="flex-shrink-0" />
+          )}
+          
+          {/* Collapse Toggle - Hidden on mobile since mobile uses overlay */}
+          {onToggleCollapse && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCollapse}
+              className={cn(
+                "hidden lg:flex shrink-0",
+                isCollapsed && "absolute top-4 right-2"
+              )}
+            >
+              {isCollapsed ? (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              )}
+            </Button>
           )}
         </div>
-      </div>
 
-      {/* Bottom Section */}
-      <div className="p-4 border-t border-gray-200 dark:border-zinc-800">
-        <Button 
-          variant="ghost" 
-          onClick={() => setShowSettingsModal(true)}
-          className="w-full justify-start gap-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-        >
-          <Settings className="w-4 h-4" />
-          Settings
-        </Button>
-      </div>
+        {/* New Chat Button */}
+        <div className={cn("p-3", isCollapsed && "px-2")}>
+          <Button
+            onClick={handleNewChat}
+            className={cn(
+              "w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors",
+              isCollapsed ? "px-0 justify-center" : "justify-start gap-3"
+            )}
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            {!isCollapsed && <span>New Chat</span>}
+          </Button>
+        </div>
+
+        {/* Quick Actions */}
+        {!isCollapsed && (
+          <div className="px-3 pb-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSearch}
+                className="justify-start gap-2 text-xs"
+              >
+                <Search className="h-3 w-3" />
+                Search
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLibrary}
+                className="justify-start gap-2 text-xs"
+              >
+                <Library className="h-3 w-3" />
+                Library
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Collapsed Quick Actions */}
+        {isCollapsed && (
+          <div className="px-2 pb-3 space-y-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSearch}
+              className="w-full"
+              title="Search"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLibrary}
+              className="w-full"
+              title="Library"
+            >
+              <Library className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Chat History */}
+        <div className="flex-1 overflow-hidden">
+          {!isCollapsed && (
+            <div className="px-3 pb-2">
+              <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Recent Chats
+              </h3>
+            </div>
+          )}
+          
+          <div className={cn(
+            "flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent",
+            isCollapsed ? "px-2" : "px-3"
+          )}>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "animate-pulse bg-gray-200 dark:bg-zinc-800 rounded-lg",
+                      isCollapsed ? "h-10 w-10 mx-auto" : "h-12"
+                    )}
+                  />
+                ))}
+              </div>
+            ) : chats.length === 0 ? (
+              !isCollapsed && (
+                <div className="text-center py-8">
+                  <MessageSquare className="h-8 w-8 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No chats yet</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Start a new conversation
+                  </p>
+                </div>
+              )
+            ) : (
+              <div className="space-y-1">
+                {chats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={cn(
+                      "group relative rounded-lg transition-all duration-200",
+                      chat.isActive || activeChatId === chat.id
+                        ? "bg-gray-100 dark:bg-zinc-800"
+                        : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                    )}
+                    onMouseEnter={() => setHoveredChatId(chat.id)}
+                    onMouseLeave={() => setHoveredChatId(null)}
+                  >
+                    <button
+                      onClick={() => onSelectChat?.(chat.id)}
+                      className={cn(
+                        "w-full text-left transition-all duration-200",
+                        isCollapsed ? "p-2 flex justify-center" : "p-3"
+                      )}
+                      title={isCollapsed ? chat.title : undefined}
+                    >
+                      {isCollapsed ? (
+                        <MessageSquare className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {chat.title}
+                              </h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                                {chat.lastMessage}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => handleChatAction(e, 'edit', chat.id)}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded"
+                                title="Edit chat"
+                              >
+                                <Edit3 className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                              </button>
+                              <button
+                                onClick={(e) => handleChatAction(e, 'delete', chat.id)}
+                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                                title="Delete chat"
+                              >
+                                <Trash2 className="h-3 w-3 text-red-500 dark:text-red-400" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              {formatTimestamp(chat.timestamp)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Actions */}
+        <div className={cn(
+          "border-t border-gray-200 dark:border-zinc-800",
+          isCollapsed ? "p-2 space-y-2" : "p-3 space-y-2"
+        )}>
+          {isCollapsed ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleModelInfo}
+                className="w-full"
+                title="Model Info"
+              >
+                <Bot className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSettingsModal(true)}
+                className="w-full"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                onClick={handleModelInfo}
+                className="w-full justify-start gap-3 text-sm"
+              >
+                <Bot className="h-4 w-4" />
+                Model Info
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowSettingsModal(true)}
+                className="w-full justify-start gap-3 text-sm"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+            </>
+          )}
+        </div>
+      </aside>
 
       {/* Modals */}
+      <SearchModal 
+        open={showSearchModal} 
+        onOpenChange={setShowSearchModal}
+      />
+      
+      <LibraryModal 
+        open={showLibraryModal} 
+        onOpenChange={setShowLibraryModal}
+        items={libraryItems}
+        onUseItem={onUseLibraryItem}
+      />
+      
+      <ModelInfoModal 
+        open={showModelModal} 
+        onOpenChange={setShowModelModal}
+      />
+      
       <SettingsModal 
         open={showSettingsModal} 
-        onOpenChange={setShowSettingsModal} 
+        onOpenChange={setShowSettingsModal}
       />
-
-      {/* Search Modal */}
-      {showSearchModal && (
-        <SearchModal 
-          open={showSearchModal}
-          onOpenChange={setShowSearchModal}
-          chats={chats}
-          onSelectChat={onSelectChat}
-        />
-      )}
-
-      {/* Library Modal */}
-      {showLibraryModal && (
-                <LibraryModal
-          open={showLibraryModal}
-          onOpenChange={setShowLibraryModal}
-          items={libraryItems}
-          onUseItem={onUseLibraryItem}
-        />
-      )}
-
-      {/* Model Info Modal */}
-      {showModelModal && (
-        <ModelInfoModal 
-          open={showModelModal}
-          onOpenChange={setShowModelModal}
-        />
-      )}
-    </div>
+    </>
   );
 } 

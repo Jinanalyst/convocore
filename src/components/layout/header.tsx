@@ -21,7 +21,9 @@ import {
   Moon,
   Sun,
   Bell,
-  ArrowUp
+  ArrowUp,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/modals/profile-modal";
@@ -56,6 +58,7 @@ export function Header({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showBillingModal, setShowBillingModal] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userInfo, setUserInfo] = useState({
     name: 'Loading...',
@@ -182,177 +185,290 @@ export function Header({
 
   return (
     <header className={cn(
-      "flex items-center justify-between px-6 py-4 bg-white dark:bg-black border-b border-gray-200 dark:border-zinc-800",
+      "flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-black border-b border-gray-200 dark:border-zinc-800",
       className
     )}>
-      {/* Chat Title */}
-      <div className="flex-1">
+      {/* Mobile Menu Button */}
+      <div className="flex items-center gap-3 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="shrink-0"
+        >
+          {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
+
+      {/* Chat Title - Hidden on mobile, responsive on larger screens */}
+      <div className="hidden md:flex flex-1 min-w-0">
         {currentChatTitle && (
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate max-w-md">
+          <h1 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white truncate max-w-md lg:max-w-lg xl:max-w-xl">
             {currentChatTitle}
           </h1>
         )}
       </div>
 
-      {/* Center - Upgrade Button */}
-      <div className="flex-1 flex justify-center">
+      {/* Mobile Chat Title - Centered on mobile */}
+      <div className="flex-1 flex justify-center md:hidden">
+        {currentChatTitle && (
+          <h1 className="text-base font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
+            {currentChatTitle}
+          </h1>
+        )}
+      </div>
+
+      {/* Center - Upgrade Button - Hidden on mobile */}
+      <div className="hidden md:flex flex-1 justify-center">
         {(userInfo.subscriptionTier === 'free' || userInfo.connectionStatus === 'Demo Mode') && (
           <NextLink href="/pricing">
             <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              variant="outline" 
+              size="sm"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md px-4 py-2 text-sm font-medium rounded-full"
             >
-              <ArrowUp className="w-4 h-4" />
-              Upgrade Available
+              <ArrowUp className="w-4 h-4 mr-2" />
+              <span className="hidden lg:inline">Upgrade to Pro</span>
+              <span className="lg:hidden">Upgrade</span>
             </Button>
           </NextLink>
         )}
       </div>
 
-      {/* Right Side - Action Buttons */}
-      <div className="flex-1 flex items-center justify-end gap-2">
-        {/* Share Button */}
-        <DropdownMenu open={showShareMenu} onOpenChange={setShowShareMenu}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Share2 className="w-4 h-4" />
-              Share
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => handleShareOption('link')}>
-              <Link className="w-4 h-4 mr-2" />
-              Copy share link
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleShareOption('export')}>
-              <Download className="w-4 h-4 mr-2" />
-              Export chat
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Notifications Button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setShowNotificationsModal(true)}
-          className="relative"
+      {/* Right Actions */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Theme Toggle - Hidden on small mobile */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleThemeToggle}
+          className="hidden sm:flex shrink-0"
         >
-          <Bell className="w-4 h-4" />
+          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+
+        {/* Notifications - With responsive badge */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowNotificationsModal(true)}
+          className="relative shrink-0"
+        >
+          <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center min-w-[16px] text-[10px] font-medium">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Button>
 
-        {/* Settings Button */}
-        <Button variant="ghost" size="sm" onClick={onSettings}>
-          <Settings className="w-4 h-4" />
-        </Button>
+        {/* Share Button - Hidden on mobile */}
+        <div className="hidden sm:block relative">
+          <DropdownMenu open={showShareMenu} onOpenChange={setShowShareMenu}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => handleShareOption('link')}>
+                <Link className="mr-2 h-4 w-4" />
+                Share Link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShareOption('export')}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Chat
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        {/* Profile Dropdown */}
+        {/* Profile Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="rounded-full w-8 h-8 p-0">
-              <div className="w-6 h-6 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
-                <User className="w-3 h-3 text-white dark:text-gray-900" />
-              </div>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <User className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-64 sm:w-72">
             <div className="px-3 py-2 border-b border-gray-200 dark:border-zinc-700">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{userInfo.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{userInfo.email}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {userInfo.name}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {userInfo.email}
+              </p>
               <div className="flex items-center gap-2 mt-1">
-                <div className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs rounded-full">
-                  {userInfo.subscriptionTier === 'premium' ? 'Premium Plan' : 
-                   userInfo.subscriptionTier === 'pro' ? 'Pro Plan' : 'Free Plan'}
-                </div>
-                <div className={`px-2 py-1 text-xs rounded-full ${
-                  userInfo.connectionStatus === 'Connected' 
-                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                    : userInfo.connectionStatus === 'Demo Mode'
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                    : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                }`}>
+                <span className={cn(
+                  "px-2 py-1 text-xs font-medium rounded-full",
+                  userInfo.subscriptionTier === 'premium' 
+                    ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                    : userInfo.subscriptionTier === 'pro'
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                )}>
+                  {userInfo.subscriptionTier.charAt(0).toUpperCase() + userInfo.subscriptionTier.slice(1)}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {userInfo.connectionStatus}
-                </div>
+                </span>
               </div>
             </div>
             
             <DropdownMenuItem onClick={handleProfileClick}>
-              <User className="w-4 h-4 mr-2" />
-              Profile & Account
+              <User className="mr-2 h-4 w-4" />
+              Profile
             </DropdownMenuItem>
             
             <DropdownMenuItem onClick={() => setShowBillingModal(true)}>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Billing & Usage
+              <CreditCard className="mr-2 h-4 w-4" />
+              Billing
             </DropdownMenuItem>
             
-            <DropdownMenuItem>
-              <Wallet className="w-4 h-4 mr-2" />
-              TRON Wallet
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem>
-              <Bell className="w-4 h-4 mr-2" />
-              Notifications
-            </DropdownMenuItem>
+            {/* Mobile-only items */}
+            <div className="sm:hidden">
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleShareOption('link')}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Share Chat
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleThemeToggle}>
+                {isDarkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+              </DropdownMenuItem>
+            </div>
             
             <DropdownMenuSeparator />
             
-            <DropdownMenuItem onClick={handleThemeToggle}>
-              {isDarkMode ? (
-                <>
-                  <Sun className="w-4 h-4 mr-2" />
-                  Light Mode
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 mr-2" />
-                  Dark Mode
-                </>
-              )}
-            </DropdownMenuItem>
-            
             <DropdownMenuItem onClick={onSettings}>
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuItem 
-              onClick={onLogout}
-              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
+            <DropdownMenuItem onClick={onLogout} className="text-red-600 dark:text-red-400">
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
+      {/* Mobile Menu Overlay */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
+          <div className="fixed top-0 left-0 w-80 h-full bg-white dark:bg-zinc-900 shadow-xl border-r border-gray-200 dark:border-zinc-800">
+            <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Menu</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="p-4 space-y-2">
+              {/* Current Chat Title */}
+              {currentChatTitle && (
+                <div className="p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Current Chat</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{currentChatTitle}</p>
+                </div>
+              )}
+              
+              {/* Upgrade Button for Mobile */}
+              {(userInfo.subscriptionTier === 'free' || userInfo.connectionStatus === 'Demo Mode') && (
+                <NextLink href="/pricing" onClick={() => setShowMobileMenu(false)}>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none hover:from-blue-700 hover:to-purple-700">
+                    <ArrowUp className="w-4 h-4 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                </NextLink>
+              )}
+              
+              <div className="space-y-1 pt-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    handleShareOption('link');
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Share2 className="mr-3 h-4 w-4" />
+                  Share Chat
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setShowNotificationsModal(true);
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Bell className="mr-3 h-4 w-4" />
+                  Notifications
+                  {unreadCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    handleThemeToggle();
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  {isDarkMode ? <Sun className="mr-3 h-4 w-4" /> : <Moon className="mr-3 h-4 w-4" />}
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    onSettings?.();
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Settings className="mr-3 h-4 w-4" />
+                  Settings
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       <ProfileModal 
         open={showProfileModal} 
-        onOpenChange={setShowProfileModal} 
+        onOpenChange={setShowProfileModal}
       />
-      <ShareModal
-        open={showShareModal}
+      
+      <ShareModal 
+        open={showShareModal} 
         onOpenChange={setShowShareModal}
         chatId={currentChatId}
         chatTitle={currentChatTitle}
       />
-      <NotificationsModal
-        open={showNotificationsModal}
+      
+      <NotificationsModal 
+        open={showNotificationsModal} 
         onOpenChange={setShowNotificationsModal}
       />
-      <BillingModal
-        open={showBillingModal}
+      
+      <BillingModal 
+        open={showBillingModal} 
         onOpenChange={setShowBillingModal}
       />
     </header>

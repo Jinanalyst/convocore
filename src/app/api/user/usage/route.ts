@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
       tokensUsed: 45230,
       storageUsed: 2.4,
       monthlyLimit: {
-        aiRequests: 'unlimited' as const,
-        apiCalls: 'unlimited' as const,
+        aiRequests: 3,
+        apiCalls: 3,
         tokensUsed: 100000,
         storageUsed: 10
       }

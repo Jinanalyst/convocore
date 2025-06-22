@@ -157,12 +157,12 @@ export function generateUserId(): string {
 export function getRateLimit(plan: User['plan']): number {
   switch (plan) {
     case 'free':
-      return 10; // 10 requests per day
+      return 3; // 3 chats per day
     case 'pro':
     case 'premium':
       return -1; // Unlimited
     default:
-      return 10;
+      return 3;
   }
 }
 
