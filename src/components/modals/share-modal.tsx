@@ -55,8 +55,8 @@ export function ShareModal({ open, onOpenChange, chatId, chatTitle }: ShareModal
     
     setIsGenerating(true);
     try {
-      // In a real app, this would call your API to create a shareable link
-      const baseUrl = window.location.origin;
+      // Use the custom domain for share URLs
+      const baseUrl = 'https://convocore.site';
       const shareId = `${chatId}-${Date.now()}`;
       const url = `${baseUrl}/shared/${shareId}`;
       

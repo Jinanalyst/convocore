@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ConvocoreLogo } from '@/components/ui/convocore-logo';
 import { WalletConnector } from '@/components/ui/wallet-connector';
+import { DevMagicLinks } from '@/components/ui/dev-magic-links';
 
 function LoginPageContent() {
   const [email, setEmail] = useState('');
@@ -62,34 +63,29 @@ function LoginPageContent() {
     setError(null);
 
     if (loginMode === 'magic') {
-      // Handle magic link
+      // Handle magic link using our custom service
       try {
-        // Check if Supabase is configured
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-          setError('Magic link authentication is not configured. Please use wallet login or contact support.');
-          return;
-        }
-
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+        const response = await fetch('/api/auth/magic-link', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            email,
+            redirectTo,
+          }),
         });
 
-        if (error) {
-          if (error.message.includes('Invalid API key') || error.message.includes('not found')) {
-            setError('Authentication service is not properly configured. Please use wallet login or contact support.');
-          } else {
-            setError(error.message);
-          }
-          return;
-        }
+        const result = await response.json();
 
-        setMagicLinkSent(true);
+        if (result.success) {
+          setMagicLinkSent(true);
+        } else {
+          setError(result.error || 'Failed to send magic link');
+        }
       } catch (err) {
         console.error('Magic link error:', err);
-        setError('Failed to send magic link. Please try wallet login or contact support.');
+        setError('Failed to send magic link. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -195,14 +191,6 @@ function LoginPageContent() {
           <p className="mt-2 text-sm text-gray-400">
             Welcome back to Convocore
           </p>
-          {/* Configuration Status */}
-          {(!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) && (
-            <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500 rounded">
-              <p className="text-xs text-yellow-400">
-                ⚠️ Email authentication not configured. Use wallet login for full access.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Login Mode Toggle */}
@@ -243,7 +231,10 @@ function LoginPageContent() {
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-green-400">Magic link sent!</h3>
                 <p className="mt-1 text-sm text-green-300">
-                  Check your email for a secure login link. Click the link to sign in instantly.
+                  Check your email for a secure login link. The link will expire in 15 minutes.
+                </p>
+                <p className="mt-1 text-xs text-green-200">
+                  For development: Check the browser console for the magic link URL.
                 </p>
               </div>
             </div>
@@ -410,6 +401,9 @@ function LoginPageContent() {
           </p>
         </div>
       </div>
+      
+      {/* Development Magic Links Helper */}
+      <DevMagicLinks />
     </div>
   );
 }

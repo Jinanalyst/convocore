@@ -13,8 +13,8 @@ export async function POST(
     // Generate a unique share ID
     const shareId = `share_${chatId}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
-    // Create share URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    // Create share URL using custom domain
+    const baseUrl = 'https://convocore.site';
     const shareUrl = `${baseUrl}/shared/${shareId}`;
 
     try {
@@ -105,7 +105,7 @@ export async function GET(
           .order('created_at', { ascending: false });
 
         if (!error && shares) {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+          const baseUrl = 'https://convocore.site';
           const shareLinks = shares.map(share => ({
             ...share,
             shareUrl: `${baseUrl}/shared/${share.id}`

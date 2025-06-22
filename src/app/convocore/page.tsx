@@ -283,7 +283,7 @@ export default function ConvocorePage() {
       console.error('Error sharing chat:', error);
       
       // Fallback: create a simple shareable URL
-      const fallbackUrl = `${window.location.origin}/chat/${activeChatId}`;
+      const fallbackUrl = `https://convocore.site/chat/${activeChatId}`;
       await navigator.clipboard.writeText(fallbackUrl);
       
       if (typeof window !== 'undefined' && (window as any).showNotification) {
@@ -309,6 +309,7 @@ export default function ConvocorePage() {
     console.log("Logging out");
     
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+    const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
     
     if (walletConnected) {
       // Clear wallet authentication
@@ -322,6 +323,15 @@ export default function ConvocorePage() {
       document.cookie = 'wallet_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'wallet_address=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       document.cookie = 'wallet_type=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      
+      // Redirect to login
+      window.location.href = '/auth/login';
+    } else if (magicLinkAuth) {
+      // Clear magic link authentication
+      document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'auth_method=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       
       // Redirect to login
       window.location.href = '/auth/login';
