@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -49,6 +49,12 @@ export function Header({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    name: 'Loading...',
+    email: 'Loading...',
+    subscriptionTier: 'free' as 'free' | 'pro' | 'premium',
+    connectionStatus: 'Connecting...'
+  });
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -70,6 +76,91 @@ export function Header({
   const handleProfileClick = () => {
     setShowProfileModal(true);
     onProfile?.();
+  };
+
+  // Load user information on component mount
+  useEffect(() => {
+    loadUserInfo();
+  }, []);
+
+  const loadUserInfo = async () => {
+    try {
+      // Check if wallet is connected first
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const walletAddress = localStorage.getItem('wallet_address') || '';
+      const walletType = localStorage.getItem('wallet_type') || '';
+
+      if (walletConnected) {
+        // For wallet users
+        setUserInfo({
+          name: 'Wallet User',
+          email: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
+          subscriptionTier: 'free',
+          connectionStatus: 'Connected'
+        });
+        return;
+      }
+
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        setUserInfo({
+          name: 'Demo User',
+          email: 'demo@convocore.ai',
+          subscriptionTier: 'pro',
+          connectionStatus: 'Demo Mode'
+        });
+        return;
+      }
+
+      // For Supabase users
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        setUserInfo({
+          name: 'Guest User',
+          email: 'guest@convocore.ai',
+          subscriptionTier: 'free',
+          connectionStatus: 'Not Connected'
+        });
+        return;
+      }
+
+      // Get user profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('full_name, email, subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        // Use auth user data as fallback
+        setUserInfo({
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || 'user@convocore.ai',
+          subscriptionTier: 'free',
+          connectionStatus: 'Connected'
+        });
+      } else {
+        setUserInfo({
+          name: profile.full_name || user.email?.split('@')[0] || 'User',
+          email: profile.email || user.email || 'user@convocore.ai',
+          subscriptionTier: profile.subscription_tier || 'free',
+          connectionStatus: 'Connected'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error loading user info:', error);
+      setUserInfo({
+        name: 'Demo User',
+        email: 'demo@convocore.ai',
+        subscriptionTier: 'pro',
+        connectionStatus: 'Demo Mode'
+      });
+    }
   };
 
   return (
@@ -124,14 +215,21 @@ export function Header({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-3 py-2 border-b border-gray-200 dark:border-zinc-700">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">John Doe</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">john@example.com</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{userInfo.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{userInfo.email}</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs rounded-full">
-                  Pro Plan
+                  {userInfo.subscriptionTier === 'premium' ? 'Premium Plan' : 
+                   userInfo.subscriptionTier === 'pro' ? 'Pro Plan' : 'Free Plan'}
                 </div>
-                <div className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
-                  Connected
+                <div className={`px-2 py-1 text-xs rounded-full ${
+                  userInfo.connectionStatus === 'Connected' 
+                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                    : userInfo.connectionStatus === 'Demo Mode'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                    : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                }`}>
+                  {userInfo.connectionStatus}
                 </div>
               </div>
             </div>
