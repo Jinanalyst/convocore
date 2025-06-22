@@ -461,7 +461,7 @@ export function Sidebar({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className={cn(
-        "flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700",
+        "flex items-center justify-between p-3 border-b border-gray-200 dark:border-zinc-700",
         isCollapsed && isDesktop && "justify-center px-2"
       )}>
         {!isCollapsed || !isDesktop ? (
@@ -487,7 +487,7 @@ export function Sidebar({
             onClick={onToggleCollapse}
             className={cn(
               "shrink-0",
-              isCollapsed && "absolute top-4 right-2"
+              isCollapsed && "absolute top-3 right-2"
             )}
           >
             {isCollapsed ? (
@@ -500,7 +500,7 @@ export function Sidebar({
       </div>
 
       {/* New Chat Button */}
-      <div className={cn("p-4", isCollapsed && isDesktop && "px-2")}>
+      <div className={cn("p-3", isCollapsed && isDesktop && "px-2")}>
         <Button
           onClick={handleNewChat}
           className={cn(
@@ -513,137 +513,134 @@ export function Sidebar({
         </Button>
       </div>
 
-      {/* Search and Library */}
+      {/* All Actions - More Compact */}
       {(!isCollapsed || !isDesktop) ? (
-        <div className="px-4 pb-4 space-y-2">
-          <Button
-            variant="ghost"
-            onClick={handleSearch}
-            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
-          >
-            <Search className="w-4 h-4 mr-2" />
-            Search
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={handleLibrary}
-            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
-          >
-            <Archive className="w-4 h-4 mr-2" />
-            Library
-          </Button>
+        <div className="px-3 pb-2">
+          <div className="grid grid-cols-2 gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSearch}
+              className="text-xs justify-start"
+            >
+              <Search className="w-3 h-3 mr-1" />
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLibrary}
+              className="text-xs justify-start"
+            >
+              <Archive className="w-3 h-3 mr-1" />
+              Library
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleModelInfo}
+              className="text-xs justify-start"
+            >
+              <HelpCircle className="w-3 h-3 mr-1" />
+              Models
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSettings}
+              className="text-xs justify-start"
+            >
+              <Settings className="w-3 h-3 mr-1" />
+              Settings
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="px-2 pb-4 space-y-2">
+        <div className="px-2 pb-2 grid grid-cols-2 gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleSearch}
-            className="w-full"
+            className="w-full h-6"
             title="Search"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-3 h-3" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleLibrary}
-            className="w-full"
+            className="w-full h-6"
             title="Library"
           >
-            <Archive className="w-4 h-4" />
+            <Archive className="w-3 h-3" />
           </Button>
-        </div>
-      )}
-
-      {/* Model Info and Settings */}
-      {(!isCollapsed || !isDesktop) ? (
-        <div className="px-4 pb-4 space-y-2">
-          <Button
-            variant="ghost"
-            onClick={handleModelInfo}
-            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
-          >
-            <HelpCircle className="w-4 h-4 mr-2" />
-            Models
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={handleSettings}
-            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-      ) : (
-        <div className="px-2 pb-4 space-y-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleModelInfo}
-            className="w-full"
-            title="Model Info"
+            className="w-full h-6"
+            title="Models"
           >
-            <HelpCircle className="w-4 h-4" />
+            <HelpCircle className="w-3 h-3" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleSettings}
-            className="w-full"
+            className="w-full h-6"
             title="Settings"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3 h-3" />
           </Button>
         </div>
       )}
 
-      {/* Recent Chats */}
-      <div className="flex-1 overflow-hidden">
+      {/* Recent Chats - Now takes ALL remaining space */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {(!isCollapsed || !isDesktop) && (
-          <div className="px-4 pb-2">
+          <div className="px-3 pb-2">
             <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Recent Chats
             </h3>
           </div>
         )}
         
-        {/* Chat List Container with Border */}
+        {/* Chat List Container - Takes ALL remaining space */}
         <div className={cn(
-          "flex-1 overflow-hidden mx-3 rounded-xl border-2 border-gray-300 dark:border-zinc-600 bg-gray-50/80 dark:bg-zinc-800/80 shadow-sm",
+          "flex-1 min-h-0 mx-3 mb-3 rounded-xl border border-gray-300 dark:border-zinc-600 bg-gray-50/80 dark:bg-zinc-800/80 shadow-sm",
           isCollapsed && isDesktop && "mx-2"
         )}>
-          <div className="h-full overflow-y-auto chat-container-scroll p-3">
+          <div className="h-full overflow-y-auto chat-container-scroll p-2">
             {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
                   <div 
                     key={i} 
                     className={cn(
                       "animate-pulse bg-gray-200 dark:bg-zinc-600 rounded-lg",
-                      isCollapsed && isDesktop ? "h-10 w-10 mx-auto" : "h-14"
+                      isCollapsed && isDesktop ? "h-8 w-8 mx-auto" : "h-12"
                     )} 
                   />
                 ))}
               </div>
             ) : filteredChats.length === 0 ? (
               (!isCollapsed || !isDesktop) && (
-                <div className="text-center py-10 px-3">
-                  <MessageSquare className="w-10 h-10 text-gray-300 dark:text-zinc-500 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No chats yet</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start a new conversation</p>
+                <div className="text-center py-6 px-2">
+                  <MessageSquare className="w-8 h-8 text-gray-300 dark:text-zinc-500 mx-auto mb-2" />
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">No chats yet</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start a conversation</p>
                 </div>
               )
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {filteredChats.map((chat) => (
                   <div
                     key={chat.id}
                     className={cn(
-                      "group relative rounded-xl transition-all duration-200 border-2 shadow-sm hover:shadow-md",
+                      "group relative rounded-lg transition-all duration-200 border",
                       chat.id === activeChatId
-                        ? "bg-blue-50 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 shadow-md"
+                        ? "bg-blue-50 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600"
                         : "bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-gray-200 dark:border-zinc-600 hover:border-gray-400 dark:hover:border-zinc-500"
                     )}
                     onMouseEnter={() => setHoveredChatId(chat.id)}
@@ -653,22 +650,22 @@ export function Sidebar({
                       onClick={() => handleChatSelect(chat.id)}
                       className={cn(
                         "w-full text-left transition-all duration-200",
-                        isCollapsed && isDesktop ? "p-3 flex justify-center" : "p-4"
+                        isCollapsed && isDesktop ? "p-2 flex justify-center" : "p-3"
                       )}
                       title={isCollapsed && isDesktop ? chat.title : undefined}
                     >
                       {isCollapsed && isDesktop ? (
-                        <MessageSquare className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       ) : (
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {chat.title}
                             </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                               {chat.lastMessage}
                             </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                               {formatSidebarTimestamp(chat.timestamp)}
                             </p>
                           </div>
@@ -677,17 +674,17 @@ export function Sidebar({
                             <div className="flex items-center gap-1 ml-2">
                               <button
                                 onClick={(e) => handleChatAction(e, 'edit', chat.id)}
-                                className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Edit chat"
                               >
-                                <Edit3 className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                                <Edit3 className="w-3 h-3 text-gray-500 dark:text-gray-400" />
                               </button>
                               <button
                                 onClick={(e) => handleChatAction(e, 'delete', chat.id)}
-                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Delete chat"
                               >
-                                <Trash2 className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
+                                <Trash2 className="w-3 h-3 text-red-500 dark:text-red-400" />
                               </button>
                             </div>
                           )}
