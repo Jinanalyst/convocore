@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendChatMessage, getModelConfig, type ChatMessage, type AIServiceConfig } from '@/lib/ai-service';
 import { detectAgentFromMessage } from '@/lib/model-agents';
 
+// Simple language detection function
+function detectLanguage(text: string): string {
+  // Korean character detection
+  const koreanRegex = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
+  if (koreanRegex.test(text)) {
+    return 'ko';
+  }
+  
+  // Default to English
+  return 'en';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -41,14 +53,22 @@ export async function POST(request: NextRequest) {
     let processedMessages = [...messages];
 
     if (latestUserMessage) {
+      // Detect language from user's message
+      const detectedLanguage = detectLanguage(latestUserMessage.content);
+      
+      // Create language instruction
+      const languageInstruction = detectedLanguage === 'ko' 
+        ? 'Please respond in Korean (한국어). Use natural Korean expressions and grammar.'
+        : 'Please respond in English. Use clear and natural English expressions.';
+
       const detectedAgent = detectAgentFromMessage(latestUserMessage.content);
       
       if (detectedAgent) {
-        // Add or update system message with agent's system prompt
+        // Add or update system message with agent's system prompt + language instruction
         const systemMessageIndex = processedMessages.findIndex(m => m.role === 'system');
         const agentSystemMessage: ChatMessage = {
           role: 'system',
-          content: detectedAgent.systemPrompt
+          content: `${detectedAgent.systemPrompt}\n\n${languageInstruction}`
         };
 
         if (systemMessageIndex >= 0) {
@@ -59,7 +79,27 @@ export async function POST(request: NextRequest) {
           processedMessages.unshift(agentSystemMessage);
         }
 
-        console.log(`Agent detected: ${detectedAgent.tag} - ${detectedAgent.displayName}`);
+        console.log(`Agent detected: ${detectedAgent.tag} - ${detectedAgent.displayName}, Language: ${detectedLanguage}`);
+      } else {
+        // Add language instruction even without agent
+        const systemMessageIndex = processedMessages.findIndex(m => m.role === 'system');
+        const languageSystemMessage: ChatMessage = {
+          role: 'system',
+          content: `You are a helpful AI assistant. ${languageInstruction}`
+        };
+
+        if (systemMessageIndex >= 0) {
+          // Update existing system message
+          processedMessages[systemMessageIndex] = {
+            ...processedMessages[systemMessageIndex],
+            content: `${processedMessages[systemMessageIndex].content}\n\n${languageInstruction}`
+          };
+        } else {
+          // Add system message at the beginning
+          processedMessages.unshift(languageSystemMessage);
+        }
+
+        console.log(`Language detected: ${detectedLanguage}`);
       }
     }
 

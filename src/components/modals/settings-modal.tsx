@@ -315,10 +315,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="zh">中文</option>
+                <option value="ko">한국어</option>
               </select>
             </div>
             

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Bot, Zap, Brain, Code, MessageSquare, Star, ExternalLink, Bug, Palette, Image, PenTool, Database, TrendingUp, Rocket, MessageCircle, Copy } from 'lucide-react';
 import { CONVO_AGENTS } from '@/lib/model-agents';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/language-context';
 import Link from 'next/link';
 
 interface ModelInfoModalProps {
@@ -13,11 +14,13 @@ interface ModelInfoModalProps {
 }
 
 export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
+  const { t } = useLanguage();
+  
   const models = [
     {
       name: "Convocore Omni",
       provider: "Convocore",
-      description: "플래그십 모델, 멀티모달, 고성능, 빠름",
+      description: t('model.omni.description'),
       features: ["Text & Image Processing", "Code Generation", "Advanced Reasoning", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -27,7 +30,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Alpha",
       provider: "Convocore",
-      description: "가장 정밀한 추론 능력, 장문 작문, 고급 분석",
+      description: t('model.alpha.description'),
       features: ["Superior Reasoning", "Creative Writing", "Code Analysis", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Medium",
@@ -37,7 +40,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Turbo",
       provider: "Convocore",
-      description: "고속 응답 + 고품질 균형, 코드/텍스트 최적화",
+      description: t('model.turbo.description'),
       features: ["Balanced Performance", "Code & Text", "JSON Mode", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -47,7 +50,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Nova",
       provider: "Convocore",
-      description: "균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합",
+      description: t('model.nova.description'),
       features: ["Balanced Capabilities", "Efficient Processing", "Code & Writing", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Fast",
