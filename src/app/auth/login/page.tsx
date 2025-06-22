@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ConvocoreLogo } from '@/components/ui/convocore-logo';
+import { WalletConnector } from '@/components/ui/wallet-connector';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -62,6 +63,40 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWalletLogin = async (walletAddress: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Create or get user with wallet address
+      const { data, error } = await supabase.auth.signInAnonymously();
+      
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      // Store wallet address in user metadata or separate table
+      if (data.user) {
+        await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            wallet_address: walletAddress,
+            subscription_tier: 'free',
+            created_at: new Date().toISOString(),
+          });
+
+        router.push(redirectTo);
+        router.refresh();
+      }
+    } catch (err) {
+      setError('Wallet authentication failed');
     } finally {
       setLoading(false);
     }
@@ -193,6 +228,20 @@ export default function LoginPage() {
               </svg>
               Continue with Google
             </Button>
+
+            {/* Wallet Login Section */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-black text-gray-400">Or connect your wallet</span>
+              </div>
+            </div>
+
+            <WalletConnector 
+              onWalletConnected={handleWalletLogin}
+            />
           </div>
         </form>
 
