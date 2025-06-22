@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { AIInputDemo } from "@/components/blocks/ai-input-demo";
+import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
 import { 
@@ -452,9 +452,12 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
               {/* Chat Limit Indicator */}
               <ChatLimitIndicator className="max-w-2xl mx-auto mb-3 sm:mb-4" />
               
-              <AIInputDemo
-                onSubmit={handleSendMessage}
-                onFileUpload={handleFileUpload}
+              <AIChatInput
+                onSendMessage={(message, options) => {
+                  // Use default model and handle new options
+                  handleSendMessage(message, 'gpt-4', options?.deepSearch);
+                }}
+                onAttachFile={handleFileUpload}
                 onVoiceInput={handleVoiceInput}
                 className="max-w-2xl mx-auto"
               />
@@ -595,9 +598,12 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       {/* Input Area - Reduced Size */}
       <div className="p-4 border-t bg-background">
-        <AIInputDemo
-          onSubmit={handleSendMessage}
-          onFileUpload={handleFileUpload}
+        <AIChatInput
+          onSendMessage={(message, options) => {
+            // Use default model and handle new options
+            handleSendMessage(message, 'gpt-4', options?.deepSearch);
+          }}
+          onAttachFile={handleFileUpload}
           onVoiceInput={handleVoiceInput}
           className="w-full"
         />

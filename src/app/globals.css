@@ -196,6 +196,9 @@
 .chat-container-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgb(156 163 175) transparent;
+  /* Ensure no margins or gaps */
+  margin: 0;
+  padding: 0;
 }
 
 .chat-container-scroll::-webkit-scrollbar {
@@ -478,4 +481,173 @@ select {
   .no-print {
     display: none !important;
   }
+}
+
+/* Ensure sidebar takes full height without gaps */
+.sidebar-full-height {
+  height: 100vh;
+  max-height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Chat list container - ensure it fills all space */
+.chat-list-full {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resizable Panel Styles */
+.resizable-handle {
+  position: relative;
+  user-select: none;
+}
+
+.resizable-handle::before {
+  content: '';
+  position: absolute;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.resizable-handle:hover::before {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.resizable-handle-horizontal {
+  cursor: col-resize;
+  width: 4px;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+}
+
+.resizable-handle-horizontal::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.resizable-handle-vertical {
+  cursor: row-resize;
+  height: 4px;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+}
+
+.resizable-handle-vertical::before {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+/* Resize indicator line */
+.resize-indicator {
+  position: absolute;
+  background: #3b82f6;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.resizable-handle:hover .resize-indicator {
+  opacity: 1;
+}
+
+.resize-indicator-horizontal {
+  width: 1px;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.resize-indicator-vertical {
+  height: 1px;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Resizable Panel Styles */
+.resizable-handle {
+  position: relative;
+  user-select: none;
+}
+
+.resizable-handle::before {
+  content: '';
+  position: absolute;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.resizable-handle:hover::before {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.resizable-handle-horizontal {
+  cursor: col-resize;
+  width: 4px;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+}
+
+.resizable-handle-horizontal::before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.resizable-handle-vertical {
+  cursor: row-resize;
+  height: 4px;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+}
+
+.resizable-handle-vertical::before {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+/* Resize indicator line */
+.resize-indicator {
+  position: absolute;
+  background: #3b82f6;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.resizable-handle:hover .resize-indicator {
+  opacity: 1;
+}
+
+.resize-indicator-horizontal {
+  width: 1px;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.resize-indicator-vertical {
+  height: 1px;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }

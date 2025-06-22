@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { Button } from '@/components/ui/button';
 import { 
   User, 
@@ -196,6 +197,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900">
+          <VisuallyHidden>
+            <DialogTitle>Loading Profile</DialogTitle>
+          </VisuallyHidden>
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
