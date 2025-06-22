@@ -1,12 +1,12 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Mic, AlertCircle, CheckCircle, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VoiceChat } from "@/components/ui/voice-chat-working";
 import { cn } from "@/lib/utils";
 import { speechService } from "@/lib/speech-recognition";
 import { aiChatService } from "@/lib/ai-chat-service";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface VoiceModalProps {
   isOpen: boolean;
@@ -18,11 +18,35 @@ interface VoiceModalProps {
 
 export function VoiceModal({ isOpen, onClose, onSubmit, selectedModel = 'gpt-4o', className }: VoiceModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
+
+  const checkPermissions = async () => {
+    try {
+      const hasPermission = await speechService.requestMicrophonePermission();
+      setHasPermission(hasPermission);
+      if (!hasPermission) {
+        setPermissionError('Microphone access is required for voice features. Please allow microphone access and try again.');
+      } else {
+        setPermissionError(null);
+      }
+    } catch (error) {
+      setHasPermission(false);
+      setPermissionError('Unable to access microphone. Please check your browser settings.');
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      checkPermissions();
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -51,6 +75,53 @@ export function VoiceModal({ isOpen, onClose, onSubmit, selectedModel = 'gpt-4o'
             >
               <X className="w-5 h-5" />
             </button>
+
+            {/* Permission Status */}
+            {(permissionError || hasPermission === false) && (
+              <div className="absolute top-16 left-4 right-4 z-10">
+                <motion.div
+                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-red-500 mb-2">Microphone Access Required</h3>
+                      <p className="text-sm text-red-500/80 mb-3">
+                        {permissionError || 'Please enable microphone permissions to use voice features.'}
+                      </p>
+                      <div className="text-xs text-red-500/70 space-y-1">
+                        <p><strong>Chrome:</strong> Click the 🔒 icon in the address bar → Allow microphone</p>
+                        <p><strong>Firefox:</strong> Click the microphone icon in the address bar → Allow</p>
+                        <p><strong>Edge:</strong> Click the 🔒 icon → Microphone → Allow</p>
+                      </div>
+                      <button
+                        onClick={checkPermissions}
+                        className="mt-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
+            {hasPermission === true && (
+              <div className="absolute top-16 left-4 right-4 z-10">
+                <motion.div
+                  className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-500">Microphone access granted</span>
+                  </div>
+                </motion.div>
+              </div>
+            )}
 
             {/* Voice Chat Interface */}
             <VoiceChat

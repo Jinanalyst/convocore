@@ -180,7 +180,28 @@ export function VoiceChat({
     };
     
     recognition.onerror = (event: any) => {
-      setError(event.error);
+      let userFriendlyError = '';
+      switch (event.error) {
+        case 'not-allowed':
+          userFriendlyError = 'Microphone access denied. Please enable microphone permissions and try again.';
+          break;
+        case 'no-speech':
+          userFriendlyError = 'No speech detected. Please try speaking again.';
+          break;
+        case 'audio-capture':
+          userFriendlyError = 'No microphone found. Please check your microphone connection.';
+          break;
+        case 'network':
+          userFriendlyError = 'Network error occurred. Please check your internet connection.';
+          break;
+        case 'service-not-allowed':
+          userFriendlyError = 'Speech recognition service not allowed. Please use HTTPS or enable permissions.';
+          break;
+        default:
+          userFriendlyError = `Speech recognition error: ${event.error}`;
+      }
+      
+      setError(userFriendlyError);
       setIsListening(false);
       setDuration(0);
     };

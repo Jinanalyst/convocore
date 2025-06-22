@@ -75,6 +75,21 @@ export class SpeechService {
     return this.synthesis !== null;
   }
 
+  public async requestMicrophonePermission(): Promise<boolean> {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Close the stream immediately as we only needed to check permissions
+        stream.getTracks().forEach(track => track.stop());
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Microphone permission denied:', error);
+      return false;
+    }
+  }
+
   public startListening(
     onResult: (transcript: string, isFinal: boolean) => void,
     onError: (error: string) => void,
@@ -117,7 +132,32 @@ export class SpeechService {
 
     this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
-      onError(event.error);
+      
+      let userFriendlyError = '';
+      switch (event.error) {
+        case 'not-allowed':
+          userFriendlyError = 'Microphone access denied. Please enable microphone permissions and try again.';
+          break;
+        case 'no-speech':
+          userFriendlyError = 'No speech detected. Please try speaking again.';
+          break;
+        case 'audio-capture':
+          userFriendlyError = 'No microphone found. Please check your microphone connection.';
+          break;
+        case 'network':
+          userFriendlyError = 'Network error occurred. Please check your internet connection.';
+          break;
+        case 'service-not-allowed':
+          userFriendlyError = 'Speech recognition service not allowed. Please use HTTPS or enable permissions.';
+          break;
+        case 'bad-grammar':
+          userFriendlyError = 'Speech recognition grammar error.';
+          break;
+        default:
+          userFriendlyError = `Speech recognition error: ${event.error}`;
+      }
+      
+      onError(userFriendlyError);
     };
 
     this.recognition.onend = () => {
