@@ -3,9 +3,9 @@ export function ConvoAILogo({ className = "" }: { className?: string }) {
     <div className={`flex items-center gap-3 ${className}`}>
       {/* Logo Icon */}
       <div className="relative">
-        <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+        <div className="w-12 h-12 bg-gray-900 dark:bg-gray-800 rounded-xl flex items-center justify-center relative overflow-hidden">
           {/* Chat bubble tail */}
-          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 rotate-45"></div>
+          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gray-900 dark:bg-gray-800 rotate-45"></div>
           
           {/* Network/circuit pattern */}
           <div className="relative z-10">

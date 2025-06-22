@@ -17,7 +17,7 @@ export default function PricingPage() {
               <Link href="/chat">Try Chat</Link>
             </Button>
             <Button asChild>
-              <Link href="/chat">Get Started</Link>
+              <Link href="/auth/login">Get Started</Link>
             </Button>
           </div>
         </div>
