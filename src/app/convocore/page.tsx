@@ -241,9 +241,59 @@ export default function ConvocorePage() {
     }
   };
 
-  const handleShare = () => {
-    console.log("Sharing chat");
-    // In a real app, this would generate a shareable link or export
+  const handleShare = async () => {
+    if (!activeChatId) {
+      console.log("No active chat to share");
+      return;
+    }
+
+    try {
+      // Generate a shareable link for the current chat
+      const response = await fetch(`/api/chat/${activeChatId}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isPublic: true,
+          allowComments: false
+        }),
+      });
+
+      if (response.ok) {
+        const { shareUrl } = await response.json();
+        
+        // Copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        
+        // Show notification
+        if (typeof window !== 'undefined' && (window as any).showNotification) {
+          (window as any).showNotification({
+            title: 'Share Link Created',
+            message: 'Chat link copied to clipboard and ready to share!',
+            type: 'success'
+          });
+        }
+        
+        console.log("Chat shared successfully:", shareUrl);
+      } else {
+        throw new Error('Failed to create share link');
+      }
+    } catch (error) {
+      console.error('Error sharing chat:', error);
+      
+      // Fallback: create a simple shareable URL
+      const fallbackUrl = `${window.location.origin}/chat/${activeChatId}`;
+      await navigator.clipboard.writeText(fallbackUrl);
+      
+      if (typeof window !== 'undefined' && (window as any).showNotification) {
+        (window as any).showNotification({
+          title: 'Share Link Ready',
+          message: 'Basic share link copied to clipboard.',
+          type: 'info'
+        });
+      }
+    }
   };
 
   const handleSettings = () => {

@@ -339,8 +339,8 @@ export function Header({
         open={showProfileModal} 
         onOpenChange={setShowProfileModal} 
       />
-      <ShareModal 
-        open={showShareModal} 
+      <ShareModal
+        open={showShareModal}
         onOpenChange={setShowShareModal}
         chatId={currentChatId}
         chatTitle={currentChatTitle}
