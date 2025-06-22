@@ -37,30 +37,34 @@ const translations = {
     'common.save': 'Save',
     'common.cancel': 'Cancel',
     'common.default': 'Default',
+    'common.confirm': 'Confirm',
+    'common.content': 'Content',
   },
   ko: {
     // Model descriptions  
-    'model.omni.description': '플래그십 모델, 멀티모달, 고성능, 빠름',
-    'model.alpha.description': '가장 정밀한 추론 능력, 장문 작문, 고급 분석',
-    'model.turbo.description': '고속 응답 + 고품질 균형, 코드/텍스트 최적화',
-    'model.nova.description': '균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합',
+    'model.omni.description': 'Flagship model, multimodal, high performance, fast',
+    'model.alpha.description': 'Most precise reasoning ability, long-form writing, advanced analysis',
+    'model.turbo.description': 'High-speed response + quality balance, code/text optimization',
+    'model.nova.description': 'Balanced performance, fast response, suitable for practical daily tasks',
     
     // Settings
-    'settings.language': '언어',
+    'settings.language': 'Language',
     'settings.english': 'English',
     'settings.korean': '한국어',
-    'settings.theme': '테마',
-    'settings.general': '일반',
-    'settings.account': '계정',
-    'settings.appearance': '외관',
-    'settings.notifications': '알림',
-    'settings.privacy': '개인정보',
-    'settings.billing': '결제',
+    'settings.theme': 'Theme',
+    'settings.general': 'General',
+    'settings.account': 'Account',
+    'settings.appearance': 'Appearance',
+    'settings.notifications': 'Notifications',
+    'settings.privacy': 'Privacy',
+    'settings.billing': 'Billing',
     
     // Common
-    'common.save': '저장',
-    'common.cancel': '취소',
-    'common.default': '기본값',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.default': 'Default',
+    'common.confirm': 'Confirm',
+    'common.content': 'Content',
   }
 };
 

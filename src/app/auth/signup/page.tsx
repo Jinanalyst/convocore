@@ -64,18 +64,40 @@ function SignupPageContent() {
     setError(null);
 
     try {
+      // Check if Supabase is properly configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        setError('Authentication service is not configured. Please contact support.');
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (error) {
-        setError(error.message);
+        console.error('Google signup error:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Google authentication failed. Please try again or use a different account.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email address before signing in.');
+        } else if (error.message.includes('configuration')) {
+          setError('Google authentication is not properly configured. Please contact support.');
+        } else {
+          setError(`Google signup failed: ${error.message}`);
+        }
       }
-    } catch {
-      setError('An unexpected error occurred');
+    } catch (err) {
+      console.error('Google signup exception:', err);
+      setError('An unexpected error occurred with Google signup. Please try again.');
     } finally {
       setLoading(false);
     }

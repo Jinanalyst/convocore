@@ -14,25 +14,25 @@ const models = [
   {
     id: "gpt-4o",
     name: "Convocore Omni",
-    description: "플래그십 모델, 멀티모달, 고성능, 빠름",
+    description: "Flagship model, multimodal, high performance, fast",
     provider: "Convocore",
   },
   {
     id: "gpt-4-turbo",
     name: "Convocore Turbo",
-    description: "고속 응답 + 고품질 균형, 코드/텍스트 최적화",
+    description: "High-speed response + quality balance, code/text optimization",
     provider: "Convocore",
   },
   {
     id: "claude-3-opus-20240229",
     name: "Convocore Alpha",
-    description: "가장 정밀한 추론 능력, 장문 작문, 고급 분석",
+    description: "Most precise reasoning ability, long-form writing, advanced analysis",
     provider: "Convocore",
   },
   {
     id: "claude-3-sonnet-20240229",
     name: "Convocore Nova",
-    description: "균형 잡힌 성능, 빠른 응답, 실용적인 일상 업무에 적합",
+    description: "Balanced performance, fast response, suitable for practical daily tasks",
     provider: "Convocore",
   },
 ];

@@ -76,6 +76,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --vh: 1vh;
+  --touch-target-min: 44px;
+  --mobile-padding: 1rem;
+  --tablet-padding: 1.5rem;
+  --desktop-padding: 2rem;
 }
 
 .dark {
@@ -190,7 +195,7 @@
 /* Sidebar chat container scrollbar styling */
 .chat-container-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(156 163 175) rgb(243 244 246);
+  scrollbar-color: rgb(156 163 175) transparent;
 }
 
 .chat-container-scroll::-webkit-scrollbar {
@@ -198,7 +203,7 @@
 }
 
 .chat-container-scroll::-webkit-scrollbar-track {
-  background: rgb(243 244 246);
+  background: transparent;
   border-radius: 3px;
 }
 
@@ -213,11 +218,7 @@
 }
 
 .dark .chat-container-scroll {
-  scrollbar-color: rgb(113 113 122) rgb(39 39 42);
-}
-
-.dark .chat-container-scroll::-webkit-scrollbar-track {
-  background: rgb(39 39 42);
+  scrollbar-color: rgb(113 113 122) transparent;
 }
 
 .dark .chat-container-scroll::-webkit-scrollbar-thumb {
@@ -246,4 +247,235 @@
 
 .dark\:hover\:scrollbar-thumb-zinc-500:hover::-webkit-scrollbar-thumb {
   background: rgb(113 113 122);
+}
+
+/* Mobile-first responsive breakpoints */
+@supports (height: 100dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
+/* Base mobile styles */
+html {
+  /* Prevent zoom on input focus (iOS) */
+  -webkit-text-size-adjust: 100%;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Better font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+  /* Better touch scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly interactive elements */
+button, 
+[role="button"],
+input[type="submit"],
+input[type="button"] {
+  /* Minimum touch target size */
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  /* Remove tap highlight on mobile */
+  -webkit-tap-highlight-color: transparent;
+  /* Better touch feedback */
+  touch-action: manipulation;
+}
+
+/* Input optimization for mobile */
+input, 
+textarea, 
+select {
+  /* Prevent zoom on focus (iOS) */
+  font-size: 16px;
+  /* Better mobile keyboard handling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Smartphone portrait (320px - 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+  }
+  
+  /* Full-width mobile chat */
+  .mobile-fullscreen {
+    width: 100vw;
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100 * var(--vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  
+  /* Mobile-specific text sizes */
+  .text-responsive-sm {
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.5;
+  }
+  
+  .text-responsive-base {
+    font-size: 1rem; /* 16px */
+    line-height: 1.6;
+  }
+  
+  .text-responsive-lg {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.6;
+  }
+}
+
+/* Smartphone landscape / Small tablet (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .container {
+    padding-left: var(--tablet-padding);
+    padding-right: var(--tablet-padding);
+  }
+}
+
+/* Tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding-left: var(--tablet-padding);
+    padding-right: var(--tablet-padding);
+  }
+}
+
+/* Desktop (1025px+) */
+@media (min-width: 1025px) {
+  .container {
+    padding-left: var(--desktop-padding);
+    padding-right: var(--desktop-padding);
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Mobile-specific animations */
+@media (max-width: 768px) {
+  /* Reduce motion for performance on mobile */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Mobile-optimized transitions */
+  .mobile-transition {
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  }
+  
+  /* Touch feedback */
+  .touch-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+}
+
+/* Keyboard adaptation for mobile */
+.mobile-keyboard-adjust {
+  transition: height 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  /* When virtual keyboard is open */
+  .keyboard-open .mobile-keyboard-adjust {
+    height: calc(100vh - 300px); /* Approximate keyboard height */
+    height: calc(100 * var(--vh) - 300px);
+  }
+}
+
+/* Safe area support for notched devices */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* PWA specific styles */
+@media all and (display-mode: standalone) {
+  /* Hide browser chrome when installed as PWA */
+  .pwa-only {
+    display: block;
+  }
+  
+  .browser-only {
+    display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --contrast-border: 2px solid;
+    --contrast-shadow: 0 0 0 2px;
+  }
+  
+  button, 
+  [role="button"],
+  input,
+  textarea {
+    border: var(--contrast-border);
+  }
+  
+  .focus-visible {
+    outline: var(--contrast-shadow);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* Print styles */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
 }

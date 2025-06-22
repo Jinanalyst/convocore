@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { NotificationContainer } from "@/components/ui/notification-toast";
 import { LanguageProvider } from "@/lib/language-context";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -163,10 +164,12 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white antialiased`}>
         <div className="min-h-full flex flex-col">
-          <LanguageProvider>
-            {children}
-            <NotificationContainer />
-          </LanguageProvider>
+          <ErrorBoundary>
+            <LanguageProvider>
+              {children}
+              <NotificationContainer />
+            </LanguageProvider>
+          </ErrorBoundary>
         </div>
       </body>
     </html>

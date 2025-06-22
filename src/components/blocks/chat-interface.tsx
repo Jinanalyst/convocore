@@ -1,365 +1,995 @@
 "use client";
 
-import { ConvoAILogo } from "@/components/ui/convo-ai-logo";
-import { AIInputDemo } from "@/components/blocks/ai-input-demo";
-import { MemoryStatus } from "@/components/ui/memory-status";
-import { Sidebar } from "@/components/layout/sidebar";
-import { ChatArea } from "@/components/layout/chat-area";
-import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Sparkles, Bot, MessageCircle } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { useIsMobile, useViewportHeight, useKeyboardOpen, useSwipeGesture } from '@/lib/mobile-utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Mic, 
+  Settings, 
+  Menu, 
+  X, 
+  Edit3, 
+  Trash2,
+  Share,
+  Copy,
+  RotateCcw,
+  User,
+  Bot,
+  Sparkles,
+  Globe,
+  FileText,
+  Image as ImageIcon,
+  Code,
+  Calculator,
+  Lightbulb
+} from 'lucide-react';
+import { VoiceModal } from '@/components/modals/voice-modal';
+import { SettingsModal } from '@/components/modals/settings-modal';
+import { ShareModal } from '@/components/modals/share-modal';
+import { ModelSelector } from '@/components/ui/model-selector';
+import { motion, AnimatePresence } from 'framer-motion';
 
+// Types
 interface ChatMessage {
   id: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
-  sender: "user" | "ai";
   timestamp: Date;
+  tokens?: number;
+  model?: string;
 }
 
-export function ChatInterface() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gpt-4o");
-  const [activeChatId, setActiveChatId] = useState<string>("");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatAreaRef = useRef<HTMLDivElement>(null);
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+  model: string;
+  messageCount: number;
+}
 
-  // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+interface ChatInterfaceProps {
+  className?: string;
+  onSendMessage?: (message: string, model: string, webSearch: boolean) => void;
+}
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+// Utility functions
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  const handleNewChat = () => {
-    setMessages([]);
-    setActiveChatId("");
-  };
-
-  const handleSelectChat = (chatId: string) => {
-    setActiveChatId(chatId);
-    // Load messages for this chat
-    // In a real app, you'd fetch messages from the database
-    setMessages([]);
-  };
-
-  const handleDeleteChat = (chatId: string) => {
-    if (chatId === activeChatId) {
-      setMessages([]);
-      setActiveChatId("");
-    }
-  };
-
-  const handleAIInputSubmit = async (message: string, model: string, includeWebSearch?: boolean) => {
-    if (!message.trim()) return;
-
-    // Update selected model if different
-    if (model !== selectedModel) {
-      setSelectedModel(model);
-    }
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: message,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
-
-    try {
-      let responseContent = "";
-      
-      if (includeWebSearch) {
-        // Simulate web search + AI response
-        responseContent = `🌐 **Web Search Enabled**\n\nI searched the web for information about "${message}" and found relevant results. Here's what I found:\n\n• Recent developments and current information\n• Multiple perspectives from reliable sources\n• Up-to-date data and statistics\n\nBased on the web search results, here's my comprehensive response using ${model}:\n\n${message.includes('?') ? 'This is a detailed answer' : 'This is relevant information'} incorporating the latest web information. In a real implementation, this would include actual search results and AI-generated insights.`;
-      } else {
-        // Regular AI response
-        responseContent = `I received your message: "${message}". This is a response from ConvoAI using ${model}. In a real implementation, this would connect to the selected AI service and provide intelligent responses based on the model's training data.`;
-      }
-
-      // Simulate AI response delay
-      setTimeout(() => {
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: responseContent,
-          sender: "ai",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, aiMessage]);
-        setIsLoading(false);
-      }, includeWebSearch ? 2500 : 1500); // Longer delay for web search
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const handleFileUpload = (file: File) => {
-    console.log('File uploaded:', file.name, file.type, file.size);
-    // In a real implementation, this would process the file
-    const fileMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: `📎 Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
-      sender: "user",
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, fileMessage]);
-  };
-
-  const handleVoiceInput = () => {
-    console.log('Voice input requested');
-    // In a real implementation, this would start voice recording
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log('Voice transcript:', transcript);
-        // You could auto-fill the input or submit directly
-        handleAIInputSubmit(transcript, selectedModel);
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-      };
-      
-      recognition.start();
+const generateTitle = (firstMessage: string): string => {
+  const cleaned = firstMessage.replace(/[^\w\s]/gi, '').trim();
+  if (cleaned.length <= 50) return cleaned;
+  
+  const words = cleaned.split(' ');
+  let title = '';
+  
+  for (const word of words) {
+    if ((title + ' ' + word).length <= 47) {
+      title += (title ? ' ' : '') + word;
     } else {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      break;
     }
+  }
+  
+  return title + '...';
+};
+
+const formatTimestamp = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
+};
+
+// Sidebar Component
+const ChatSidebar: React.FC<{
+  sessions: ChatSession[];
+  currentSession: ChatSession | null;
+  onSessionSelect: (session: ChatSession) => void;
+  onNewChat: () => void;
+  onDeleteSession: (sessionId: string) => void;
+  onRenameSession: (sessionId: string, newTitle: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ 
+  sessions, 
+  currentSession, 
+  onSessionSelect, 
+  onNewChat, 
+  onDeleteSession, 
+  onRenameSession,
+  isOpen,
+  onClose 
+}) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const isMobile = useIsMobile();
+
+  const handleRename = (sessionId: string, newTitle: string) => {
+    if (newTitle.trim()) {
+      onRenameSession(sessionId, newTitle.trim());
+    }
+    setEditingId(null);
+    setEditTitle('');
+  };
+
+  const handleDelete = (sessionId: string) => {
+    if (window.confirm('Delete this conversation?')) {
+      onDeleteSession(sessionId);
+    }
+  };
+
+  const startEditing = (session: ChatSession) => {
+    setEditingId(session.id);
+    setEditTitle(session.title);
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-900 dark:to-zinc-800">
-      {/* Sidebar */}
-      <Sidebar
-        className="flex-shrink-0"
-        onNewChat={handleNewChat}
-        onSelectChat={handleSelectChat}
-        onDeleteChat={handleDeleteChat}
-        activeChatId={activeChatId}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
-        {/* Chat Messages Area with Custom Scrollbar */}
-        <div 
-          ref={chatAreaRef}
-          className="flex-1 overflow-y-auto px-4 py-6 pt-16 lg:pt-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-zinc-500"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgb(156 163 175) transparent'
-          }}
-        >
-          <div className="container mx-auto max-w-4xl min-h-full">
-            {messages.length === 0 ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20 min-h-full flex flex-col justify-center"
+    <AnimatePresence>
+      {(isOpen || !isMobile) && (
+        <>
+          {/* Mobile backdrop */}
+          {isMobile && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              onClick={onClose}
+            />
+          )}
+          
+          {/* Sidebar */}
+          <motion.aside
+            initial={isMobile ? { x: -320 } : { x: 0 }}
+            animate={{ x: 0 }}
+            exit={isMobile ? { x: -320 } : { x: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={cn(
+              "fixed lg:relative top-0 left-0 h-full w-80 bg-gray-50 dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 flex flex-col z-50",
+              isMobile && "shadow-xl"
+            )}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
+              {isMobile && (
+                <Button variant="ghost" size="sm" onClick={onClose}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            
+            {/* New Chat Button */}
+            <div className="p-4">
+              <Button 
+                onClick={onNewChat}
+                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <ConvoAILogo className="justify-center mb-6" />
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                  Welcome to Convocore
-                </h1>
-                <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto px-4">
-                  Your intelligent conversational AI platform. Start a conversation, explore our library, or configure your AI model settings.
-                </p>
-                
-                {/* Memory Status */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="mb-8"
-                >
-                  <MemoryStatus className="max-w-md mx-auto" />
-                </motion.div>
-
-                {/* Feature Cards - Mobile-first vertical layout */}
-                <div className="flex flex-col space-y-4 max-w-md mx-auto px-4 md:hidden">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="flex items-center gap-4 bg-white dark:bg-zinc-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-zinc-700"
-                  >
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                        Smart Conversations
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-300 text-xs">
-                        Advanced AI models for natural conversations
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex items-center gap-4 bg-white dark:bg-zinc-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-zinc-700"
-                  >
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                      <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                        Custom AI Agents
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-300 text-xs">
-                        Specialized agents for specific tasks
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex items-center gap-4 bg-white dark:bg-zinc-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-zinc-700"
-                  >
-                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-                        Secure & Private
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-300 text-xs">
-                        Your conversations are secure and private
-                      </p>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Desktop Feature Cards */}
-                <div className="hidden md:grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white dark:bg-zinc-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-zinc-700 hover:shadow-md transition-shadow"
-                  >
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
-                      <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Smart Conversations
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm">
-                      Engage with advanced AI models for natural, intelligent conversations
-                    </p>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white dark:bg-zinc-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-zinc-700 hover:shadow-md transition-shadow"
-                  >
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
-                      <Bot className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Custom AI Agents
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm">
-                      Create and configure specialized AI agents for specific tasks
-                    </p>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white dark:bg-zinc-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-zinc-700 hover:shadow-md transition-shadow"
-                  >
-                    <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center mb-4">
-                      <MessageCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Secure & Private
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm">
-                      Your conversations are secure and private with blockchain payments
-                    </p>
-                  </motion.div>
-                </div>
-              </motion.div>
-            ) : (
-              // Chat Messages
-              <div className="space-y-4">
-                {messages.map((message) => (
+                <Plus className="w-4 h-4 mr-2" />
+                New Chat
+              </Button>
+            </div>
+            
+            {/* Chat Sessions */}
+            <div className="flex-1 overflow-y-auto px-2">
+              <div className="space-y-1">
+                {sessions.map((session) => (
                   <div
-                    key={message.id}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    key={session.id}
+                    className={cn(
+                      "group relative flex items-center p-3 rounded-lg cursor-pointer transition-all",
+                      currentSession?.id === session.id
+                        ? "bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                        : "hover:bg-gray-100 dark:hover:bg-zinc-800"
+                    )}
+                    onClick={() => onSessionSelect(session)}
                   >
-                    <div
-                      className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl px-4 py-2 rounded-lg ${
-                        message.sender === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-700'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </p>
+                    <MessageSquare className="w-4 h-4 mr-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                    
+                    {editingId === session.id ? (
+                      <input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={() => handleRename(session.id, editTitle)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleRename(session.id, editTitle);
+                          } else if (e.key === 'Escape') {
+                            setEditingId(null);
+                            setEditTitle('');
+                          }
+                        }}
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {session.title}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                          <span>{session.messageCount} messages</span>
+                          <span>•</span>
+                          <span>{formatTimestamp(session.updatedAt)}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Action Buttons */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(session);
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(session.id);
+                        }}
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                 ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="max-w-xs sm:max-w-sm md:max-w-md bg-white dark:bg-zinc-800 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-700 px-4 py-2 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                        <span className="text-sm text-gray-500">AI is typing...</span>
-                      </div>
-                    </div>
+                
+                {sessions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No conversations yet</p>
+                    <p className="text-xs">Start a new chat to begin</p>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 dark:border-zinc-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Convocore AI Chat
+              </div>
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// Welcome Screen Component
+const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
+  const features = [
+    {
+      icon: <Sparkles className="w-6 h-6" />,
+      title: "Smart Conversations",
+      description: "Engage with advanced AI models for natural, intelligent conversations"
+    },
+    {
+      icon: <Code className="w-6 h-6" />,
+      title: "Code Generation",
+      description: "Get help with programming, debugging, and technical solutions"
+    },
+    {
+      icon: <Globe className="w-6 h-6" />,
+      title: "Web Search",
+      description: "Access real-time information from the web when needed"
+    },
+    {
+      icon: <FileText className="w-6 h-6" />,
+      title: "Document Analysis",
+      description: "Upload and analyze documents, images, and files"
+    }
+  ];
+
+  const suggestions = [
+    "Explain quantum computing in simple terms",
+    "Write a Python function to sort an array",
+    "Plan a 7-day trip to Japan",
+    "Help me debug this JavaScript code",
+    "Summarize the latest AI trends",
+    "Create a workout plan for beginners"
+  ];
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="max-w-4xl w-full text-center space-y-12">
+        {/* Header */}
+        <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-3 mb-6"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+          </motion.div>
+          
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4"
+          >
+            Welcome to Convocore
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
+          >
+            AI chat with secure USDT payments on TRON blockchain. Start a conversation to unlock intelligent assistance.
+          </motion.p>
         </div>
 
-        {/* AI Input Area */}
-        <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm p-4">
-          <div className="container mx-auto max-w-4xl">
-            <AIInputDemo
-              onSubmit={handleAIInputSubmit}
-              onFileUpload={handleFileUpload}
-              onVoiceInput={handleVoiceInput}
-              className="w-full"
-            />
+        {/* Features Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          {features.map((feature, index) => (
+            <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+              <CardContent className="p-0 text-center space-y-4">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400">
+                  {feature.icon}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {feature.description}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+
+        {/* Suggestions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="space-y-6"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Try asking me about...
+          </h2>
+          
+          <div className="flex flex-wrap gap-3 justify-center">
+            {suggestions.map((suggestion, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                onClick={() => onNewChat()}
+                className="text-sm hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20"
+              >
+                {suggestion}
+              </Button>
+            ))}
           </div>
-        </div>
+        </motion.div>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Button 
+            onClick={onNewChat}
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 text-lg"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Start New Conversation
+          </Button>
+        </motion.div>
       </div>
     </div>
   );
-} 
+};
+
+// Message Component
+const MessageComponent: React.FC<{
+  message: ChatMessage;
+  onCopy: (content: string) => void;
+  onRegenerate?: () => void;
+  isLast: boolean;
+}> = ({ message, onCopy, onRegenerate, isLast }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await onCopy(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "group flex gap-4 p-6",
+        message.role === 'user' 
+          ? "bg-transparent" 
+          : "bg-gray-50 dark:bg-zinc-900/50"
+      )}
+    >
+      {/* Avatar */}
+      <div className={cn(
+        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium",
+        message.role === 'user'
+          ? "bg-blue-600"
+          : "bg-gradient-to-br from-purple-500 to-blue-600"
+      )}>
+        {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 space-y-2">
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <div className="whitespace-pre-wrap text-gray-900 dark:text-white">
+            {message.content}
+          </div>
+        </div>
+
+        {/* Message Meta */}
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            className="h-6 px-2 text-xs"
+          >
+            <Copy className="w-3 h-3 mr-1" />
+            {copied ? 'Copied!' : 'Copy'}
+          </Button>
+          
+          {message.role === 'assistant' && isLast && onRegenerate && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRegenerate}
+              className="h-6 px-2 text-xs"
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Regenerate
+            </Button>
+          )}
+
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {formatTimestamp(message.timestamp)}
+          </span>
+          
+          {message.tokens && (
+            <Badge variant="secondary" className="text-xs">
+              {message.tokens} tokens
+            </Badge>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Main Chat Interface Component
+export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o');
+  const [includeWebSearch, setIncludeWebSearch] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
+  const vh = useViewportHeight();
+  const isKeyboardOpen = useKeyboardOpen();
+
+  // Load sessions from localStorage on mount
+  useEffect(() => {
+    const savedSessions = localStorage.getItem('convocore-chat-sessions');
+    if (savedSessions) {
+      try {
+        const parsed = JSON.parse(savedSessions).map((session: any) => ({
+          ...session,
+          createdAt: new Date(session.createdAt),
+          updatedAt: new Date(session.updatedAt),
+          messages: session.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        }));
+        setSessions(parsed);
+      } catch (error) {
+        console.error('Failed to load sessions:', error);
+      }
+    }
+  }, []);
+
+  // Save sessions to localStorage whenever sessions change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem('convocore-chat-sessions', JSON.stringify(sessions));
+    }
+  }, [sessions]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentSession?.messages, isLoading]);
+
+  // Swipe gesture for mobile sidebar
+  useSwipeGesture({
+    onSwipeRight: () => {
+      if (isMobile && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+    },
+    onSwipeLeft: () => {
+      if (isMobile && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    },
+  });
+
+  const createNewSession = useCallback(() => {
+    const newSession: ChatSession = {
+      id: generateId(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      model: selectedModel,
+      messageCount: 0
+    };
+    
+    setSessions(prev => [newSession, ...prev]);
+    setCurrentSession(newSession);
+    setSidebarOpen(false);
+    
+    // Focus input after creating new session
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }, [selectedModel]);
+
+  const selectSession = useCallback((session: ChatSession) => {
+    setCurrentSession(session);
+    setSidebarOpen(false);
+  }, []);
+
+  const deleteSession = useCallback((sessionId: string) => {
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(null);
+    }
+  }, [currentSession]);
+
+  const renameSession = useCallback((sessionId: string, newTitle: string) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { ...session, title: newTitle }
+        : session
+    ));
+    
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
+    }
+  }, [currentSession]);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim() || isLoading) return;
+
+    let session = currentSession;
+    
+    // Create new session if none exists
+    if (!session) {
+      session = {
+        id: generateId(),
+        title: generateTitle(content),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        model: selectedModel,
+        messageCount: 0
+      };
+      setSessions(prev => [session!, ...prev]);
+      setCurrentSession(session);
+    }
+
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: 'user',
+      content: content.trim(),
+      timestamp: new Date()
+    };
+
+    // Add user message immediately
+    const updatedSession = {
+      ...session,
+      messages: [...session.messages, userMessage],
+      updatedAt: new Date(),
+      messageCount: session.messageCount + 1,
+      title: session.messages.length === 0 ? generateTitle(content) : session.title
+    };
+
+    setCurrentSession(updatedSession);
+    setSessions(prev => prev.map(s => s.id === session!.id ? updatedSession : s));
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // Call the AI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: updatedSession.messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          model: selectedModel,
+          includeWebSearch,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      const assistantMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: data.content || data.data?.content || 'Sorry, I could not generate a response.',
+        timestamp: new Date(),
+        tokens: data.tokens,
+        model: selectedModel
+      };
+
+      // Add assistant message
+      const finalSession = {
+        ...updatedSession,
+        messages: [...updatedSession.messages, assistantMessage],
+        updatedAt: new Date(),
+        messageCount: updatedSession.messageCount + 1
+      };
+
+      setCurrentSession(finalSession);
+      setSessions(prev => prev.map(s => s.id === session!.id ? finalSession : s));
+
+      // Call external callback if provided
+      onSendMessage?.(content, selectedModel, includeWebSearch);
+
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error while processing your request. Please try again.',
+        timestamp: new Date()
+      };
+
+      const errorSession = {
+        ...updatedSession,
+        messages: [...updatedSession.messages, errorMessage],
+        updatedAt: new Date(),
+        messageCount: updatedSession.messageCount + 1
+      };
+
+      setCurrentSession(errorSession);
+      setSessions(prev => prev.map(s => s.id === session!.id ? errorSession : s));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentSession, selectedModel, includeWebSearch, isLoading, onSendMessage]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (isMobile || e.shiftKey) {
+        // On mobile or with Shift, allow new line
+        return;
+      } else {
+        // On desktop without Shift, submit
+        e.preventDefault();
+        sendMessage(input);
+      }
+    }
+  };
+
+  const handleCopyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
+  };
+
+  const handleRegenerateResponse = () => {
+    if (!currentSession || currentSession.messages.length === 0) return;
+    
+    // Find the last user message and regenerate from there
+    const messages = [...currentSession.messages];
+    const lastUserMessageIndex = messages.findLastIndex(m => m.role === 'user');
+    
+    if (lastUserMessageIndex !== -1) {
+      const lastUserMessage = messages[lastUserMessageIndex];
+      
+      // Remove messages after the last user message
+      const truncatedMessages = messages.slice(0, lastUserMessageIndex + 1);
+      
+      const updatedSession = {
+        ...currentSession,
+        messages: truncatedMessages,
+        messageCount: truncatedMessages.length
+      };
+      
+      setCurrentSession(updatedSession);
+      setSessions(prev => prev.map(s => s.id === currentSession.id ? updatedSession : s));
+      
+      // Regenerate the response
+      setTimeout(() => {
+        sendMessage(lastUserMessage.content);
+      }, 100);
+    }
+  };
+
+  const handleVoiceSubmit = (transcript: string) => {
+    setInput(transcript);
+    setTimeout(() => {
+      sendMessage(transcript);
+    }, 100);
+  };
+
+  return (
+    <div 
+      className={cn("flex h-full bg-white dark:bg-zinc-950", className)}
+      style={{ height: isMobile ? `${vh}px` : '100vh' }}
+    >
+      {/* Sidebar */}
+      <ChatSidebar
+        sessions={sessions}
+        currentSession={currentSession}
+        onSessionSelect={selectSession}
+        onNewChat={createNewSession}
+        onDeleteSession={deleteSession}
+        onRenameSession={renameSession}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Header */}
+        <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950">
+          <div className="flex items-center gap-3">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-4 h-4" />
+              </Button>
+            )}
+            
+            <div>
+              <h1 className="font-semibold text-gray-900 dark:text-white">
+                {currentSession?.title || 'New Chat'}
+              </h1>
+              {currentSession && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {currentSession.messageCount} messages • {currentSession.model}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {currentSession && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowShareModal(true)}
+              >
+                <Share className="w-4 h-4" />
+              </Button>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSettingsModal(true)}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto">
+          {!currentSession ? (
+            <WelcomeScreen onNewChat={createNewSession} />
+          ) : (
+            <div className="space-y-0">
+              {currentSession.messages.map((message, index) => (
+                <MessageComponent
+                  key={message.id}
+                  message={message}
+                  onCopy={handleCopyMessage}
+                  onRegenerate={
+                    message.role === 'assistant' && 
+                    index === currentSession.messages.length - 1 
+                      ? handleRegenerateResponse 
+                      : undefined
+                  }
+                  isLast={index === currentSession.messages.length - 1}
+                />
+              ))}
+              
+              {isLoading && (
+                <div className="flex gap-4 p-6 bg-gray-50 dark:bg-zinc-900/50">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Model Selector & Options */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <ModelSelector
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+              />
+              
+              <Button
+                type="button"
+                variant={includeWebSearch ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIncludeWebSearch(!includeWebSearch)}
+                className="h-8"
+              >
+                <Globe className="w-4 h-4 mr-1" />
+                Web Search
+              </Button>
+            </div>
+
+            {/* Input Row */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className={cn(
+                    "w-full resize-none rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none",
+                    "min-h-[44px] max-h-32 overflow-y-auto"
+                  )}
+                  rows={1}
+                  style={{
+                    height: 'auto',
+                    minHeight: '44px'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                  }}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Voice Button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowVoiceModal(true)}
+                className="h-11 w-11 p-0"
+                disabled={isLoading}
+              >
+                <Mic className="w-4 h-4" />
+              </Button>
+
+              {/* Send Button */}
+              <Button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <VoiceModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        onSubmit={handleVoiceSubmit}
+        selectedModel={selectedModel}
+      />
+
+      <SettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+      />
+
+      {currentSession && (
+        <ShareModal
+          open={showShareModal}
+          onOpenChange={setShowShareModal}
+          chatSession={currentSession}
+        />
+      )}
+    </div>
+  );
+}

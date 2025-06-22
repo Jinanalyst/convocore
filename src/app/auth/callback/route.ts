@@ -7,49 +7,74 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const redirectTo = searchParams.get('redirectTo') ?? '/convocore';
 
-  // Check if Supabase is configured
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.error('Supabase environment variables not configured');
-    return NextResponse.redirect(`${origin}/auth/login?error=configuration`);
+  // Enhanced configuration check
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase configuration missing:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey
+    });
+    return NextResponse.redirect(`${origin}/auth/login?error=configuration&message=${encodeURIComponent('Authentication service is not properly configured. Please contact support.')}`);
   }
 
   if (code) {
     try {
       const cookieStore = await cookies();
       const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        supabaseUrl,
+        supabaseAnonKey,
         {
           cookies: {
             get(name: string) {
               return cookieStore.get(name)?.value;
             },
             set(name: string, value: string, options: Record<string, unknown>) {
-              cookieStore.set({ name, value, ...options });
+              try {
+                cookieStore.set({ name, value, ...options });
+              } catch (error) {
+                console.error('Failed to set cookie:', error);
+              }
             },
             remove(name: string, options: Record<string, unknown>) {
-              cookieStore.set({ name, value: '', ...options });
+              try {
+                cookieStore.set({ name, value: '', ...options });
+              } catch (error) {
+                console.error('Failed to remove cookie:', error);
+              }
             },
           },
         }
       );
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       
-      if (!error) {
-        console.log('Magic link authentication successful');
+      if (!error && data.session) {
+        console.log('Authentication successful:', {
+          userId: data.user?.id,
+          email: data.user?.email,
+          provider: data.user?.app_metadata?.provider
+        });
+        
         return NextResponse.redirect(`${origin}${redirectTo}`);
       } else {
-        console.error('Magic link authentication failed:', error.message);
-        return NextResponse.redirect(`${origin}/auth/login?error=auth_failed&message=${encodeURIComponent(error.message)}`);
+        console.error('Authentication failed:', {
+          error: error?.message,
+          hasSession: !!data.session,
+          hasUser: !!data.user
+        });
+        
+        const errorMessage = error?.message || 'Authentication failed';
+        return NextResponse.redirect(`${origin}/auth/login?error=auth_failed&message=${encodeURIComponent(errorMessage)}`);
       }
     } catch (error) {
-      console.error('Auth callback error:', error);
-      return NextResponse.redirect(`${origin}/auth/login?error=callback_error`);
+      console.error('Auth callback exception:', error);
+      return NextResponse.redirect(`${origin}/auth/login?error=callback_error&message=${encodeURIComponent('An unexpected error occurred during authentication')}`);
     }
   }
 
   // No code provided
-  console.error('No auth code provided in callback');
-  return NextResponse.redirect(`${origin}/auth/login?error=no_code`);
+  console.error('Auth callback called without code parameter');
+  return NextResponse.redirect(`${origin}/auth/login?error=no_code&message=${encodeURIComponent('Invalid authentication link. Please try logging in again.')}`);
 } 
