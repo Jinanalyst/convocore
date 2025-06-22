@@ -34,8 +34,13 @@ export default function ConvocorePage() {
         // For wallet users, load chats from localStorage or provide demo data
         const savedChats = localStorage.getItem('wallet_chats');
         if (savedChats) {
-          const parsedChats = JSON.parse(savedChats);
-          setChats(parsedChats);
+          try {
+            const parsedChats = JSON.parse(savedChats);
+            setChats(parsedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            setChats([]);
+          }
         } else {
           // Start with empty chat list for new wallet users
           setChats([]);
@@ -44,9 +49,31 @@ export default function ConvocorePage() {
         return;
       }
 
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured, using empty chat list');
+        setChats([]);
+        return;
+      }
+
       // For Supabase authenticated users
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
+      
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Authentication error:', authError.message);
+        setChats([]);
+        return;
+      }
+
+      if (!user) {
+        console.log('User not authenticated, using empty chat list');
+        setChats([]);
+        return;
+      }
       
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -59,11 +86,13 @@ export default function ConvocorePage() {
             created_at
           )
         `)
+        .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .limit(20);
 
       if (error) {
-        console.error('Error loading chats:', error);
+        console.error('Database error loading chats:', error.message, error.details);
+        setChats([]);
         return;
       }
 
@@ -75,8 +104,9 @@ export default function ConvocorePage() {
       })) || [];
 
       setChats(formattedChats);
+      console.log(`Loaded ${formattedChats.length} chats for authenticated user`);
     } catch (error) {
-      console.error('Error loading chats:', error);
+      console.error('Error loading chats:', error instanceof Error ? error.message : 'Unknown error', error);
       // Fallback to empty chats
       setChats([]);
     }

@@ -81,8 +81,51 @@ export function Sidebar({
 
   const loadChats = async () => {
     try {
+      // Check if wallet is connected first
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected) {
+        // For wallet users, load chats from localStorage
+        const savedChats = localStorage.getItem('wallet_chats');
+        if (savedChats) {
+          try {
+            const parsedChats = JSON.parse(savedChats);
+            setChats(parsedChats);
+          } catch (parseError) {
+            console.error('Error parsing saved chats:', parseError);
+            setChats([]);
+          }
+        } else {
+          setChats([]);
+        }
+        console.log('Loaded chats for wallet user');
+        return;
+      }
+
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured, using empty chat list');
+        setChats([]);
+        return;
+      }
+
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
+      
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Authentication error:', authError.message);
+        setChats([]);
+        return;
+      }
+
+      if (!user) {
+        console.log('User not authenticated, using empty chat list');
+        setChats([]);
+        return;
+      }
       
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -97,11 +140,13 @@ export function Sidebar({
             created_at
           )
         `)
+        .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
         .limit(20);
 
       if (error) {
-        console.error('Error loading chats:', error);
+        console.error('Database error loading chats:', error.message, error.details);
+        setChats([]);
         return;
       }
 
@@ -113,8 +158,9 @@ export function Sidebar({
       })) || [];
 
       setChats(formattedChats);
+      console.log(`Loaded ${formattedChats.length} chats for authenticated user`);
     } catch (error) {
-      console.error('Error loading chats:', error);
+      console.error('Error loading chats:', error instanceof Error ? error.message : 'Unknown error', error);
       // Fallback to empty array if Supabase not configured
       setChats([]);
     } finally {
