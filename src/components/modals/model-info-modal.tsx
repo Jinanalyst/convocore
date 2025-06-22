@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Bot, Zap, Brain, Code, MessageSquare, Star, ExternalLink, Bug, Palette, Image, PenTool, Database, TrendingUp, Rocket, MessageCircle, Copy } from 'lucide-react';
 import { CONVO_AGENTS } from '@/lib/model-agents';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface ModelInfoModalProps {
   open: boolean;
@@ -272,9 +273,11 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
                   Upgrade to Pro or Premium for unlimited requests and advanced features
                 </p>
               </div>
-              <Button className="bg-gray-900 hover:bg-gray-800 text-white">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View Pricing
+              <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white">
+                <Link href="/pricing">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Pricing
+                </Link>
               </Button>
             </div>
           </div>
