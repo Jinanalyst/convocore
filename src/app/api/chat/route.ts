@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendChatMessage, getModelConfig, type ChatMessage, type AIServiceConfig } from '@/lib/ai-service';
+import { detectAgentFromMessage } from '@/lib/model-agents';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,6 +36,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for agent mentions in the latest user message
+    const latestUserMessage = messages.filter(m => m.role === 'user').pop();
+    let processedMessages = [...messages];
+
+    if (latestUserMessage) {
+      const detectedAgent = detectAgentFromMessage(latestUserMessage.content);
+      
+      if (detectedAgent) {
+        // Add or update system message with agent's system prompt
+        const systemMessageIndex = processedMessages.findIndex(m => m.role === 'system');
+        const agentSystemMessage: ChatMessage = {
+          role: 'system',
+          content: detectedAgent.systemPrompt
+        };
+
+        if (systemMessageIndex >= 0) {
+          // Replace existing system message
+          processedMessages[systemMessageIndex] = agentSystemMessage;
+        } else {
+          // Add system message at the beginning
+          processedMessages.unshift(agentSystemMessage);
+        }
+
+        console.log(`Agent detected: ${detectedAgent.tag} - ${detectedAgent.displayName}`);
+      }
+    }
+
     // Prepare AI service configuration
     const aiConfig: AIServiceConfig = {
       provider: modelConfig.provider,
@@ -45,7 +73,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Send message to AI service
-    const response = await sendChatMessage(messages, aiConfig);
+    const response = await sendChatMessage(processedMessages, aiConfig);
 
     return NextResponse.json({
       success: true,
