@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClientComponentClient } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -21,6 +21,41 @@ function LoginPageContent() {
   const redirectTo = searchParams.get('redirectTo') || '/convocore';
   const supabase = createClientComponentClient();
 
+  // Check for auth callback errors
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    const messageParam = searchParams.get('message');
+    
+    if (errorParam) {
+      let errorMessage = 'Authentication failed';
+      
+      switch (errorParam) {
+        case 'configuration':
+          errorMessage = 'Authentication service is not configured. Please contact support.';
+          break;
+        case 'auth_failed':
+          errorMessage = messageParam ? decodeURIComponent(messageParam) : 'Magic link authentication failed';
+          break;
+        case 'callback_error':
+          errorMessage = 'There was an error processing your authentication. Please try again.';
+          break;
+        case 'no_code':
+          errorMessage = 'Invalid magic link. Please request a new one.';
+          break;
+        default:
+          errorMessage = 'Authentication failed. Please try again.';
+      }
+      
+      setError(errorMessage);
+      
+      // Clear error parameters from URL
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('error');
+      newUrl.searchParams.delete('message');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [searchParams]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -29,6 +64,12 @@ function LoginPageContent() {
     if (loginMode === 'magic') {
       // Handle magic link
       try {
+        // Check if Supabase is configured
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+          setError('Magic link authentication is not configured. Please use wallet login or contact support.');
+          return;
+        }
+
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
@@ -37,13 +78,18 @@ function LoginPageContent() {
         });
 
         if (error) {
-          setError(error.message);
+          if (error.message.includes('Invalid API key') || error.message.includes('not found')) {
+            setError('Authentication service is not properly configured. Please use wallet login or contact support.');
+          } else {
+            setError(error.message);
+          }
           return;
         }
 
         setMagicLinkSent(true);
-      } catch {
-        setError('Failed to send magic link');
+      } catch (err) {
+        console.error('Magic link error:', err);
+        setError('Failed to send magic link. Please try wallet login or contact support.');
       } finally {
         setLoading(false);
       }
@@ -149,6 +195,14 @@ function LoginPageContent() {
           <p className="mt-2 text-sm text-gray-400">
             Welcome back to Convocore
           </p>
+          {/* Configuration Status */}
+          {(!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) && (
+            <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500 rounded">
+              <p className="text-xs text-yellow-400">
+                ⚠️ Email authentication not configured. Use wallet login for full access.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Login Mode Toggle */}
