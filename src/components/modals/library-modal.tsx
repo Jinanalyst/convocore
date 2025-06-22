@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Library, FileText, MessageSquare, Code, Plus, Search, Bookmark, Copy, Eye, EyeOff } from 'lucide-react';
+import { safeDate } from '@/lib/date-utils';
 
 interface LibraryItem {
   id: string;
@@ -11,7 +12,7 @@ interface LibraryItem {
   type: 'prompt' | 'template' | 'conversation';
   description: string;
   content?: string;
-  createdAt: Date;
+  createdAt: Date | string | number;
 }
 
 interface LibraryModalProps {
@@ -114,12 +115,20 @@ export function LibraryModal({ open, onOpenChange, items = [], onUseItem }: Libr
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-    });
+  const formatDate = (date: Date | string | number) => {
+    const dateObj = safeDate(date);
+    const now = new Date();
+    
+    try {
+      return dateObj.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: dateObj.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const toggleExpanded = (itemId: string) => {
@@ -293,9 +302,9 @@ export function LibraryModal({ open, onOpenChange, items = [], onUseItem }: Libr
                           variant="ghost" 
                           size="sm" 
                           onClick={() => handleUseItem(item)}
-                          className="h-6 px-3 text-xs bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+                          className="h-7 px-3 text-xs bg-gray-900 text-white hover:bg-gray-800"
                         >
-                          Use Template
+                          Use Item
                         </Button>
                       </div>
                     </div>

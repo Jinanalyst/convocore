@@ -17,7 +17,7 @@ import {
   CreditCard, 
   Wallet,
   Download,
-  Link,
+  Link as LinkIcon,
   Moon,
   Sun,
   Bell,
@@ -238,9 +238,9 @@ export function Header({
             }
           `}
         >
-          <NextLink href="/pricing">
+          <Link href="/pricing">
             {isMobile ? "Upgrade" : "Upgrade to Pro"}
-          </NextLink>
+          </Link>
         </Button>
       </div>
 
@@ -418,14 +418,14 @@ export function Header({
               </button>
 
               {/* Upgrade Button for Mobile */}
-              <NextLink
+              <Link
                 href="/pricing"
                 onClick={() => setShowMobileMenu(false)}
                 className="flex items-center gap-3 p-3 text-left bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-lg transition-colors touch-feedback min-h-[48px] font-medium"
               >
                 <Zap className="h-5 w-5" />
                 <span>Upgrade to Pro</span>
-              </NextLink>
+              </Link>
 
               {/* Sign Out */}
               <button
