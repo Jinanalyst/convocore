@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
 import { SettingsModal } from "@/components/modals/settings-modal";
@@ -20,15 +20,22 @@ import {
   BookOpen,
   History,
   Menu,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Clock,
+  HelpCircle,
+  Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatSidebarTimestamp } from '@/lib/date-utils';
 
 interface Chat {
   id: string;
   title: string;
   lastMessage: string;
-  timestamp: Date;
+  timestamp: Date | string | number;
   isActive?: boolean;
 }
 
@@ -77,23 +84,27 @@ export function Sidebar({
   const [showModelModal, setShowModelModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Real chat data from Supabase
   const [chats, setChats] = useState<Chat[]>([]);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [recentChats, setRecentChats] = useState<Chat[]>([]);
+  const [favoriteChats, setFavoriteChats] = useState<Chat[]>([]);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (isMobileMenuOpen && !target.closest('.mobile-sidebar') && !target.closest('.mobile-menu-button')) {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
   }, [isMobileMenuOpen]);
 
   // Load real data on component mount
@@ -104,259 +115,140 @@ export function Sidebar({
 
   const loadChats = async () => {
     try {
-      // Check if wallet is connected first
+      // Check authentication methods
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
       
       if (walletConnected) {
-        // For wallet users, load chats from localStorage
-        const savedChats = localStorage.getItem('wallet_chats');
-        if (savedChats) {
-          try {
-            const parsedChats = JSON.parse(savedChats);
-            setChats(parsedChats);
-          } catch (parseError) {
-            console.error('Error parsing saved chats:', parseError);
-            setChats([]);
-          }
-        } else {
-          setChats([]);
-        }
-        console.log('Loaded chats for wallet user');
+        // Load wallet-based chats
+        const walletChats = JSON.parse(localStorage.getItem('wallet_chats') || '[]');
+        const formattedChats = walletChats.map((chat: any) => ({
+          ...chat,
+          timestamp: new Date(chat.timestamp || Date.now())
+        }));
+        setChats(formattedChats);
+        setRecentChats(formattedChats.slice(0, 5));
         return;
       }
 
       if (magicLinkAuth) {
-        // For magic link users, load chats from localStorage
-        const savedChats = localStorage.getItem('magic_link_chats');
-        if (savedChats) {
-          try {
-            const parsedChats = JSON.parse(savedChats);
-            setChats(parsedChats);
-          } catch (parseError) {
-            console.error('Error parsing saved chats:', parseError);
-            setChats([]);
-          }
-        } else {
-          setChats([]);
-        }
-        console.log('Loaded chats for magic link user');
+        // Load magic link chats
+        const magicLinkChats = JSON.parse(localStorage.getItem('magic_link_chats') || '[]');
+        const formattedChats = magicLinkChats.map((chat: any) => ({
+          ...chat,
+          timestamp: new Date(chat.timestamp || Date.now())
+        }));
+        setChats(formattedChats);
+        setRecentChats(formattedChats.slice(0, 5));
         return;
       }
 
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn('Supabase not configured, using empty chat list');
-        setChats([]);
-        return;
-      }
-
+      // Load regular authenticated user chats
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      // Check if user is authenticated
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (authError) {
-        console.error('Authentication error:', authError.message);
-        setChats([]);
+      if (!user) {
+        // Load demo chats for non-authenticated users
+        const demoChats: Chat[] = [
+          {
+            id: '1',
+            title: 'Welcome to Convocore',
+            lastMessage: 'Hello! How can I help you today?',
+            timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+          },
+          {
+            id: '2',
+            title: 'Getting Started',
+            lastMessage: 'Let me know what you\'d like to explore...',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+          },
+        ];
+        setChats(demoChats);
+        setRecentChats(demoChats);
         return;
       }
 
-      if (!user) {
-        console.log('User not authenticated, using empty chat list');
-        setChats([]);
-        return;
-      }
-      
       const { data: conversations, error } = await supabase
         .from('conversations')
-        .select(`
-          id,
-          title,
-          model,
-          created_at,
-          updated_at,
-          messages (
-            content,
-            created_at
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) {
-        console.error('Database error loading chats:', error.message, error.details);
-        setChats([]);
+        console.error('Error loading conversations:', error);
         return;
       }
 
-      const formattedChats: Chat[] = conversations?.map(conv => ({
+      const formattedChats: Chat[] = (conversations || []).map(conv => ({
         id: conv.id,
-        title: conv.title,
-        lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
+        title: conv.title || 'Untitled Chat',
+        lastMessage: conv.summary || 'No messages yet',
         timestamp: new Date(conv.updated_at),
-      })) || [];
+        isActive: conv.id === activeChatId
+      }));
 
       setChats(formattedChats);
-      console.log(`Loaded ${formattedChats.length} chats for authenticated user`);
+      setRecentChats(formattedChats.slice(0, 5));
+      
+      // Set favorite chats (for now, just the most recent ones)
+      setFavoriteChats(formattedChats.slice(0, 3));
+
     } catch (error) {
-      console.error('Error loading chats:', error instanceof Error ? error.message : 'Unknown error', error);
-      // Fallback to empty array if Supabase not configured
-      setChats([]);
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading chats:', error);
+      // Fallback to demo chats
+      const demoChats: Chat[] = [
+        {
+          id: '1',
+          title: 'Welcome to Convocore',
+          lastMessage: 'Hello! How can I help you today?',
+          timestamp: new Date(),
+        },
+      ];
+      setChats(demoChats);
+      setRecentChats(demoChats);
     }
   };
 
   const loadLibraryItems = async () => {
-    try {
-      // Default Convocore library items
+    // Load saved prompts and templates from localStorage
+    const savedItems = JSON.parse(localStorage.getItem('library_items') || '[]');
+    
+    // Add some default items if none exist
+    if (savedItems.length === 0) {
       const defaultItems: LibraryItem[] = [
         {
-          id: 'default-1',
-          title: '🧠 Convocore Ideation Prompt',
+          id: '1',
+          title: 'Code Review',
           type: 'prompt',
-          description: 'Generate 5 innovative agent ideas based on the task provided.',
-          content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
+          description: 'Template for code review requests',
+          content: 'Please review this code for best practices, security issues, and performance optimizations:\n\n[paste your code here]',
           createdAt: new Date()
         },
         {
-          id: 'default-2',
-          title: '📄 Convocore API Template',
+          id: '2',
+          title: 'Meeting Notes',
           type: 'template',
-          description: 'Summarize API endpoints into easy-to-read docs with example requests.',
-          content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
+          description: 'Structure for meeting summaries',
+          content: '# Meeting Notes\n\n**Date:** \n**Attendees:** \n**Agenda:** \n\n## Discussion Points\n\n## Action Items\n\n## Next Steps',
           createdAt: new Date()
         },
         {
-          id: 'default-3',
-          title: '🔍 Convocore Debug Assistant',
+          id: '3',
+          title: 'Explain Like I\'m 5',
           type: 'prompt',
-          description: 'Diagnose and suggest fixes for the given error message and code.',
-          content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-4',
-          title: '💬 ConvoAgent Role Trainer',
-          type: 'template',
-          description: 'Define tone, behavior, and logic for a new conversational agent.',
-          content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-5',
-          title: '🎨 Convocore Brand Voice Generator',
-          type: 'prompt',
-          description: 'Generate a consistent brand voice for product, blog, and UI.',
-          content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
+          description: 'Simplify complex topics',
+          content: 'Please explain [topic] in simple terms that a 5-year-old could understand, using analogies and examples.',
           createdAt: new Date()
         }
       ];
-
-      // Check if user is authenticated
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
-
-      if (walletConnected || magicLinkAuth) {
-        // For wallet/magic link users, always include defaults
-        setLibraryItems(defaultItems);
-        return;
-      }
-
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn('Supabase not configured, using default library items');
-        setLibraryItems(defaultItems);
-        return;
-      }
-
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
       
-      // Check if user is authenticated
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.log('User not authenticated, using default library items');
-        setLibraryItems(defaultItems);
-        return;
-      }
-
-      // Try to get user's custom library items
-      const { data: customItems, error } = await supabase
-        .from('library_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Database error loading library items:', error.message);
-        setLibraryItems(defaultItems);
-        return;
-      }
-
-      // Convert database items and merge with defaults
-      const dbItems: LibraryItem[] = customItems?.map(item => ({
-        id: item.id,
-        title: item.title,
-        type: item.type,
-        description: item.description,
-        content: item.content,
-        createdAt: new Date(item.created_at)
-      })) || [];
-
-      // Always include defaults plus any custom items
-      const allItems = [...defaultItems, ...dbItems];
-      setLibraryItems(allItems);
-      console.log(`Loaded ${allItems.length} library items (${defaultItems.length} defaults + ${dbItems.length} custom)`);
-    } catch (error) {
-      console.error('Error loading library items:', error);
-      // Fallback to defaults
-      setLibraryItems([
-        {
-          id: 'default-1',
-          title: '🧠 Convocore Ideation Prompt',
-          type: 'prompt',
-          description: 'Generate 5 innovative agent ideas based on the task provided.',
-          content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-2',
-          title: '📄 Convocore API Template',
-          type: 'template',
-          description: 'Summarize API endpoints into easy-to-read docs with example requests.',
-          content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-3',
-          title: '🔍 Convocore Debug Assistant',
-          type: 'prompt',
-          description: 'Diagnose and suggest fixes for the given error message and code.',
-          content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-4',
-          title: '💬 ConvoAgent Role Trainer',
-          type: 'template',
-          description: 'Define tone, behavior, and logic for a new conversational agent.',
-          content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
-          createdAt: new Date()
-        },
-        {
-          id: 'default-5',
-          title: '🎨 Convocore Brand Voice Generator',
-          type: 'prompt',
-          description: 'Generate a consistent brand voice for product, blog, and UI.',
-          content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
-          createdAt: new Date()
-        }
-      ]);
+      localStorage.setItem('library_items', JSON.stringify(defaultItems));
+      setLibraryItems(defaultItems);
+    } else {
+      setLibraryItems(savedItems);
     }
   };
 
@@ -364,19 +256,6 @@ export function Sidebar({
     chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 168) { // 7 days
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
 
   const handleChatAction = async (e: React.MouseEvent, action: 'edit' | 'delete', chatId: string) => {
     e.stopPropagation();
@@ -588,13 +467,9 @@ export function Sidebar({
             )}
           >
             {isCollapsed ? (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeft className="w-4 h-4" />
             )}
           </Button>
         )}
@@ -630,7 +505,7 @@ export function Sidebar({
             onClick={handleLibrary}
             className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
           >
-            <Library className="w-4 h-4 mr-2" />
+            <Archive className="w-4 h-4 mr-2" />
             Library
           </Button>
         </div>
@@ -652,7 +527,7 @@ export function Sidebar({
             className="w-full"
             title="Library"
           >
-            <Library className="w-4 h-4" />
+            <Archive className="w-4 h-4" />
           </Button>
         </div>
       )}
@@ -665,8 +540,8 @@ export function Sidebar({
             onClick={handleModelInfo}
             className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
           >
-            <Bot className="w-4 h-4 mr-2" />
-            Model Info
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Models
           </Button>
           <Button
             variant="ghost"
@@ -686,7 +561,7 @@ export function Sidebar({
             className="w-full"
             title="Model Info"
           >
-            <Bot className="w-4 h-4" />
+            <HelpCircle className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
@@ -770,7 +645,7 @@ export function Sidebar({
                               {chat.lastMessage}
                             </p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                              {formatTimestamp(chat.timestamp)}
+                              {formatSidebarTimestamp(chat.timestamp)}
                             </p>
                           </div>
                           

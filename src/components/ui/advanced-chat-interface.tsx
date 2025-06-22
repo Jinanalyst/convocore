@@ -434,11 +434,18 @@ interface MessageComponentProps {
 function MessageComponent({ message, onRegenerate, onCopy }: MessageComponentProps) {
   const [showActions, setShowActions] = useState(false);
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: Date | string | number) => {
+    const dateObj = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    
+    // Check if dateObj is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid date';
+    }
+    
     return new Intl.DateTimeFormat('en-US', {
       hour: '2-digit',
       minute: '2-digit'
-    }).format(timestamp);
+    }).format(dateObj);
   };
 
   return (
