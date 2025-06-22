@@ -177,4 +177,33 @@ export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: b
     openai: !!process.env.OPENAI_API_KEY,
     anthropic: !!process.env.ANTHROPIC_API_KEY,
   };
-} 
+}
+
+// Main AI Service Instance
+export const aiService = {
+  async generateResponse(messages: ChatMessage[], model: string = 'gpt-4o'): Promise<string> {
+    const modelConfig = await getModelConfig(model);
+    if (!modelConfig) {
+      throw new Error(`Unsupported model: ${model}`);
+    }
+
+    const config: AIServiceConfig = {
+      provider: modelConfig.provider,
+      model: model,
+      temperature: 0.7,
+      maxTokens: modelConfig.maxTokens,
+      stream: false
+    };
+
+    const response = await sendChatMessage(messages, config);
+    return response.content;
+  },
+
+  async getAvailableModels() {
+    return AI_MODELS;
+  },
+
+  async validateConfiguration() {
+    return await validateAPIKeys();
+  }
+}; 

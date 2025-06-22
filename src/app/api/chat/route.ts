@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { advancedAIAgent } from '@/lib/advanced-ai-agent';
-import { initializeAIAgent, ensureInitialized } from '@/lib/ai-agent-initialization';
+import { initializeAIAgent } from '@/lib/ai-agent-initialization';
 import { nanoid } from 'nanoid';
 import type { ConversationContext, ChatMessage } from '@/lib/advanced-ai-agent';
 import { sendChatMessage, getModelConfig, type AIServiceConfig } from '@/lib/ai-service';
@@ -12,9 +12,6 @@ import { createClient } from '@supabase/supabase-js';
 import { aiService } from '@/lib/ai-service';
 import { CONVO_AGENTS, getAgentByTag, formatMessageWithAgent } from '@/lib/model-agents';
 import { memoryService } from '@/lib/memory-service';
-
-// Ensure AI agent is initialized
-ensureInitialized();
 
 // Simple language detection function
 function detectLanguage(text: string): string {

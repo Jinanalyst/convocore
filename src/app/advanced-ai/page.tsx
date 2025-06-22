@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthContext } from '@/lib/auth';
+import { useAuthContext } from '@/lib/auth-context';
 import AdvancedChatInterface from '@/components/ui/advanced-chat-interface';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
