@@ -38,9 +38,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     language: 'en',
     autoSave: true,
     notifications: {
-      email: true,
-      push: false,
-      marketing: false
+      push: false
     },
     aiModel: {
       defaultModel: 'gpt-4o',
@@ -526,22 +524,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <div className="space-y-4">
                 <label className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Email notifications</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Receive updates via email</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.email}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      notifications: { ...prev.notifications, email: e.target.checked }
-                    }))}
-                    className="rounded border-gray-300 dark:border-zinc-600" 
-                  />
-                </label>
-                
-                <label className="flex items-center justify-between">
-                  <div>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">Push notifications</span>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Browser notifications for new messages</p>
                   </div>
@@ -549,22 +531,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     type="checkbox" 
                     checked={settings.notifications.push}
                     onChange={(e) => handleNotificationToggle('push', e.target.checked)}
-                    className="rounded border-gray-300 dark:border-zinc-600" 
-                  />
-                </label>
-                
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Marketing emails</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Updates about new features and offers</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.marketing}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      notifications: { ...prev.notifications, marketing: e.target.checked }
-                    }))}
                     className="rounded border-gray-300 dark:border-zinc-600" 
                   />
                 </label>
