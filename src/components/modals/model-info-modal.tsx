@@ -112,11 +112,11 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
           {/* Platform Overview */}
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-700 p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-              Powered by Leading AI Models
+              Advanced AI Technology Platform
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Convocore integrates the most advanced AI models from OpenAI and Anthropic, giving you access to 
-              cutting-edge capabilities for any task.
+              Convocore brings together cutting-edge AI capabilities through our proprietary model suite, 
+              delivering superior performance and specialized functionality for any task.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {capabilities.map((capability, index) => (

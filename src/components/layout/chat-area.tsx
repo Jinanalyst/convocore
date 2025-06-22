@@ -323,60 +323,80 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     return (
       <div className={cn("flex flex-col h-full bg-gray-50 dark:bg-zinc-950", className)}>
         {/* Welcome Screen */}
-        <div className="h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <ConvocoreLogo size="lg" className="justify-center mb-6 sm:mb-8" />
+        <div className="flex-1 flex flex-col">
+          {/* Header Section */}
+          <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-8 sm:pt-12 pb-6 sm:pb-8">
+            <ConvocoreLogo size="lg" className="justify-center mb-4 sm:mb-6" />
             
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
               Welcome to Convocore
             </h1>
             
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed">
-              Your intelligent conversational AI platform. Start a conversation, explore our library, or configure your AI model settings.
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
+              Your intelligent conversational AI platform
             </p>
+          </div>
 
-            {/* Feature Cards - Mobile Responsive Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
-              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow">
-                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Smart Conversations</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Engage with advanced AI models for natural, intelligent conversations
-                </p>
-              </div>
-              
-              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow">
-                <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Custom AI Agents</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Create and configure specialized AI agents for specific tasks
-                </p>
-              </div>
-              
-              <div className="p-4 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
-                <Copy className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 mb-3 mx-auto" />
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Prompt Library</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Access a curated collection of prompts and templates
-                </p>
+          {/* Feature Cards Section - Mobile Optimized */}
+          <div className="flex-1 px-4 sm:px-6 pb-4">
+            <div className="max-w-2xl mx-auto">
+              <div className="space-y-3 sm:space-y-4">
+                {/* Feature Card 1 */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
+                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Smart Conversations</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      Advanced AI models for intelligent conversations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Feature Card 2 */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
+                  <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Custom AI Agents</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      Specialized agents for specific tasks
+                    </p>
+                  </div>
+                </div>
+
+                {/* Feature Card 3 */}
+                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
+                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <Copy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Prompt Library</h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      Curated prompts and templates
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-            {/* Chat Limit Indicator */}
-            <ChatLimitIndicator className="max-w-4xl mx-auto mb-3 sm:mb-4" />
-            
-            <AIInputDemo
-              placeholder="Type your message to start a conversation..."
-              onSubmit={handleSendMessage}
-              onFileUpload={handleFileUpload}
-              onVoiceInput={handleVoiceInput}
-              className="max-w-4xl mx-auto"
-            />
+          {/* Input Area */}
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <div className="px-4 sm:px-6 py-3 sm:py-4">
+              {/* Chat Limit Indicator */}
+              <ChatLimitIndicator className="max-w-2xl mx-auto mb-3 sm:mb-4" />
+              
+              <AIInputDemo
+                placeholder="Type your message to start a conversation..."
+                onSubmit={handleSendMessage}
+                onFileUpload={handleFileUpload}
+                onVoiceInput={handleVoiceInput}
+                className="max-w-2xl mx-auto"
+              />
+            </div>
           </div>
         </div>
       </div>

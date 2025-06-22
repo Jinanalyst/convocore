@@ -218,14 +218,14 @@ export function Header({
         )}
       </div>
 
-      {/* Center - Upgrade Button - Hidden on mobile */}
-      <div className="hidden md:flex flex-1 justify-center">
+      {/* Center Navigation - Upgrade Button */}
+      <div className="hidden md:flex flex-1 justify-center items-center">
         {(userInfo.subscriptionTier === 'free' || userInfo.connectionStatus === 'Demo Mode') && (
           <NextLink href="/pricing">
             <Button 
               variant="outline" 
               size="sm"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md px-4 py-2 text-sm font-medium rounded-full"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow-md px-6 py-2.5 text-sm font-semibold rounded-full min-w-[140px]"
             >
               <ArrowUp className="w-4 h-4 mr-2" />
               <span className="hidden lg:inline">Upgrade to Pro</span>

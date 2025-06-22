@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Library, FileText, MessageSquare, Code, Plus, Search, Bookmark, Copy, Eye, EyeOff } from 'lucide-react';
@@ -17,16 +17,70 @@ interface LibraryItem {
 interface LibraryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  items: LibraryItem[];
+  items?: LibraryItem[];
   onUseItem?: (item: LibraryItem) => void;
 }
 
-export function LibraryModal({ open, onOpenChange, items, onUseItem }: LibraryModalProps) {
+// Default Convocore library items
+const defaultLibraryItems: LibraryItem[] = [
+  {
+    id: 'default-1',
+    title: '🧠 Convocore Ideation Prompt',
+    type: 'prompt',
+    description: 'Generate 5 innovative agent ideas based on the task provided.',
+    content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
+    createdAt: new Date()
+  },
+  {
+    id: 'default-2',
+    title: '📄 Convocore API Template',
+    type: 'template',
+    description: 'Summarize API endpoints into easy-to-read docs with example requests.',
+    content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
+    createdAt: new Date()
+  },
+  {
+    id: 'default-3',
+    title: '🔍 Convocore Debug Assistant',
+    type: 'prompt',
+    description: 'Diagnose and suggest fixes for the given error message and code.',
+    content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
+    createdAt: new Date()
+  },
+  {
+    id: 'default-4',
+    title: '💬 ConvoAgent Role Trainer',
+    type: 'template',
+    description: 'Define tone, behavior, and logic for a new conversational agent.',
+    content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
+    createdAt: new Date()
+  },
+  {
+    id: 'default-5',
+    title: '🎨 Convocore Brand Voice Generator',
+    type: 'prompt',
+    description: 'Generate a consistent brand voice for product, blog, and UI.',
+    content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
+    createdAt: new Date()
+  }
+];
+
+export function LibraryModal({ open, onOpenChange, items = [], onUseItem }: LibraryModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'prompt' | 'template' | 'conversation'>('all');
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>(defaultLibraryItems);
 
-  const filteredItems = items.filter(item => {
+  useEffect(() => {
+    // Merge provided items with defaults, ensuring defaults are always available
+    const mergedItems = [
+      ...defaultLibraryItems,
+      ...items.filter(item => !defaultLibraryItems.some(defaultItem => defaultItem.id === item.id))
+    ];
+    setLibraryItems(mergedItems);
+  }, [items]);
+
+  const filteredItems = libraryItems.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.type === selectedCategory;
     const matchesSearch = searchQuery === "" || 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

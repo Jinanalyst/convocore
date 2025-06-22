@@ -35,17 +35,17 @@ export function AIInputDemo({
   className 
 }: AIInputDemoProps) {
   const [message, setMessage] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const models = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient' },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest' },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s AI model' },
+    { id: 'gpt-4o', name: 'Convocore Omni', description: 'Flagship model, multimodal, high performance' },
+    { id: 'gpt-4-turbo', name: 'Convocore Turbo', description: 'Fast response + high quality, code/text optimized' },
+    { id: 'claude-3-opus-20240229', name: 'Convocore Alpha', description: 'Most precise reasoning, long-form writing' },
+    { id: 'claude-3-sonnet-20240229', name: 'Convocore Nova', description: 'Balanced performance, fast response' },
   ];
 
   const adjustTextareaHeight = () => {

@@ -18,7 +18,9 @@ import {
   MoreHorizontal,
   Bot,
   BookOpen,
-  History
+  History,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -74,11 +76,25 @@ export function Sidebar({
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Real chat data from Supabase
   const [chats, setChats] = useState<Chat[]>([]);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isMobileMenuOpen && !target.closest('.mobile-sidebar') && !target.closest('.mobile-menu-button')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
 
   // Load real data on component mount
   useEffect(() => {
@@ -196,57 +212,151 @@ export function Sidebar({
 
   const loadLibraryItems = async () => {
     try {
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      // Convocore Library Items with prompts and templates
-      const defaultLibraryItems: LibraryItem[] = [
+      // Default Convocore library items
+      const defaultItems: LibraryItem[] = [
         {
-          id: '1',
+          id: 'default-1',
           title: '🧠 Convocore Ideation Prompt',
           type: 'prompt',
           description: 'Generate 5 innovative agent ideas based on the task provided.',
           content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
-          createdAt: new Date(),
+          createdAt: new Date()
         },
         {
-          id: '2',
+          id: 'default-2',
           title: '📄 Convocore API Template',
           type: 'template',
           description: 'Summarize API endpoints into easy-to-read docs with example requests.',
           content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
-          createdAt: new Date(),
+          createdAt: new Date()
         },
         {
-          id: '3',
+          id: 'default-3',
           title: '🔍 Convocore Debug Assistant',
           type: 'prompt',
           description: 'Diagnose and suggest fixes for the given error message and code.',
           content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
-          createdAt: new Date(),
+          createdAt: new Date()
         },
         {
-          id: '4',
+          id: 'default-4',
           title: '💬 ConvoAgent Role Trainer',
           type: 'template',
           description: 'Define tone, behavior, and logic for a new conversational agent.',
           content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
-          createdAt: new Date(),
+          createdAt: new Date()
         },
         {
-          id: '5',
+          id: 'default-5',
           title: '🎨 Convocore Brand Voice Generator',
           type: 'prompt',
           description: 'Generate a consistent brand voice for product, blog, and UI.',
           content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
-          createdAt: new Date(),
-        },
+          createdAt: new Date()
+        }
       ];
 
-      setLibraryItems(defaultLibraryItems);
+      // Check if user is authenticated
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
+
+      if (walletConnected || magicLinkAuth) {
+        // For wallet/magic link users, always include defaults
+        setLibraryItems(defaultItems);
+        return;
+      }
+
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured, using default library items');
+        setLibraryItems(defaultItems);
+        return;
+      }
+
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.log('User not authenticated, using default library items');
+        setLibraryItems(defaultItems);
+        return;
+      }
+
+      // Try to get user's custom library items
+      const { data: customItems, error } = await supabase
+        .from('library_items')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Database error loading library items:', error.message);
+        setLibraryItems(defaultItems);
+        return;
+      }
+
+      // Convert database items and merge with defaults
+      const dbItems: LibraryItem[] = customItems?.map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        description: item.description,
+        content: item.content,
+        createdAt: new Date(item.created_at)
+      })) || [];
+
+      // Always include defaults plus any custom items
+      const allItems = [...defaultItems, ...dbItems];
+      setLibraryItems(allItems);
+      console.log(`Loaded ${allItems.length} library items (${defaultItems.length} defaults + ${dbItems.length} custom)`);
     } catch (error) {
       console.error('Error loading library items:', error);
-      setLibraryItems([]);
+      // Fallback to defaults
+      setLibraryItems([
+        {
+          id: 'default-1',
+          title: '🧠 Convocore Ideation Prompt',
+          type: 'prompt',
+          description: 'Generate 5 innovative agent ideas based on the task provided.',
+          content: 'You are designing a new AI agent for this task: "{{task}}". Suggest 5 unique features or roles this agent could perform that differentiate it from existing tools.',
+          createdAt: new Date()
+        },
+        {
+          id: 'default-2',
+          title: '📄 Convocore API Template',
+          type: 'template',
+          description: 'Summarize API endpoints into easy-to-read docs with example requests.',
+          content: 'Given the following API spec, generate concise documentation with curl and JS usage examples. Explain each endpoint simply. \n\nAPI Spec:\n{{api_spec}}',
+          createdAt: new Date()
+        },
+        {
+          id: 'default-3',
+          title: '🔍 Convocore Debug Assistant',
+          type: 'prompt',
+          description: 'Diagnose and suggest fixes for the given error message and code.',
+          content: 'Analyze the following code and error message. Find the root cause and suggest 2 possible fixes.\n\nError: {{error_message}}\n\nCode:\n```{{code}}```',
+          createdAt: new Date()
+        },
+        {
+          id: 'default-4',
+          title: '💬 ConvoAgent Role Trainer',
+          type: 'template',
+          description: 'Define tone, behavior, and logic for a new conversational agent.',
+          content: 'Create a role definition for an AI agent named \'{{agent_name}}\'.\n\nContext: {{context}}\nTone: {{tone}}\nAbilities: {{abilities}}\nLimitations: {{limitations}}',
+          createdAt: new Date()
+        },
+        {
+          id: 'default-5',
+          title: '🎨 Convocore Brand Voice Generator',
+          type: 'prompt',
+          description: 'Generate a consistent brand voice for product, blog, and UI.',
+          content: 'You are branding a product called \'{{product_name}}\'. Generate a tone guide and example phrases for UI labels, emails, and landing page content.',
+          createdAt: new Date()
+        }
+      ]);
     }
   };
 
@@ -257,74 +367,109 @@ export function Sidebar({
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
     
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 48) return "Yesterday";
-    return `${Math.floor(diffInHours / 24)}d ago`;
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 168) { // 7 days
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
   };
 
   const handleChatAction = async (e: React.MouseEvent, action: 'edit' | 'delete', chatId: string) => {
     e.stopPropagation();
+    
     if (action === 'delete') {
-      try {
-        // Check authentication method
-        const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-        const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
-        
-        if (walletConnected || magicLinkAuth) {
-          // For wallet and magic link users, just update local state and delegate to parent
+      if (confirm('Are you sure you want to delete this chat?')) {
+        try {
+          const { createClientComponentClient } = await import('@/lib/supabase');
+          const supabase = createClientComponentClient();
+          
+          const { error } = await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', chatId);
+
+          if (error) {
+            console.error('Error deleting chat:', error);
+            return;
+          }
+
+          // Remove from local state
           setChats(prev => prev.filter(chat => chat.id !== chatId));
+          
+          // Call parent callback
           onDeleteChat?.(chatId);
-          return;
-        }
-
-        // For Supabase users, delete from database
-        const { createClientComponentClient } = await import('@/lib/supabase');
-        const supabase = createClientComponentClient();
-        
-        const { error } = await supabase
-          .from('conversations')
-          .delete()
-          .eq('id', chatId);
-
-        if (error) {
+        } catch (error) {
           console.error('Error deleting chat:', error);
-          return;
         }
+      }
+    } else if (action === 'edit') {
+      const newTitle = prompt('Enter new chat title:');
+      if (newTitle && newTitle.trim()) {
+        try {
+          const { createClientComponentClient } = await import('@/lib/supabase');
+          const supabase = createClientComponentClient();
+          
+          const { error } = await supabase
+            .from('conversations')
+            .update({ title: newTitle.trim() })
+            .eq('id', chatId);
 
-        // Update local state
-        setChats(prev => prev.filter(chat => chat.id !== chatId));
-        onDeleteChat?.(chatId);
-      } catch (error) {
-        console.error('Error deleting chat:', error);
+          if (error) {
+            console.error('Error updating chat title:', error);
+            return;
+          }
+
+          // Update local state
+          setChats(prev => prev.map(chat => 
+            chat.id === chatId 
+              ? { ...chat, title: newTitle.trim() }
+              : chat
+          ));
+        } catch (error) {
+          console.error('Error updating chat title:', error);
+        }
       }
     }
-    // Edit functionality can be added later
   };
 
   const handleNewChat = async () => {
     try {
-      // Check authentication method
+      // Check if wallet is connected first
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       const magicLinkAuth = document.cookie.includes('auth_method=magic_link');
       
       if (walletConnected || magicLinkAuth) {
-        // For wallet and magic link users, delegate to parent component
-        // The parent component will handle the localStorage operations
+        // For wallet and magic link users, create chat locally
+        const newChat: Chat = {
+          id: Date.now().toString(),
+          title: 'New Chat',
+          lastMessage: 'No messages yet',
+          timestamp: new Date(),
+        };
+        
+        setChats(prev => [newChat, ...prev]);
+        
+        // Save to localStorage
+        const storageKey = walletConnected ? 'wallet_chats' : 'magic_link_chats';
+        const updatedChats = [newChat, ...chats];
+        localStorage.setItem(storageKey, JSON.stringify(updatedChats));
+        
         onNewChat?.();
+        setIsMobileMenuOpen(false); // Close mobile menu
         return;
       }
 
-      // For Supabase users, create in database
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
-        console.error('User not authenticated');
+        console.log('User not authenticated, cannot create chat');
         return;
       }
 
@@ -332,8 +477,8 @@ export function Sidebar({
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `New Chat ${new Date().toLocaleDateString()}`,
-          model: 'gpt-4o'
+          title: 'New Chat',
+          model: 'gpt-4o',
         })
         .select()
         .single();
@@ -343,238 +488,311 @@ export function Sidebar({
         return;
       }
 
-      // Add to local state
       const newChat: Chat = {
         id: newConversation.id,
         title: newConversation.title,
-        lastMessage: 'Start a new conversation...',
+        lastMessage: 'No messages yet',
         timestamp: new Date(newConversation.created_at),
       };
 
       setChats(prev => [newChat, ...prev]);
       onNewChat?.();
-      onSelectChat?.(newConversation.id);
+      setIsMobileMenuOpen(false); // Close mobile menu
     } catch (error) {
       console.error('Error creating new chat:', error);
-      // Fallback to callback if Supabase not configured
-      onNewChat?.();
     }
   };
 
   const handleSearch = () => {
     setShowSearchModal(true);
+    setIsMobileMenuOpen(false); // Close mobile menu
   };
 
   const handleLibrary = () => {
     setShowLibraryModal(true);
+    setIsMobileMenuOpen(false); // Close mobile menu
   };
 
   const handleModelInfo = () => {
     setShowModelModal(true);
+    setIsMobileMenuOpen(false); // Close mobile menu
   };
 
-  return (
-    <>
-      <aside className={cn(
-        "flex flex-col bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-80",
-        "h-full overflow-hidden",
-        className
-      )}>
-        {/* Header */}
-        <div className={cn(
-          "flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-800",
-          isCollapsed && "justify-center px-2"
-        )}>
-          {!isCollapsed && (
-            <ConvocoreLogo size="md" className="flex-shrink-0" />
-          )}
-          {isCollapsed && (
-            <ConvocoreLogo size="sm" showText={false} className="flex-shrink-0" />
-          )}
-          
-          {/* Collapse Toggle - Hidden on mobile since mobile uses overlay */}
-          {onToggleCollapse && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCollapse}
-              className={cn(
-                "hidden lg:flex shrink-0",
-                isCollapsed && "absolute top-4 right-2"
-              )}
-            >
-              {isCollapsed ? (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              )}
-            </Button>
-          )}
-        </div>
+  const handleSettings = () => {
+    setShowSettingsModal(true);
+    setIsMobileMenuOpen(false); // Close mobile menu
+  };
 
-        {/* New Chat Button */}
-        <div className={cn("p-3", isCollapsed && "px-2")}>
+  const handleChatSelect = (chatId: string) => {
+    onSelectChat?.(chatId);
+    setIsMobileMenuOpen(false); // Close mobile menu
+  };
+
+  // Mobile Menu Button (visible only on mobile)
+  const MobileMenuButton = () => (
+    <button
+      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      className="mobile-menu-button lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors"
+      aria-label="Toggle menu"
+    >
+      {isMobileMenuOpen ? (
+        <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+      ) : (
+        <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+      )}
+    </button>
+  );
+
+  // Mobile Overlay (visible only on mobile when menu is open)
+  const MobileOverlay = () => (
+    isMobileMenuOpen && (
+      <div 
+        className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+    )
+  );
+
+  // Sidebar Content Component
+  const SidebarContent = ({ isDesktop = false }: { isDesktop?: boolean }) => (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className={cn(
+        "flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700",
+        isCollapsed && isDesktop && "justify-center px-2"
+      )}>
+        {!isCollapsed || !isDesktop ? (
+          <ConvocoreLogo />
+        ) : (
+          <ConvocoreLogo size="sm" showText={false} />
+        )}
+        
+        {!isDesktop && (
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+        
+        {/* Desktop Collapse Toggle */}
+        {isDesktop && onToggleCollapse && (
           <Button
-            onClick={handleNewChat}
+            variant="ghost"
+            size="icon"
+            onClick={onToggleCollapse}
             className={cn(
-              "w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors",
-              isCollapsed ? "px-0 justify-center" : "justify-start gap-3"
+              "shrink-0",
+              isCollapsed && "absolute top-4 right-2"
             )}
           >
-            <Plus className="h-4 w-4 shrink-0" />
-            {!isCollapsed && <span>New Chat</span>}
+            {isCollapsed ? (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* New Chat Button */}
+      <div className={cn("p-4", isCollapsed && isDesktop && "px-2")}>
+        <Button
+          onClick={handleNewChat}
+          className={cn(
+            "w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors",
+            isCollapsed && isDesktop ? "px-0 justify-center" : "justify-start gap-2"
+          )}
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          {(!isCollapsed || !isDesktop) && <span>New Chat</span>}
+        </Button>
+      </div>
+
+      {/* Search and Library */}
+      {(!isCollapsed || !isDesktop) ? (
+        <div className="px-4 pb-4 space-y-2">
+          <Button
+            variant="ghost"
+            onClick={handleSearch}
+            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Search
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleLibrary}
+            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
+          >
+            <Library className="w-4 h-4 mr-2" />
+            Library
           </Button>
         </div>
+      ) : (
+        <div className="px-2 pb-4 space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSearch}
+            className="w-full"
+            title="Search"
+          >
+            <Search className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLibrary}
+            className="w-full"
+            title="Library"
+          >
+            <Library className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
-        {/* Quick Actions */}
-        {!isCollapsed && (
-          <div className="px-3 pb-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSearch}
-                className="justify-start gap-2 text-xs"
-              >
-                <Search className="h-3 w-3" />
-                Search
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLibrary}
-                className="justify-start gap-2 text-xs"
-              >
-                <Library className="h-3 w-3" />
-                Library
-              </Button>
-            </div>
+      {/* Model Info and Settings */}
+      {(!isCollapsed || !isDesktop) ? (
+        <div className="px-4 pb-4 space-y-2">
+          <Button
+            variant="ghost"
+            onClick={handleModelInfo}
+            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
+          >
+            <Bot className="w-4 h-4 mr-2" />
+            Model Info
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={handleSettings}
+            className="w-full justify-start text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-700"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </Button>
+        </div>
+      ) : (
+        <div className="px-2 pb-4 space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleModelInfo}
+            className="w-full"
+            title="Model Info"
+          >
+            <Bot className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSettings}
+            className="w-full"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Recent Chats */}
+      <div className="flex-1 overflow-hidden">
+        {(!isCollapsed || !isDesktop) && (
+          <div className="px-4 pb-2">
+            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Recent Chats
+            </h3>
           </div>
         )}
-
-        {/* Collapsed Quick Actions */}
-        {isCollapsed && (
-          <div className="px-2 pb-3 space-y-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSearch}
-              className="w-full"
-              title="Search"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLibrary}
-              className="w-full"
-              title="Library"
-            >
-              <Library className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Chat History */}
-        <div className="flex-1 overflow-hidden">
-          {!isCollapsed && (
-            <div className="px-3 pb-2">
-              <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Recent Chats
-              </h3>
-            </div>
-          )}
-          
-          <div className={cn(
-            "flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent",
-            isCollapsed ? "px-2" : "px-3"
-          )}>
+        
+        {/* Chat List Container with Border */}
+        <div className={cn(
+          "flex-1 overflow-hidden mx-3 rounded-xl border-2 border-gray-300 dark:border-zinc-600 bg-gray-50/80 dark:bg-zinc-800/80 shadow-sm",
+          isCollapsed && isDesktop && "mx-2"
+        )}>
+          <div className="h-full overflow-y-auto chat-container-scroll p-3">
             {isLoading ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
+                  <div 
+                    key={i} 
                     className={cn(
-                      "animate-pulse bg-gray-200 dark:bg-zinc-800 rounded-lg",
-                      isCollapsed ? "h-10 w-10 mx-auto" : "h-12"
-                    )}
+                      "animate-pulse bg-gray-200 dark:bg-zinc-600 rounded-lg",
+                      isCollapsed && isDesktop ? "h-10 w-10 mx-auto" : "h-14"
+                    )} 
                   />
                 ))}
               </div>
-            ) : chats.length === 0 ? (
-              !isCollapsed && (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-8 w-8 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No chats yet</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    Start a new conversation
-                  </p>
+            ) : filteredChats.length === 0 ? (
+              (!isCollapsed || !isDesktop) && (
+                <div className="text-center py-10 px-3">
+                  <MessageSquare className="w-10 h-10 text-gray-300 dark:text-zinc-500 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No chats yet</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start a new conversation</p>
                 </div>
               )
             ) : (
-              <div className="space-y-1">
-                {chats.map((chat) => (
+              <div className="space-y-2">
+                {filteredChats.map((chat) => (
                   <div
                     key={chat.id}
                     className={cn(
-                      "group relative rounded-lg transition-all duration-200",
-                      chat.isActive || activeChatId === chat.id
-                        ? "bg-gray-100 dark:bg-zinc-800"
-                        : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                      "group relative rounded-xl transition-all duration-200 border-2 shadow-sm hover:shadow-md",
+                      chat.id === activeChatId
+                        ? "bg-blue-50 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 shadow-md"
+                        : "bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-gray-200 dark:border-zinc-600 hover:border-gray-400 dark:hover:border-zinc-500"
                     )}
                     onMouseEnter={() => setHoveredChatId(chat.id)}
                     onMouseLeave={() => setHoveredChatId(null)}
                   >
                     <button
-                      onClick={() => onSelectChat?.(chat.id)}
+                      onClick={() => handleChatSelect(chat.id)}
                       className={cn(
                         "w-full text-left transition-all duration-200",
-                        isCollapsed ? "p-2 flex justify-center" : "p-3"
+                        isCollapsed && isDesktop ? "p-3 flex justify-center" : "p-4"
                       )}
-                      title={isCollapsed ? chat.title : undefined}
+                      title={isCollapsed && isDesktop ? chat.title : undefined}
                     >
-                      {isCollapsed ? (
-                        <MessageSquare className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      {isCollapsed && isDesktop ? (
+                        <MessageSquare className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                       ) : (
-                        <>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {chat.title}
-                              </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                                {chat.lastMessage}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                              {chat.title}
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                              {chat.lastMessage}
+                            </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              {formatTimestamp(chat.timestamp)}
+                            </p>
+                          </div>
+                          
+                          {hoveredChatId === chat.id && (
+                            <div className="flex items-center gap-1 ml-2">
                               <button
                                 onClick={(e) => handleChatAction(e, 'edit', chat.id)}
-                                className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded"
+                                className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Edit chat"
                               >
-                                <Edit3 className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                                <Edit3 className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                               </button>
                               <button
                                 onClick={(e) => handleChatAction(e, 'delete', chat.id)}
-                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Delete chat"
                               >
-                                <Trash2 className="h-3 w-3 text-red-500 dark:text-red-400" />
+                                <Trash2 className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
                               </button>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {formatTimestamp(chat.timestamp)}
-                            </span>
-                          </div>
-                        </>
+                          )}
+                        </div>
                       )}
                     </button>
                   </div>
@@ -583,74 +801,56 @@ export function Sidebar({
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
 
-        {/* Bottom Actions */}
-        <div className={cn(
-          "border-t border-gray-200 dark:border-zinc-800",
-          isCollapsed ? "p-2 space-y-2" : "p-3 space-y-2"
-        )}>
-          {isCollapsed ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleModelInfo}
-                className="w-full"
-                title="Model Info"
-              >
-                <Bot className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSettingsModal(true)}
-                className="w-full"
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                onClick={handleModelInfo}
-                className="w-full justify-start gap-3 text-sm"
-              >
-                <Bot className="h-4 w-4" />
-                Model Info
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setShowSettingsModal(true)}
-                className="w-full justify-start gap-3 text-sm"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Button>
-            </>
-          )}
-        </div>
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <MobileMenuButton />
+
+      {/* Mobile Overlay */}
+      <MobileOverlay />
+
+      {/* Desktop Sidebar */}
+      <aside className={cn(
+        "hidden lg:flex lg:flex-col bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-80",
+        "h-full overflow-hidden",
+        className
+      )}>
+        <SidebarContent isDesktop={true} />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <aside className={cn(
+        "mobile-sidebar lg:hidden fixed top-0 left-0 h-full w-80 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 transform transition-transform duration-300 ease-in-out z-50",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <SidebarContent isDesktop={false} />
       </aside>
 
       {/* Modals */}
       <SearchModal 
         open={showSearchModal} 
         onOpenChange={setShowSearchModal}
+        chats={chats}
+        onSelectChat={handleChatSelect}
       />
-      
       <LibraryModal 
         open={showLibraryModal} 
         onOpenChange={setShowLibraryModal}
         items={libraryItems}
-        onUseItem={onUseLibraryItem}
+        onUseItem={(item) => {
+          onUseLibraryItem?.(item);
+          setShowLibraryModal(false);
+        }}
       />
-      
       <ModelInfoModal 
         open={showModelModal} 
         onOpenChange={setShowModelModal}
       />
-      
       <SettingsModal 
         open={showSettingsModal} 
         onOpenChange={setShowSettingsModal}

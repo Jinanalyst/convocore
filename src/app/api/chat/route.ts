@@ -1,20 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendChatMessage, getModelConfig, type ChatMessage, type AIServiceConfig } from '@/lib/ai-service';
 import { detectAgentFromMessage } from '@/lib/model-agents';
-import { memoryService } from '@/lib/memory-service';
-import { createServerComponentClient } from '@/lib/supabase';
+import { MemoryService } from '@/lib/memory-service';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { getRateLimit, canMakeRequest, incrementUsage } from '@/lib/auth';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
-  // Korean character detection
-  const koreanRegex = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
-  if (koreanRegex.test(text)) {
-    return 'ko';
+  // Simple Korean detection - checks for Hangul characters
+  const koreanRegex = /[\u3131-\u3163\uac00-\ud7a3]/;
+  return koreanRegex.test(text) ? 'ko' : 'en';
+}
+
+function extractUserIdFromRequest(request: NextRequest): string | null {
+  try {
+    // Check for user ID in various places
+    const cookies = request.headers.get('cookie') || '';
+    
+    // Extract from wallet_address cookie if wallet user
+    if (cookies.includes('wallet_connected=true')) {
+      const walletMatch = cookies.match(/wallet_address=([^;]+)/);
+      if (walletMatch) {
+        return `wallet_${walletMatch[1]}`;
+      }
+    }
+    
+    // Extract from other auth methods
+    const userIdMatch = cookies.match(/user_id=([^;]+)/);
+    if (userIdMatch) {
+      return userIdMatch[1];
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Failed to extract user ID:', error);
+    return null;
   }
-  
-  // Default to English
-  return 'en';
 }
 
 export async function POST(request: NextRequest) {
@@ -28,35 +49,117 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Get user ID and check rate limits
-    let userId: string | null = null;
+    const authHeader = request.headers.get('authorization');
+    const userId = request.headers.get('x-user-id') || extractUserIdFromRequest(request);
     let userPlan: 'free' | 'pro' | 'premium' = 'free';
     let dailyUsage = 0;
-    
+
     try {
-      const supabase = await createServerComponentClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id || null;
-      
-      // In a real app, this would fetch user data from database
-      // For now, we'll simulate rate limiting for demo users
-      if (userId) {
-        // Check if user has exceeded daily limit
+      // Check if user is wallet authenticated
+      const userAgent = request.headers.get('user-agent') || '';
+      const cookies = request.headers.get('cookie') || '';
+      const isWalletUser = cookies.includes('wallet_connected=true');
+      const isMagicLinkUser = cookies.includes('auth_method=magic_link');
+
+      // Check rate limiting for free plan users
+      if (isWalletUser || isMagicLinkUser) {
+        // For wallet/magic link users, get usage from headers or assume free plan
+        userPlan = 'free'; // Wallet users start with free plan
         const rateLimit = getRateLimit(userPlan);
+        
         if (rateLimit > 0) {
-          // Get current usage from localStorage or database
-          const currentUsage = dailyUsage; // This would come from database
+          // Get today's date for daily usage reset
+          const today = new Date().toDateString();
+          const usageKey = isWalletUser ? 'wallet_daily_usage' : 'magic_daily_usage';
+          const dateKey = isWalletUser ? 'wallet_usage_date' : 'magic_usage_date';
           
-          if (currentUsage >= rateLimit) {
+          // Try to get usage from request headers (set by middleware)
+          const usageHeader = request.headers.get('x-daily-usage');
+          const usageDateHeader = request.headers.get('x-usage-date');
+          
+          // Reset usage if it's a new day
+          if (usageDateHeader !== today) {
+            dailyUsage = 0;
+          } else {
+            dailyUsage = parseInt(usageHeader || '0');
+          }
+
+          if (dailyUsage >= rateLimit) {
             return NextResponse.json(
               { 
-                error: `Daily chat limit exceeded. Free plan allows ${rateLimit} chats per day. Please upgrade to Pro or Premium for unlimited chats.`,
+                error: `Daily chat limit exceeded. Free plan allows ${rateLimit} chats per day. Please upgrade to Pro (20 USDT/month) or Premium (40 USDT/month) for unlimited chats.`,
                 type: 'RATE_LIMIT_EXCEEDED',
                 limit: rateLimit,
-                used: currentUsage
+                usage: dailyUsage,
+                resetTime: new Date(new Date().setHours(24, 0, 0, 0)).toISOString()
               },
               { status: 429 }
             );
           }
+        }
+      } else {
+        // For Supabase authenticated users, check database
+        try {
+          const { createClientComponentClient } = await import('@/lib/supabase');
+          const supabase = createClientComponentClient();
+          
+          if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            // Get user from session or token
+            const authHeader = request.headers.get('authorization');
+            if (authHeader) {
+              const token = authHeader.replace('Bearer ', '');
+              const { data: { user }, error } = await supabase.auth.getUser(token);
+              
+              if (user && !error) {
+                // Get user's subscription plan and usage
+                const { data: userData, error: userError } = await supabase
+                  .from('users')
+                  .select('subscription_tier, daily_usage, usage_date')
+                  .eq('id', user.id)
+                  .single();
+
+                if (!userError && userData) {
+                  userPlan = userData.subscription_tier || 'free';
+                  
+                  // Check if usage needs to be reset (new day)
+                  const today = new Date().toDateString();
+                  const usageDate = userData.usage_date ? new Date(userData.usage_date).toDateString() : '';
+                  
+                  if (usageDate !== today) {
+                    // Reset daily usage for new day
+                    dailyUsage = 0;
+                    await supabase
+                      .from('users')
+                      .update({ 
+                        daily_usage: 0, 
+                        usage_date: new Date().toISOString() 
+                      })
+                      .eq('id', user.id);
+                  } else {
+                    dailyUsage = userData.daily_usage || 0;
+                  }
+
+                  const rateLimit = getRateLimit(userPlan);
+                  if (rateLimit > 0 && dailyUsage >= rateLimit) {
+                    return NextResponse.json(
+                      { 
+                        error: `Daily chat limit exceeded. ${userPlan} plan allows ${rateLimit} chats per day. Please upgrade for unlimited chats.`,
+                        type: 'RATE_LIMIT_EXCEEDED',
+                        limit: rateLimit,
+                        usage: dailyUsage,
+                        resetTime: new Date(new Date().setHours(24, 0, 0, 0)).toISOString()
+                      },
+                      { status: 429 }
+                    );
+                  }
+                }
+              }
+            }
+          }
+        } catch (supabaseError) {
+          console.warn('Could not check Supabase rate limits:', supabaseError);
+          // Default to free plan with local storage check
+          userPlan = 'free';
         }
       }
     } catch (error) {
@@ -97,6 +200,9 @@ export async function POST(request: NextRequest) {
     let userRecognition = null;
     if (userId && latestUserMessage) {
       try {
+        // Create memory service instance
+        const memoryService = new MemoryService();
+        
         // Get user recognition info
         userRecognition = await memoryService.getUserRecognition(userId);
         
@@ -252,6 +358,9 @@ export async function POST(request: NextRequest) {
     // Save conversation to memory for authenticated users
     if (userId && latestUserMessage && response) {
       try {
+        // Create memory service instance
+        const memoryService = new MemoryService();
+        
         // Save user message
         await memoryService.saveMessage(userId, 'user', latestUserMessage.content);
         
