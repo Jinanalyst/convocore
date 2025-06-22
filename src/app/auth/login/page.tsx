@@ -75,46 +75,33 @@ export default function LoginPage() {
     try {
       console.log('Starting wallet authentication...', { walletAddress, walletType });
       
-      // Create or get user with wallet address
-      const { data, error } = await supabase.auth.signInAnonymously();
+      // For wallet authentication, we'll create a temporary session
+      // and store user data directly without using Supabase auth
       
-      if (error) {
-        console.error('Supabase auth error:', error);
-        setError(error.message);
-        return;
-      }
+      // Generate a temporary user ID based on wallet address
+      const tempUserId = `wallet_${walletAddress.toLowerCase()}`;
 
-      console.log('Anonymous auth successful:', data.user?.id);
-
-      // Store wallet address and type in user metadata or separate table
-      if (data.user) {
-        try {
-          const { error: upsertError } = await supabase
-            .from('users')
-            .upsert({
-              id: data.user.id,
-              email: null, // Allow null for wallet-only users
-              wallet_address: walletAddress,
-              wallet_type: walletType,
-              subscription_tier: 'free',
-              created_at: new Date().toISOString(),
-            });
-
-          if (upsertError) {
-            console.error('Error saving user data:', upsertError);
-            // Don't block login for this error, continue with redirect
-          } else {
-            console.log('User data saved successfully');
-          }
-        } catch (dbError) {
-          console.error('Database operation failed:', dbError);
-          // Continue with redirect even if database fails
-        }
-
+      // Store wallet connection in localStorage and cookies
+      try {
+        // Store wallet info in localStorage
+        localStorage.setItem('wallet_connected', 'true');
+        localStorage.setItem('wallet_address', walletAddress);
+        localStorage.setItem('wallet_type', walletType);
+        localStorage.setItem('user_id', tempUserId);
+        
+        // Also set cookies for middleware
+        document.cookie = `wallet_connected=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+        document.cookie = `wallet_address=${walletAddress}; path=/; max-age=${60 * 60 * 24 * 7}`;
+        document.cookie = `wallet_type=${walletType}; path=/; max-age=${60 * 60 * 24 * 7}`;
+        
+        console.log('Wallet info stored in localStorage and cookies');
         console.log('Redirecting to:', redirectTo);
         
         // Use window.location for more reliable redirect
         window.location.href = redirectTo;
+      } catch (storageError) {
+        console.error('Failed to store wallet info:', storageError);
+        setError('Failed to store wallet connection');
       }
     } catch (err) {
       console.error('Wallet authentication error:', err);

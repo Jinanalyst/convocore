@@ -1,5 +1,5 @@
 // TRON blockchain integration for USDT payments
-const TronWeb = require('tronweb');
+// TronWeb is only available in browser environment
 
 export interface PaymentDetails {
   amount: number;
@@ -34,19 +34,16 @@ const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 // ConvoAI USDT recipient address
 export const CONVO_AI_RECIPIENT_ADDRESS = 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ';
 
-// Initialize TronWeb
-let tronWeb: any;
-if (typeof window !== 'undefined' && (window as any).tronLink) {
-  // Browser environment with TronLink
-  tronWeb = (window as any).tronLink.tronWeb;
-} else {
-  // Server environment
-  tronWeb = new TronWeb(
-    TRON_CONFIG.fullHost,
-    TRON_CONFIG.fullHost,
-    TRON_CONFIG.fullHost,
-    TRON_CONFIG.privateKey
-  );
+// Initialize TronWeb (client-side only)
+let tronWeb: any = null;
+
+function getTronWeb() {
+  if (typeof window !== 'undefined') {
+    if ((window as any).tronLink && (window as any).tronLink.tronWeb) {
+      return (window as any).tronLink.tronWeb;
+    }
+  }
+  return null;
 }
 
 export class TronPaymentService {
@@ -91,6 +88,11 @@ export class TronPaymentService {
   // Get wallet balance
   async getWalletBalance(address: string): Promise<{ TRX: number; USDT: number }> {
     try {
+      const tronWeb = getTronWeb();
+      if (!tronWeb) {
+        throw new Error('TronWeb not available');
+      }
+
       // Get TRX balance
       const trxBalance = await tronWeb.trx.getBalance(address);
       const trxAmount = tronWeb.fromSun(trxBalance);
@@ -135,6 +137,11 @@ export class TronPaymentService {
     userId: string
   ): Promise<string | null> {
     try {
+      const tronWeb = getTronWeb();
+      if (!tronWeb) {
+        throw new Error('TronWeb not available');
+      }
+
       const contract = await tronWeb.contract().at(USDT_CONTRACT_ADDRESS);
       
       // Convert amount to contract units (USDT has 6 decimals)
@@ -170,6 +177,11 @@ export class TronPaymentService {
   // Verify transaction on blockchain
   async verifyTransaction(txHash: string): Promise<boolean> {
     try {
+      const tronWeb = getTronWeb();
+      if (!tronWeb) {
+        throw new Error('TronWeb not available');
+      }
+
       const transaction = await tronWeb.trx.getTransaction(txHash);
       return transaction && transaction.ret && transaction.ret[0].contractRet === 'SUCCESS';
     } catch (error) {

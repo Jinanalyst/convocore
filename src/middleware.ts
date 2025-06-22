@@ -62,6 +62,10 @@ export async function middleware(request: NextRequest) {
   // Get user session
   const { data: { user }, error } = await supabase.auth.getUser();
 
+  // Check for wallet authentication in cookies
+  const walletConnected = request.cookies.get('wallet_connected')?.value === 'true';
+  const walletAddress = request.cookies.get('wallet_address')?.value;
+
   // Protected routes that require authentication
   const protectedRoutes = ['/convocore', '/dashboard'];
   const isProtectedRoute = protectedRoutes.some(route => 
@@ -69,7 +73,8 @@ export async function middleware(request: NextRequest) {
   );
 
   // Redirect to login if accessing protected route without authentication
-  if (isProtectedRoute && !user) {
+  // Allow either Supabase user OR wallet authentication
+  if (isProtectedRoute && !user && !walletConnected) {
     const redirectUrl = new URL('/auth/login', request.url);
     redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
