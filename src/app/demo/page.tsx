@@ -352,44 +352,34 @@ export default function DemoPage() {
 
         {/* Kakao Authentication Test */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 border border-gray-200 dark:border-zinc-700">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">KakaoTalk Authentication Test</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">KakaoTalk Authentication</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-lg">
+            <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-900">
               <div className="flex items-center gap-3">
                 <span className="text-lg">💬</span>
                 <div>
                   <div className="font-medium text-gray-900 dark:text-white">
                     KakaoTalk Login
                   </div>
-                  {kakaoTestResult && (
-                    <div className="text-sm">
-                      {kakaoTestResult.success ? (
-                        <span className="text-green-600 dark:text-green-400">
-                          Configuration test passed
-                        </span>
-                      ) : (
-                        <span className="text-red-600 dark:text-red-400">
-                          {kakaoTestResult.error}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="text-sm">
+                    <span className="text-yellow-600 dark:text-yellow-400">
+                      Currently in maintenance mode
+                    </span>
+                  </div>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={testKakaoAuth}
-                className="text-xs"
-              >
-                Test Config
-              </Button>
+              <span className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-3 py-1 rounded-full font-medium">
+                Coming Soon
+              </span>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              <strong>Status:</strong> Ready for configuration
+              <strong>Status:</strong> Under development & configuration
               <br />
-              <strong>Mobile Support:</strong> {deviceInfo?.isMobile ? 'Optimized for mobile' : 'Desktop ready'}
+              <strong>Mobile Support:</strong> {deviceInfo?.isMobile ? 'Ready for mobile deployment' : 'Desktop integration prepared'}
               <br />
-              <strong>Setup Required:</strong> Supabase + Kakao Developer Console
+              <strong>Timeline:</strong> Available once Supabase + Kakao Developer Console setup is complete
+              <br />
+              <strong>Alternatives:</strong> Google Login, Wallet Connection, or Magic Link available now
             </div>
           </div>
         </div>

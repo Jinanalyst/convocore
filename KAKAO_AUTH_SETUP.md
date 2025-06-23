@@ -1,12 +1,45 @@
 # KakaoTalk Authentication Setup Guide
 
+## Current Status: 🚧 Coming Soon
+
+**KakaoTalk authentication is currently in maintenance mode and showing "Coming Soon" to users.**
+
+This prevents users from encountering errors while the authentication system is being configured and tested. Users will see a disabled button with a "Coming Soon" badge instead of a functional login option.
+
 ## Overview
 
 This guide will help you set up KakaoTalk authentication for both mobile and desktop platforms in Convocore. KakaoTalk is the most popular messaging app in South Korea with over 47 million users.
 
-## Current Status: ⚠️ Configuration Required
+## Current Implementation Status
 
-The Kakao login is currently showing error code KOE205, which indicates that Kakao OAuth is not properly configured in Supabase.
+- ✅ **User Interface**: "Coming Soon" mode implemented
+- ✅ **Error Prevention**: Users cannot click KakaoTalk login button
+- ✅ **Alternative Options**: Google login and wallet connection available
+- ⚠️ **Backend Configuration**: Requires Supabase + Kakao Developer Console setup
+- ⚠️ **Testing**: Needs production environment testing
+
+## 🚧 Maintenance Mode Features
+
+### User Experience:
+- **Disabled KakaoTalk buttons** on login and signup pages
+- **"Coming Soon" badge** clearly visible to users
+- **Alternative login options** prominently displayed (Google, Wallet)
+- **No error messages** - clean user experience
+
+### Developer Benefits:
+- **No authentication errors** during development
+- **Clean codebase** ready for KakaoTalk implementation
+- **Documentation prepared** for quick deployment
+- **Mobile optimization** already implemented
+
+## When Ready to Enable KakaoTalk
+
+To switch from "Coming Soon" mode to functional KakaoTalk authentication:
+
+1. **Complete Supabase + Kakao Developer Console setup** (see guide below)
+2. **Replace "Coming Soon" buttons** with functional authentication buttons
+3. **Update auth context** to enable actual KakaoTalk OAuth flow
+4. **Test thoroughly** on both mobile and desktop platforms
 
 ## Prerequisites
 

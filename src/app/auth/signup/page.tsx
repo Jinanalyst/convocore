@@ -323,16 +323,22 @@ function SignupPageContent() {
               Continue with Google
             </Button>
 
-            <Button
-              type="button"
-              onClick={handleKakaoSignup}
-              disabled={loading}
-              variant="outline"
-              className="w-full bg-transparent border-gray-700 text-white hover:bg-gray-900"
-            >
-              <KakaoIcon className="w-5 h-5 mr-2" />
-              Continue with Kakao
-            </Button>
+            {/* Kakao Signup - Coming Soon */}
+            <div className="relative">
+              <Button
+                type="button"
+                disabled={true}
+                variant="outline"
+                className="w-full bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-800 cursor-not-allowed"
+              >
+                <KakaoIcon className="w-5 h-5 mr-2 text-gray-500" />
+                <span>Continue with Kakao</span>
+                <span className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">
+                  Coming Soon
+                </span>
+              </Button>
+              <div className="absolute inset-0 bg-gray-900 bg-opacity-30 rounded-md pointer-events-none"></div>
+            </div>
           </div>
         </form>
 

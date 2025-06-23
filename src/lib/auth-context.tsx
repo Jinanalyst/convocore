@@ -178,42 +178,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithKakao = async () => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      throw new Error('Kakao authentication is not configured. Please contact support or try Google login.');
-    }
-
-    try {
-      // Check if we're on mobile for better UX
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'kakao',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(window.location.pathname)}`,
-          ...(isMobile && {
-            // Mobile-specific options
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            }
-          })
-        }
-      });
-
-      if (error) {
-        // Enhanced error handling for Kakao-specific issues
-        if (error.message.includes('KOE205') || error.message.includes('not enabled')) {
-          throw new Error('Kakao authentication is not enabled. Please use Google login or wallet connection instead.');
-        } else if (error.message.includes('configuration')) {
-          throw new Error('Kakao authentication is not properly configured. Please contact support.');
-        } else {
-          throw new Error(`Kakao login failed: ${error.message}. Please try Google login instead.`);
-        }
-      }
-    } catch (error: any) {
-      console.error('Kakao authentication error:', error);
-      throw error;
-    }
+    // KakaoTalk authentication is currently in "Coming Soon" mode
+    throw new Error('KakaoTalk login is coming soon! We\'re currently setting up this feature. Please use Google login or wallet connection instead.');
   };
 
   const signInWithWallet = async (walletAddress: string, walletType: string) => {
