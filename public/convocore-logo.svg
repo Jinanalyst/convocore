@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" fill="none">
+  <!-- Hexagonal C Logo -->
+  <g transform="translate(10, 10)">
+    <!-- Outer hexagon -->
+    <path d="M40 15 L60 25 L60 45 L40 55 L20 45 L20 25 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="2"/>
+    
+    <!-- Inner C shape -->
+    <path d="M35 25 Q30 20 30 30 Q30 40 35 35 L35 40 Q25 45 25 30 Q25 15 35 20 L35 25 Z" fill="white"/>
+    <path d="M45 25 Q50 20 50 30 Q50 40 45 35 L45 40 Q55 45 55 30 Q55 15 45 20 L45 25 Z" fill="white"/>
+  </g>
+  
+  <!-- Convocore Text -->
+  <text x="90" y="45" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="32" font-weight="600" fill="#1a1a1a">
+    Convocore
+  </text>
+</svg> 

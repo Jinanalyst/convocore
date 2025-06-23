@@ -1,115 +1,26 @@
 {
-  "name": "Convocore - Where AI Meets Web3",
+  "name": "Convocore",
   "short_name": "Convocore",
-  "description": "Advanced AI chat platform with blockchain payments. Experience intelligent conversations with code generation, problem solving, and secure USDT payments on multiple blockchains.",
+  "description": "AI Chat with Multiple Models",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "orientation": "portrait-primary",
-  "categories": ["productivity", "utilities", "business", "developer"],
-  "lang": "en",
-  "dir": "ltr",
-  "scope": "/",
-  "id": "convocore-ai-chat",
+  "background_color": "#ffffff",
+  "theme_color": "#1a1a1a",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "16x16 32x32",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "type": "image/png"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x800",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Convocore AI Chat Interface - Desktop View"
-    },
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Convocore Mobile Chat Experience"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Start New Chat",
-      "short_name": "New Chat",
-      "description": "Start a new AI conversation",
-      "url": "/convocore",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "View Pricing Plans",
-      "short_name": "Pricing",
-      "description": "View subscription plans and pricing",
-      "url": "/pricing",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Demo Features",
-      "short_name": "Demo",
-      "description": "Explore Convocore features and capabilities",
-      "url": "/demo",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false,
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  }
-} 
+  ]
+}
