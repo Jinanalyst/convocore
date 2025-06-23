@@ -41,7 +41,7 @@ export function ConvocoreLogo({
   );
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center justify-center gap-3 ${className}`}>
       <div className="relative">
         <HexagonIcon className={`${sizeClasses[size]}`} />
         <div className="absolute inset-0 bg-gray-900 dark:bg-white rounded-lg opacity-5 blur-sm"></div>

@@ -442,7 +442,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         <div className="flex-1 flex flex-col">
           {/* Header Section - Mobile Optimized */}
           <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-4 sm:pt-12 pb-3 sm:pb-8">
-            <ConvocoreLogo size="lg" className="justify-center mb-3 sm:mb-6" />
+            <ConvocoreLogo size="lg" className="mx-auto mb-3 sm:mb-6" />
             
 
             
