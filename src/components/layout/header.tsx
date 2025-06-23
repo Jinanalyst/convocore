@@ -33,6 +33,7 @@ import { ShareModal } from "@/components/modals/share-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
+import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -55,6 +56,7 @@ export function Header({
   currentChatId
 }: HeaderProps) {
   const isMobile = useIsMobile();
+  const { user, signOut } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -63,12 +65,6 @@ export function Header({
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [userInfo, setUserInfo] = useState({
-    name: 'Loading...',
-    email: 'Loading...',
-    subscriptionTier: 'free' as 'free' | 'pro' | 'premium',
-    connectionStatus: 'Connecting...'
-  });
 
   const handleThemeToggle = () => {
     setIsDarkMode(!isDarkMode);
@@ -92,10 +88,13 @@ export function Header({
     onProfile?.();
   };
 
-  // Load user information on component mount
-  useEffect(() => {
-    loadUserInfo();
+  const handleLogout = async () => {
+    await signOut();
+    onLogout?.();
+  };
 
+  // Subscribe to notifications on component mount
+  useEffect(() => {
     // Subscribe to notifications (client-side only)
     if (typeof window !== 'undefined') {
       const unsubscribe = notificationService.subscribe((state) => {
@@ -105,86 +104,6 @@ export function Header({
       return unsubscribe;
     }
   }, []);
-
-  const loadUserInfo = async () => {
-    try {
-      // Check if wallet is connected first
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      const walletAddress = localStorage.getItem('wallet_address') || '';
-      const walletType = localStorage.getItem('wallet_type') || '';
-
-      if (walletConnected) {
-        // For wallet users
-        setUserInfo({
-          name: 'Wallet User',
-          email: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
-          subscriptionTier: 'free',
-          connectionStatus: 'Connected'
-        });
-        return;
-      }
-
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        setUserInfo({
-          name: 'Demo User',
-          email: 'demo@convocore.ai',
-          subscriptionTier: 'pro',
-          connectionStatus: 'Demo Mode'
-        });
-        return;
-      }
-
-      // For Supabase users
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        setUserInfo({
-          name: 'Guest User',
-          email: 'guest@convocore.ai',
-          subscriptionTier: 'free',
-          connectionStatus: 'Not Connected'
-        });
-        return;
-      }
-
-      // Get user profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('full_name, email, subscription_tier')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        // Use auth user data as fallback
-        setUserInfo({
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          email: user.email || 'user@convocore.ai',
-          subscriptionTier: 'free',
-          connectionStatus: 'Connected'
-        });
-      } else {
-        setUserInfo({
-          name: profile.full_name || user.email?.split('@')[0] || 'User',
-          email: profile.email || user.email || 'user@convocore.ai',
-          subscriptionTier: profile.subscription_tier || 'free',
-          connectionStatus: 'Connected'
-        });
-      }
-
-    } catch (error) {
-      console.error('Error loading user info:', error);
-      setUserInfo({
-        name: 'Demo User',
-        email: 'demo@convocore.ai',
-        subscriptionTier: 'pro',
-        connectionStatus: 'Demo Mode'
-      });
-    }
-  };
 
   return (
     <header className={cn(
@@ -253,7 +172,7 @@ export function Header({
             size="icon"
             onClick={onShare}
             className={`
-              text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white
+              text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white
               hover:bg-gray-100 dark:hover:bg-zinc-800 touch-feedback
               ${isMobile ? 'min-h-[44px] min-w-[44px]' : 'h-9 w-9'}
             `}
@@ -269,7 +188,7 @@ export function Header({
           size="icon"
           onClick={onSettings}
           className={`
-            text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white
+            text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white
             hover:bg-gray-100 dark:hover:bg-zinc-800 touch-feedback
             ${isMobile ? 'min-h-[44px] min-w-[44px]' : 'h-9 w-9'}
           `}
@@ -285,8 +204,10 @@ export function Header({
               variant="ghost"
               size="icon"
               className={`
-                text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white
+                text-gray-900 dark:text-gray-100 hover:text-gray-950 dark:hover:text-white
                 hover:bg-gray-100 dark:hover:bg-zinc-800 touch-feedback
+                border border-gray-200 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600
+                bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm
                 ${isMobile ? 'min-h-[44px] min-w-[44px]' : 'h-9 w-9'}
               `}
               aria-label="User menu"
@@ -314,6 +235,18 @@ export function Header({
             </DropdownMenuItem>
             
             <DropdownMenuItem 
+              onClick={() => setShowBillingModal(true)}
+              className={`
+                flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800
+                cursor-pointer touch-feedback
+                ${isMobile ? 'min-h-[48px]' : ''}
+              `}
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>Billing & Plans</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem 
               onClick={() => onSettings?.()}
               className={`
                 flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800
@@ -328,7 +261,7 @@ export function Header({
             <DropdownMenuSeparator className="my-1 bg-gray-200 dark:bg-zinc-700" />
             
             <DropdownMenuItem 
-              onClick={() => onLogout?.()}
+              onClick={handleLogout}
               className={`
                 flex items-center gap-2 p-3 hover:bg-red-50 dark:hover:bg-red-900/20
                 text-red-600 dark:text-red-400 cursor-pointer touch-feedback
@@ -408,6 +341,17 @@ export function Header({
 
               <button
                 onClick={() => {
+                  setShowBillingModal(true);
+                  setShowMobileMenu(false);
+                }}
+                className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
+              >
+                <CreditCard className="h-5 w-5" />
+                <span>Billing & Plans</span>
+              </button>
+
+              <button
+                onClick={() => {
                   onSettings?.();
                   setShowMobileMenu(false);
                 }}
@@ -431,7 +375,7 @@ export function Header({
               {/* Sign Out */}
               <button
                 onClick={() => {
-                  onLogout?.();
+                  handleLogout();
                   setShowMobileMenu(false);
                 }}
                 className="flex items-center gap-3 p-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors touch-feedback min-h-[48px] mt-4"

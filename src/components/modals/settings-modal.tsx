@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/lib/auth-context";
 import { 
   Settings, 
   User, 
@@ -20,7 +21,11 @@ import {
   Moon,
   Sun,
   Monitor,
-  Save
+  Save,
+  Crown,
+  Zap,
+  Star,
+  Copy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BillingModal } from "@/components/modals/billing-modal";
@@ -33,6 +38,7 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'account' | 'ai-model' | 'appearance' | 'notifications' | 'privacy' | 'billing';
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState({
     theme: 'system',
@@ -76,20 +82,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const loadSettings = async () => {
     setIsLoading(true);
     try {
-      // Check if user is wallet-authenticated
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      const walletAddress = localStorage.getItem('wallet_address') || '';
-      const walletType = localStorage.getItem('wallet_type') || '';
-
-      if (walletConnected) {
-        // Load wallet user info
+      // Use auth context data
+      if (user) {
         setUserInfo({
-          name: `Wallet User`,
-          email: '',
-          walletAddress,
-          walletType,
-          subscriptionTier: 'free',
-          isWalletUser: true
+          name: user.name,
+          email: user.email,
+          walletAddress: user.walletAddress || '',
+          walletType: user.walletType || '',
+          subscriptionTier: user.subscriptionTier,
+          isWalletUser: user.authType === 'wallet'
         });
       }
 
@@ -102,34 +103,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         applyTheme(parsed.theme || 'system');
       }
 
-      // For Supabase users, load from database
-      if (!walletConnected) {
+      // For Supabase users, load additional settings from database
+      if (user?.authType === 'supabase') {
         const { createClientComponentClient } = await import('@/lib/supabase');
         const supabase = createClientComponentClient();
         
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Load user info
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        if (supabaseUser) {
+          // Load user settings
           const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('full_name, email, subscription_tier, settings')
-            .eq('id', user.id)
+            .select('settings')
+            .eq('id', supabaseUser.id)
             .single();
 
-          if (!userError && userData) {
-            setUserInfo({
-              name: userData.full_name || 'User',
-              email: userData.email || user.email || '',
-              walletAddress: '',
-              walletType: '',
-              subscriptionTier: userData.subscription_tier || 'free',
-              isWalletUser: false
-            });
-
-            if (userData.settings) {
-              setSettings(prev => ({ ...prev, ...userData.settings }));
-              applyTheme(userData.settings.theme || 'system');
-            }
+          if (!userError && userData?.settings) {
+            setSettings(prev => ({ ...prev, ...userData.settings }));
+            applyTheme(userData.settings.theme || 'system');
           }
         }
       }
@@ -156,17 +146,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       }
 
       // For Supabase users, save to database
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      if (!walletConnected) {
+      if (user?.authType === 'supabase') {
         const { createClientComponentClient } = await import('@/lib/supabase');
         const supabase = createClientComponentClient();
         
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        if (supabaseUser) {
           const { error } = await supabase
             .from('users')
             .upsert({
-              id: user.id,
+              id: supabaseUser.id,
               settings: newSettings,
               updated_at: new Date().toISOString()
             });
@@ -340,78 +329,191 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       case 'account':
         return (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Profile Information</h3>
-              <div className="space-y-4">
-                {userInfo.isWalletUser ? (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Wallet Address</label>
-                      <input 
-                        type="text" 
-                        value={userInfo.walletAddress}
-                        readOnly
-                        className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Wallet Type</label>
-                      <input 
-                        type="text" 
-                        value={userInfo.walletType}
-                        readOnly
-                        className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md text-sm"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Full Name</label>
-                      <input 
-                        type="text" 
-                        value={userInfo.name}
-                        onChange={(e) => setUserInfo(prev => ({ ...prev, name: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Email</label>
-                      <input 
-                        type="email" 
-                        value={userInfo.email}
-                        onChange={(e) => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Subscription</h3>
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                      {userInfo.subscriptionTier} Plan
-                    </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      {userInfo.subscriptionTier === 'free' ? 'Free tier' : 
-                       userInfo.subscriptionTier === 'pro' ? '$20 USDT/month' : 
-                       '$40 USDT/month'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {userInfo.subscriptionTier !== 'free' && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300">Next billing: Dec 15, 2024</p>
+            {/* Profile Section */}
+            <div className="space-y-4">
+              {/* Avatar and Basic Info */}
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
+                  {userInfo.isWalletUser ? (
+                    <Wallet className="w-8 h-8 text-white dark:text-gray-900" />
+                  ) : (
+                    <User className="w-8 h-8 text-white dark:text-gray-900" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="space-y-3">
+                    {userInfo.isWalletUser ? (
+                      <>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Wallet User
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Connected via {userInfo.walletType || 'crypto wallet'}
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Wallet Address
+                            </label>
+                            <div className="relative">
+                              <input 
+                                type="text" 
+                                value={userInfo.walletAddress}
+                                readOnly
+                                className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm font-mono"
+                              />
+                              <button
+                                onClick={() => navigator.clipboard.writeText(userInfo.walletAddress)}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded"
+                                title="Copy address"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Wallet Type
+                            </label>
+                            <input 
+                              type="text" 
+                              value={userInfo.walletType}
+                              readOnly
+                              className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm capitalize"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <input
+                            type="text"
+                            value={userInfo.name}
+                            onChange={(e) => setUserInfo(prev => ({ ...prev, name: e.target.value }))}
+                            className="text-lg font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-white p-0 w-full focus:ring-0"
+                            placeholder="Enter your name"
+                          />
+                          <input
+                            type="email"
+                            value={userInfo.email}
+                            onChange={(e) => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
+                            className="text-sm bg-transparent border-none outline-none text-gray-600 dark:text-gray-400 p-0 w-full focus:ring-0 mt-1"
+                            placeholder="Enter your email"
+                          />
+                        </div>
+                      </>
                     )}
-                    <Button variant="outline" size="sm" className="mt-1">
-                      {userInfo.subscriptionTier === 'free' ? 'Upgrade' : 'Manage'}
-                    </Button>
                   </div>
                 </div>
+              </div>
+
+              {/* Subscription Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      userInfo.subscriptionTier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                      userInfo.subscriptionTier === 'pro' ? 'bg-gradient-to-r from-blue-500 to-purple-600' :
+                      'bg-gray-500'
+                    }`}>
+                      {userInfo.subscriptionTier === 'premium' ? (
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ) : userInfo.subscriptionTier === 'pro' ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white capitalize">
+                        {userInfo.subscriptionTier} Plan
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {userInfo.subscriptionTier === 'free' ? 'Free tier' : 
+                         userInfo.subscriptionTier === 'pro' ? '$20 USDT/month' : 
+                         '$40 USDT/month'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowBillingModal(true)}
+                    className="bg-white dark:bg-zinc-800 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    {userInfo.subscriptionTier === 'free' ? 'Upgrade' : 'Manage'}
+                  </Button>
+                </div>
+
+                {/* Usage Stats */}
+                {userInfo.subscriptionTier === 'free' && (
+                  <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">API Usage</span>
+                      <span className="font-medium text-gray-900 dark:text-white">3 / 10</span>
+                    </div>
+                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">30% used this month</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Account Details */}
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Account Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Member since</span>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Last login</span>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date().toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => setShowBillingModal(true)}
+                  className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Manage Billing
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Security
+                </Button>
               </div>
             </div>
           </div>
@@ -638,15 +740,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[600px] p-0">
+      <DialogContent className="max-w-4xl h-[80vh] max-h-[800px] p-0">
         <div className="flex h-full">
           {/* Sidebar */}
-          <div className="w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4">
+          <div className="w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex flex-col">
             <DialogHeader className="mb-6">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
             
-            <nav className="space-y-1">
+            <nav className="space-y-1 flex-1 overflow-y-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -669,13 +771,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 p-6 overflow-y-auto">
               {renderTabContent()}
             </div>
             
             {/* Footer */}
-            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex justify-end gap-3">
+            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex justify-end gap-3 bg-white dark:bg-zinc-900">
               <Button variant="outline" onClick={() => onOpenChange?.(false)}>
                 Cancel
               </Button>

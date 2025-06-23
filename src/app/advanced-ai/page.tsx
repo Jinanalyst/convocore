@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthContext } from '@/lib/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import AdvancedChatInterface from '@/components/ui/advanced-chat-interface';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function AdvancedAIPage() {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const [agents, setAgents] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>('general-assistant');
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +49,7 @@ export default function AdvancedAIPage() {
   }, []);
 
   const getAgentIcon = (agentId: string) => {
-    const iconMap: { [key: string]: JSX.Element } = {
+    const iconMap: { [key: string]: React.ReactElement } = {
       'general-assistant': <BrainIcon className="w-5 h-5" />,
       'code-specialist': <CodeIcon className="w-5 h-5" />,
       'research-analyst': <SearchIcon className="w-5 h-5" />,

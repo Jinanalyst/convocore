@@ -7,23 +7,82 @@ CREATE TYPE subscription_status AS ENUM ('active', 'inactive', 'cancelled');
 CREATE TYPE payment_status AS ENUM ('pending', 'confirmed', 'failed');
 CREATE TYPE message_role AS ENUM ('user', 'assistant', 'system');
 
--- Users table (extends Supabase auth.users)
+-- Drop the existing table if it exists and recreate with proper structure
+DROP TABLE IF EXISTS public.users CASCADE;
+
+-- Create users table with proper structure
 CREATE TABLE public.users (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
     email TEXT,
     full_name TEXT,
     avatar_url TEXT,
-    subscription_tier subscription_tier DEFAULT 'free',
-    subscription_status subscription_status DEFAULT 'active',
-    subscription_expires_at TIMESTAMPTZ,
-    wallet_address TEXT,
-    wallet_type TEXT,
-    tron_wallet_address TEXT, -- Keep for backward compatibility
+    subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'premium')),
+    subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'cancelled', 'expired')),
     api_requests_used INTEGER DEFAULT 0,
-    api_requests_limit INTEGER DEFAULT 3, -- Free tier: 3 chats/day
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    api_requests_limit INTEGER DEFAULT 10,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
+    last_login TIMESTAMPTZ
 );
+
+-- Set up Row Level Security (RLS)
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies
+CREATE POLICY "Users can view own profile" ON public.users
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON public.users
+    FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON public.users
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Create function to handle new user registration
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (id, email, full_name, avatar_url, last_login)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', SPLIT_PART(NEW.email, '@', 1)),
+        NEW.raw_user_meta_data->>'avatar_url',
+        NOW()
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger to automatically create user profile when user signs up
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('UTC', NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically update updated_at column
+CREATE TRIGGER handle_users_updated_at
+    BEFORE UPDATE ON public.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS users_email_idx ON public.users (email);
+CREATE INDEX IF NOT EXISTS users_subscription_tier_idx ON public.users (subscription_tier);
+CREATE INDEX IF NOT EXISTS users_created_at_idx ON public.users (created_at);
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON public.users TO authenticated;
+GRANT SELECT ON public.users TO anon;
 
 -- Conversations table
 CREATE TABLE public.conversations (
@@ -80,18 +139,10 @@ CREATE INDEX idx_payments_transaction_hash ON public.payments(transaction_hash);
 CREATE INDEX idx_payments_status ON public.payments(status);
 
 -- Row Level Security (RLS) policies
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.convo_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-
--- Users policies
-CREATE POLICY "Users can view own profile" ON public.users
-    FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own profile" ON public.users
-    FOR UPDATE USING (auth.uid() = id);
 
 -- Conversations policies
 CREATE POLICY "Users can view own conversations" ON public.conversations
@@ -138,44 +189,6 @@ CREATE POLICY "Users can view own payments" ON public.payments
 
 CREATE POLICY "Users can create own payments" ON public.payments
     FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Functions
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.users (id, email, full_name, avatar_url)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        NEW.raw_user_meta_data->>'full_name',
-        NEW.raw_user_meta_data->>'avatar_url'
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger to create user profile on signup
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers for updated_at
-CREATE TRIGGER handle_users_updated_at
-    BEFORE UPDATE ON public.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-CREATE TRIGGER handle_conversations_updated_at
-    BEFORE UPDATE ON public.conversations
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- Function to reset daily API limits
 CREATE OR REPLACE FUNCTION public.reset_daily_api_limits()

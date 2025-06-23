@@ -55,12 +55,79 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
   const loadUserProfile = async () => {
     try {
+      // Check wallet authentication first
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      const walletAddress = localStorage.getItem('wallet_address');
+      const walletType = localStorage.getItem('wallet_type');
+
+      if (walletConnected && walletAddress) {
+        // Create wallet user profile
+        const walletProfile: UserProfile = {
+          id: `wallet_${walletAddress.toLowerCase()}`,
+          email: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}@wallet.local`,
+          full_name: 'Wallet User',
+          subscription_tier: 'free',
+          subscription_status: 'active',
+          api_requests_used: 3,
+          api_requests_limit: 10,
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        };
+        setUserProfile(walletProfile);
+        setEditForm({
+          full_name: walletProfile.full_name,
+          email: walletProfile.email
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        // Create demo profile for environments without Supabase
+        const demoProfile: UserProfile = {
+          id: 'demo-user',
+          email: 'demo@convocore.ai',
+          full_name: 'Demo User',
+          subscription_tier: 'pro',
+          subscription_status: 'active',
+          api_requests_used: 45,
+          api_requests_limit: 1000,
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        };
+        setUserProfile(demoProfile);
+        setEditForm({
+          full_name: demoProfile.full_name,
+          email: demoProfile.email
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        // Handle unauthenticated users gracefully
+        const guestProfile: UserProfile = {
+          id: 'guest-user',
+          email: 'guest@convocore.ai',
+          full_name: 'Guest User',
+          subscription_tier: 'free',
+          subscription_status: 'active',
+          api_requests_used: 3,
+          api_requests_limit: 10,
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        };
+        setUserProfile(guestProfile);
+        setEditForm({
+          full_name: guestProfile.full_name,
+          email: guestProfile.email
+        });
+        setIsLoading(false);
         return;
       }
 
@@ -98,12 +165,17 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
         });
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      // Silently handle errors and provide fallback profile
+      // Only log in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Profile loading failed, using fallback:', error);
+      }
+      
       // Fallback profile for demo
       const demoProfile: UserProfile = {
         id: 'demo-user',
-        email: 'john@example.com',
-        full_name: 'John Doe',
+        email: 'demo@convocore.ai',
+        full_name: 'Demo User',
         subscription_tier: 'pro',
         subscription_status: 'active',
         api_requests_used: 45,
