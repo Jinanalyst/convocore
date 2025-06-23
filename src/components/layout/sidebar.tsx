@@ -8,6 +8,7 @@ import { SearchModal } from "@/components/modals/search-modal";
 import { LibraryModal } from "@/components/modals/library-modal";
 import { ModelInfoModal } from "@/components/modals/model-info-modal";
 import { useLanguage } from "@/lib/language-context";
+import { useIsMobile } from "@/lib/mobile-utils";
 import { 
   Plus, 
   MessageSquare, 
@@ -81,13 +82,13 @@ export function Sidebar({
   chats = []
 }: SidebarProps) {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Real chat data from Supabase
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
@@ -173,7 +174,7 @@ export function Sidebar({
           <ConvocoreLogo size="sm" showText={false} />
         )}
         
-        {/* Desktop Collapse Toggle */}
+        {/* Mobile Close Button or Desktop Collapse Toggle */}
         {onToggleCollapse && (
           <Button
             variant="ghost"
@@ -181,10 +182,12 @@ export function Sidebar({
             onClick={onToggleCollapse}
             className={cn(
               "shrink-0",
-              isCollapsed && "absolute top-3 right-2"
+              isCollapsed && !isMobile && "absolute top-3 right-2"
             )}
           >
-            {isCollapsed ? (
+            {isMobile ? (
+              <X className="w-4 h-4" />
+            ) : isCollapsed ? (
               <ChevronRight className="w-4 h-4" />
             ) : (
               <ChevronLeft className="w-4 h-4" />

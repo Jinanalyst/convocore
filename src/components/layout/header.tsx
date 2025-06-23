@@ -43,6 +43,8 @@ interface HeaderProps {
   onSettings?: () => void;
   onProfile?: () => void;
   onLogout?: () => void;
+  onToggleSidebar?: () => void;
+  showMobileMenu?: boolean;
   currentChatTitle?: string;
   currentChatId?: string;
 }
@@ -53,6 +55,8 @@ export function Header({
   onSettings, 
   onProfile, 
   onLogout,
+  onToggleSidebar,
+  showMobileMenu = false,
   currentChatTitle,
   currentChatId
 }: HeaderProps) {
@@ -65,7 +69,7 @@ export function Header({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showBillingModal, setShowBillingModal] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
   const [unreadCount, setUnreadCount] = useState(0);
 
   const handleThemeToggle = () => {
@@ -117,7 +121,7 @@ export function Header({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          onClick={onToggleSidebar}
           className="shrink-0 touch-feedback min-h-[44px] min-w-[44px]"
           aria-label={showMobileMenu ? "Close menu" : "Open menu"}
         >
@@ -277,125 +281,7 @@ export function Header({
         </DropdownMenu>
       </div>
 
-      {/* Enhanced Mobile Menu Overlay */}
-      {showMobileMenu && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm" 
-            onClick={() => setShowMobileMenu(false)} 
-          />
-          
-          {/* Menu Panel */}
-          <div className="fixed top-0 left-0 w-80 h-full bg-white dark:bg-zinc-900 shadow-xl border-r border-gray-200 dark:border-zinc-800 safe-area-top">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Menu</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowMobileMenu(false)}
-                  className="touch-feedback min-h-[44px] min-w-[44px]"
-                  aria-label="Close menu"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
 
-            {/* Current Chat Title */}
-            {currentChatTitle && (
-              <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Chat</div>
-                <div className="text-base font-medium text-gray-900 dark:text-white truncate">
-                  {currentChatTitle}
-                </div>
-              </div>
-            )}
-
-            {/* Menu Items */}
-            <div className="flex flex-col p-4 space-y-2">
-              {/* Chat Actions */}
-              {currentChatId && onShare && (
-                <button
-                  onClick={() => {
-                    onShare?.();
-                    setShowMobileMenu(false);
-                  }}
-                  className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
-                >
-                  <Share2 className="h-5 w-5" />
-                  <span>Share Chat</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  handleProfileClick();
-                  setShowMobileMenu(false);
-                }}
-                className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
-              >
-                <User className="h-5 w-5" />
-                <span>Profile</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowBillingModal(true);
-                  setShowMobileMenu(false);
-                }}
-                className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
-              >
-                <CreditCard className="h-5 w-5" />
-                <span>Billing & Plans</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onSettings?.();
-                  setShowMobileMenu(false);
-                }}
-                className="flex items-center gap-3 p-3 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-feedback min-h-[48px]"
-              >
-                <Settings className="h-5 w-5" />
-                <span>Settings</span>
-              </button>
-
-              {/* Upgrade Button for Mobile */}
-              <Link href="/pricing">
-                <button
-                  onClick={() => setShowMobileMenu(false)}
-                  className="flex items-center gap-3 p-3 text-left bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 rounded-lg transition-colors touch-feedback min-h-[48px] font-medium w-full"
-                >
-                  <Zap className="h-5 w-5" />
-                  <span>Upgrade to Pro</span>
-                </button>
-              </Link>
-
-              {/* Sign Out */}
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setShowMobileMenu(false);
-                }}
-                className="flex items-center gap-3 p-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors touch-feedback min-h-[48px] mt-4"
-              >
-                <LogOut className="h-5 w-5" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-
-            {/* Footer Info */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-zinc-800 safe-area-bottom">
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Convocore v1.0 • AI Meets Web3
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modals */}
       <ProfileModal 

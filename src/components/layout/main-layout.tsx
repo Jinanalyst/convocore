@@ -17,6 +17,7 @@ export function MainLayout() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [showMigrationPrompt, setShowMigrationPrompt] = useState(false);
   const [migrationInfo, setMigrationInfo] = useState<{ sessionCount: number; messageCount: number }>({ sessionCount: 0, messageCount: 0 });
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -86,10 +87,18 @@ export function MainLayout() {
 
   const handleNewChat = () => {
     setActiveChatId(null);
+    // Close mobile sidebar when creating new chat
+    if (isMobile) {
+      setShowMobileSidebar(false);
+    }
   };
 
   const handleSelectChat = (chatId: string) => {
     setActiveChatId(chatId);
+    // Close mobile sidebar when selecting a chat
+    if (isMobile) {
+      setShowMobileSidebar(false);
+    }
     // TODO: Load the selected chat session data and pass it to the chat area
     // This will require updating the ChatArea component to accept session data
   };
@@ -107,7 +116,11 @@ export function MainLayout() {
   };
 
   const handleToggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
+    if (isMobile) {
+      setShowMobileSidebar(!showMobileSidebar);
+    } else {
+      setIsSidebarCollapsed(!isSidebarCollapsed);
+    }
   };
 
   const handleSidebarResize = (newWidth: number) => {
@@ -138,8 +151,8 @@ export function MainLayout() {
   };
 
   return (
-    <div className="h-screen flex bg-background overflow-hidden">
-      {/* Resizable Sidebar - Desktop */}
+    <div className="h-screen flex bg-background overflow-hidden relative">
+      {/* Desktop Resizable Sidebar */}
       {!isMobile && !isSidebarCollapsed && (
         <ResizablePanel
           direction="horizontal"
@@ -164,8 +177,8 @@ export function MainLayout() {
         </ResizablePanel>
       )}
 
-      {/* Collapsed Sidebar for mobile or when collapsed */}
-      {(isMobile || isSidebarCollapsed) && (
+      {/* Desktop Collapsed Sidebar */}
+      {!isMobile && isSidebarCollapsed && (
         <div className="w-16 border-r border-border bg-card flex-shrink-0 h-full">
           <Sidebar
             activeChatId={activeChatId || undefined}
@@ -179,12 +192,38 @@ export function MainLayout() {
           />
         </div>
       )}
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && showMobileSidebar && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-in fade-in-0 duration-300"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          {/* Sidebar */}
+          <div className="fixed left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-card border-r border-border z-50 animate-in slide-in-from-left-full duration-300 ease-out">
+            <Sidebar
+              activeChatId={activeChatId || undefined}
+              isCollapsed={false}
+              onNewChat={handleNewChat}
+              onSelectChat={handleSelectChat}
+              onDeleteChat={handleDeleteChat}
+              onToggleCollapse={handleToggleSidebar}
+              chats={chats}
+              className="h-full"
+            />
+          </div>
+        </>
+      )}
       
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full">
         {/* Header */}
         <Header 
           className="flex-shrink-0"
+          onToggleSidebar={handleToggleSidebar}
+          showMobileMenu={showMobileSidebar}
         />
         
         {/* Chat Area - Resizable */}

@@ -534,10 +534,11 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4 max-w-md mx-auto">
-              <ConvocoreLogo className="mx-auto h-16 w-16 text-muted-foreground/50" />
+            <div className="text-center space-y-4 max-w-md mx-auto px-4">
+              <ConvocoreLogo className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50" />
               <div className="space-y-2">
-                <h3 className="text-lg font-medium text-muted-foreground">
+                {/* Hide welcome title on mobile, show on desktop */}
+                <h3 className="hidden sm:block text-lg font-medium text-muted-foreground">
                   Welcome to Convocore AI
                 </h3>
                 <p className="text-sm text-muted-foreground/80">

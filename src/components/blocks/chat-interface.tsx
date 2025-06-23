@@ -302,11 +302,12 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
             </div>
           </motion.div>
           
+          {/* Hide welcome title on mobile, show condensed version on desktop */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4"
+            className="hidden sm:block text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4"
           >
             Welcome to Convocore
           </motion.h1>
@@ -315,7 +316,7 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
+            className="text-base sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
           >
             AI chat with secure USDT payments on multiple blockchains. Start a conversation to unlock intelligent assistance.
           </motion.p>
