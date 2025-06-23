@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
+import { notificationService } from '@/lib/notification-service';
 
 // Helper function to generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -224,13 +225,28 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       // Call external callback if provided
       onSendMessage?.(content, model, includeWebSearch);
 
+      // Notify chat completion with proper parameters
+      const chatTitle = chatId || 'New Chat';
+      notificationService.notifyChatComplete(
+        chatTitle,
+        assistantMessage.content,
+        chatId
+      );
+
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Notify user of the error
+      const errorTitle = language === 'ko' ? '메시지 전송 실패' : 'Message Send Failed';
+      const errorMsg = language === 'ko' 
+        ? '메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
+        : 'There was an error processing your message. Please try again.';
+      
+      notificationService.notifyError(errorTitle, errorMsg);
+      
       const errorMessage: Message = {
         id: generateId(),
-        content: language === 'ko' 
-          ? '죄송합니다. 메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
-          : 'Sorry, there was an error processing your message. Please try again.',
+        content: errorMsg,
         role: 'assistant',
         timestamp: new Date()
       };
@@ -339,7 +355,12 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const handleCopyMessage = (content: string) => {
     navigator.clipboard.writeText(content);
-    // Show toast notification in real app
+    
+    // Show success notification
+    const successTitle = language === 'ko' ? '복사됨' : 'Copied';
+    const successMsg = language === 'ko' ? '메시지가 클립보드에 복사되었습니다' : 'Message copied to clipboard';
+    
+    notificationService.notifySuccess(successTitle, successMsg);
   };
 
   const handleRegenerateResponse = (messageId: string) => {
