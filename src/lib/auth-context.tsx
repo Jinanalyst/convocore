@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClientComponentClient } from '@/lib/supabase';
+import { usageService } from './usage-service';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthUser {
@@ -77,14 +78,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const walletType = localStorage.getItem('wallet_type');
 
       if (walletConnected && walletAddress) {
+        const userId = `wallet_${walletAddress.toLowerCase()}`;
+        const subscription = usageService.getUserSubscription(userId);
+        
         setUser({
-          id: `wallet_${walletAddress.toLowerCase()}`,
+          id: userId,
           email: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}@wallet.local`,
           name: 'Wallet User',
           authType: 'wallet',
           walletAddress,
           walletType: walletType || undefined,
-          subscriptionTier: 'free',
+          subscriptionTier: subscription.tier,
           isAuthenticated: true,
         });
         setLoading(false);
@@ -96,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { user: supabaseUser } } = await supabase.auth.getUser();
         
         if (supabaseUser) {
+          const subscription = usageService.getUserSubscription(supabaseUser.id);
+          
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email || '',
@@ -103,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   supabaseUser.user_metadata?.name || 
                   supabaseUser.email?.split('@')[0] || 'User',
             authType: 'supabase',
-            subscriptionTier: 'free',
+            subscriptionTier: subscription.tier,
             isAuthenticated: true,
           });
           setLoading(false);
@@ -175,14 +181,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       document.cookie = `wallet_type=${walletType}; path=/; max-age=${60 * 60 * 24 * 7}`;
 
       // Update user state
+      const userId = `wallet_${walletAddress.toLowerCase()}`;
+      const subscription = usageService.getUserSubscription(userId);
+      
       setUser({
-        id: `wallet_${walletAddress.toLowerCase()}`,
+        id: userId,
         email: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}@wallet.local`,
         name: 'Wallet User',
         authType: 'wallet',
         walletAddress,
         walletType,
-        subscriptionTier: 'free',
+        subscriptionTier: subscription.tier,
         isAuthenticated: true,
       });
     } catch (error) {

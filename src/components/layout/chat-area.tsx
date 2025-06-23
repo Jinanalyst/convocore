@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
+import { usageService } from "@/lib/usage-service";
+import { useAuth } from "@/lib/auth-context";
 import { 
   Copy, 
   ThumbsUp, 
@@ -46,6 +48,7 @@ interface ChatAreaProps {
 }
 
 export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -118,6 +121,19 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean) => {
     if (!content.trim()) return;
+
+    // Check usage limit before processing
+    if (user && !usageService.canMakeRequest(user.id)) {
+      const usage = usageService.getUserUsage(user.id);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: `🚫 **Daily Limit Reached**\n\nYou've used ${usage.requestsUsed}/${usage.requestsLimit} requests today.\n\nUpgrade to Pro (20 USDT/month) for 1,000 requests or Premium (40 USDT/month) for 5,000 requests per month.`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
 
     console.log('🚀 Sending message:', { content, model, chatId });
 
@@ -218,19 +234,21 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       const data = await response.json();
       
-      // Increment local usage tracking after successful response
-      try {
-        const currentUsage = parseInt(localStorage.getItem('daily_chat_usage') || '0');
-        localStorage.setItem('daily_chat_usage', (currentUsage + 1).toString());
-        
-        // Trigger storage event for other components
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'daily_chat_usage',
-          newValue: (currentUsage + 1).toString(),
-          oldValue: currentUsage.toString()
-        }));
-      } catch (error) {
-        console.warn('Failed to update local usage tracking:', error);
+      // Increment real usage tracking after successful response
+      if (user) {
+        try {
+          const result = usageService.incrementUsage(user.id);
+          console.log('Usage updated:', result);
+          
+          // Trigger storage event for other components to update
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'usage_updated',
+            newValue: user.id,
+            oldValue: null
+          }));
+        } catch (error) {
+          console.warn('Failed to update usage tracking:', error);
+        }
       }
 
       const aiMessage: Message = {
@@ -305,7 +323,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     }, 1500);
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = (file?: File) => {
+    if (!file) return;
     console.log('File uploaded:', file.name, file.type, file.size);
     // In a real implementation, this would process the file
     const fileMessage: Message = {

@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
+import { usageService, type UserUsage, type SubscriptionInfo } from "@/lib/usage-service";
 import { 
   Settings, 
   User, 
@@ -71,6 +72,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showBillingModal, setShowBillingModal] = useState(false);
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
 
   // Load settings from localStorage and Supabase on mount
   useEffect(() => {
@@ -82,14 +85,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const loadSettings = async () => {
     setIsLoading(true);
     try {
-      // Use auth context data
+      // Use auth context data and load real usage/subscription data
       if (user) {
+        // Load real usage and subscription data
+        const userUsage = usageService.getUserUsage(user.id);
+        const userSubscription = usageService.getUserSubscription(user.id);
+        setUsage(userUsage);
+        setSubscription(userSubscription);
+
         setUserInfo({
           name: user.name,
           email: user.email,
           walletAddress: user.walletAddress || '',
           walletType: user.walletType || '',
-          subscriptionTier: user.subscriptionTier,
+          subscriptionTier: userSubscription.tier,
           isWalletUser: user.authType === 'wallet'
         });
       }
@@ -457,16 +466,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
 
                 {/* Usage Stats */}
-                {userInfo.subscriptionTier === 'free' && (
+                {usage && subscription && (
                   <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">API Usage</span>
-                      <span className="font-medium text-gray-900 dark:text-white">3 / 10</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {usage.requestsUsed} / {usage.requestsLimit}
+                      </span>
                     </div>
                     <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ width: `${Math.round((usage.requestsUsed / usage.requestsLimit) * 100)}%` }}
+                      ></div>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">30% used this month</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {Math.round((usage.requestsUsed / usage.requestsLimit) * 100)}% used this {subscription.tier === 'free' ? 'day' : 'month'}
+                    </p>
                   </div>
                 )}
               </div>

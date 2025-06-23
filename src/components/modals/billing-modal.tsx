@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { multiNetworkPaymentService, NetworkConfig, PaymentStatus } from '@/lib/multi-network-payment';
+import { usageService, type UserUsage, type SubscriptionInfo } from '@/lib/usage-service';
 import { 
   CreditCard, 
   Wallet, 
@@ -44,6 +45,8 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
   const [copied, setCopied] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<PaymentStatus[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
 
   const networks = multiNetworkPaymentService.getSupportedNetworks();
   const planPrice = multiNetworkPaymentService.getPlanPrice(selectedPlanType);
@@ -65,6 +68,12 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
     if (user?.id) {
       const history = multiNetworkPaymentService.getUserPayments(user.id);
       setPaymentHistory(history);
+      
+      // Load real usage data
+      const userUsage = usageService.getUserUsage(user.id);
+      const userSubscription = usageService.getUserSubscription(user.id);
+      setUsage(userUsage);
+      setSubscription(userSubscription);
     }
   };
 
@@ -141,6 +150,10 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
       const result = await multiNetworkPaymentService.processPayment(payment.id, userAddress);
 
       if (result.success) {
+        // Update subscription when payment is successful
+        if (user?.id) {
+          usageService.updateSubscription(user.id, selectedPlanType);
+        }
         setCurrentView('success');
         loadPaymentHistory();
       } else {
@@ -241,26 +254,31 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white">Current Plan</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {user?.subscriptionTier === 'free' ? 'Free Tier' : `${user?.subscriptionTier} Plan`}
+                {subscription?.tier === 'free' ? 'Free Tier' : `${subscription?.tier} Plan`}
               </p>
             </div>
           </div>
-          <Badge variant="outline">Active</Badge>
+          <Badge variant="outline">{subscription?.status === 'active' ? 'Active' : 'Inactive'}</Badge>
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">3</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{usage?.requestsUsed || 0}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Requests Used</div>
           </div>
           <div className="text-center p-3 bg-white dark:bg-zinc-800 rounded-lg">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">10</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Daily Limit</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{usage?.requestsLimit || 0}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {subscription?.tier === 'free' ? 'Daily Limit' : 'Monthly Limit'}
+            </div>
           </div>
         </div>
 
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
-          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '30%' }}></div>
+          <div 
+            className="bg-blue-600 h-2 rounded-full" 
+            style={{ width: `${usage ? Math.round((usage.requestsUsed / usage.requestsLimit) * 100) : 0}%` }}
+          ></div>
         </div>
         
         <p className="text-sm text-gray-600 dark:text-gray-400 text-center">

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { Button } from '@/components/ui/button';
+import { usageService, type UserUsage, type SubscriptionInfo } from '@/lib/usage-service';
+import { useAuth } from '@/lib/auth-context';
 import { 
   User, 
   Mail, 
@@ -38,7 +40,10 @@ interface UserProfile {
 }
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
+  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
@@ -55,139 +60,40 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
   const loadUserProfile = async () => {
     try {
-      // Check wallet authentication first
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      const walletAddress = localStorage.getItem('wallet_address');
-      const walletType = localStorage.getItem('wallet_type');
-
-      if (walletConnected && walletAddress) {
-        // Create wallet user profile
-        const walletProfile: UserProfile = {
-          id: `wallet_${walletAddress.toLowerCase()}`,
-          email: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}@wallet.local`,
-          full_name: 'Wallet User',
-          subscription_tier: 'free',
-          subscription_status: 'active',
-          api_requests_used: 3,
-          api_requests_limit: 10,
-          created_at: new Date().toISOString(),
-          last_login: new Date().toISOString()
-        };
-        setUserProfile(walletProfile);
-        setEditForm({
-          full_name: walletProfile.full_name,
-          email: walletProfile.email
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        // Create demo profile for environments without Supabase
-        const demoProfile: UserProfile = {
-          id: 'demo-user',
-          email: 'demo@convocore.ai',
-          full_name: 'Demo User',
-          subscription_tier: 'pro',
-          subscription_status: 'active',
-          api_requests_used: 45,
-          api_requests_limit: 1000,
-          created_at: new Date().toISOString(),
-          last_login: new Date().toISOString()
-        };
-        setUserProfile(demoProfile);
-        setEditForm({
-          full_name: demoProfile.full_name,
-          email: demoProfile.email
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
+      setIsLoading(true);
       
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        // Handle unauthenticated users gracefully
-        const guestProfile: UserProfile = {
-          id: 'guest-user',
-          email: 'guest@convocore.ai',
-          full_name: 'Guest User',
-          subscription_tier: 'free',
-          subscription_status: 'active',
-          api_requests_used: 3,
-          api_requests_limit: 10,
-          created_at: new Date().toISOString(),
-          last_login: new Date().toISOString()
-        };
-        setUserProfile(guestProfile);
-        setEditForm({
-          full_name: guestProfile.full_name,
-          email: guestProfile.email
-        });
+      if (!user) {
         setIsLoading(false);
         return;
       }
 
-      // Get user profile from users table
-      const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error loading user profile:', error);
-        // Create basic profile from auth user if doesn't exist
-        const basicProfile: UserProfile = {
-          id: user.id,
-          email: user.email || '',
-          full_name: user.user_metadata?.full_name || 'User',
-          subscription_tier: 'free',
-          subscription_status: 'active',
-          api_requests_used: 0,
-          api_requests_limit: 10,
-          created_at: user.created_at,
-          last_login: new Date().toISOString()
-        };
-        setUserProfile(basicProfile);
-        setEditForm({
-          full_name: basicProfile.full_name,
-          email: basicProfile.email
-        });
-      } else {
-        setUserProfile(profile);
-        setEditForm({
-          full_name: profile.full_name || '',
-          email: profile.email || ''
-        });
-      }
-    } catch (error) {
-      // Silently handle errors and provide fallback profile
-      // Only log in development mode
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Profile loading failed, using fallback:', error);
-      }
+      // Load real usage and subscription data
+      const userUsage = usageService.getUserUsage(user.id);
+      const userSubscription = usageService.getUserSubscription(user.id);
       
-      // Fallback profile for demo
-      const demoProfile: UserProfile = {
-        id: 'demo-user',
-        email: 'demo@convocore.ai',
-        full_name: 'Demo User',
-        subscription_tier: 'pro',
-        subscription_status: 'active',
-        api_requests_used: 45,
-        api_requests_limit: 1000,
-        created_at: new Date().toISOString(),
+      setUsage(userUsage);
+      setSubscription(userSubscription);
+
+      // Create user profile based on real data
+      const profile: UserProfile = {
+        id: user.id,
+        email: user.email,
+        full_name: user.name,
+        subscription_tier: userSubscription.tier,
+        subscription_status: userSubscription.status,
+        api_requests_used: userUsage.requestsUsed,
+        api_requests_limit: userUsage.requestsLimit,
+        created_at: userSubscription.startDate,
         last_login: new Date().toISOString()
       };
-      setUserProfile(demoProfile);
+
+      setUserProfile(profile);
       setEditForm({
-        full_name: demoProfile.full_name,
-        email: demoProfile.email
+        full_name: profile.full_name,
+        email: profile.email
       });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
     } finally {
       setIsLoading(false);
     }
@@ -261,8 +167,8 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   };
 
   const getUsagePercentage = () => {
-    if (!userProfile) return 0;
-    return Math.round((userProfile.api_requests_used / userProfile.api_requests_limit) * 100);
+    if (!usage) return 0;
+    return Math.round((usage.requestsUsed / usage.requestsLimit) * 100);
   };
 
   if (isLoading) {

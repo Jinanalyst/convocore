@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usageService, type UserUsage } from '@/lib/usage-service';
+import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
 interface ChatLimitIndicatorProps {
@@ -10,30 +12,30 @@ interface ChatLimitIndicatorProps {
 }
 
 export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
+  const { user } = useAuth();
   const [usage, setUsage] = useState<{
     used: number;
     limit: number;
     plan: 'free' | 'pro' | 'premium';
   }>({
     used: 0,
-    limit: 3,
+    limit: 10,
     plan: 'free'
   });
 
   useEffect(() => {
-    // Get usage from localStorage (this would be from API in real app)
+    // Get real usage data
     const loadUsage = () => {
+      if (!user) return;
+      
       try {
-        const storedUsage = localStorage.getItem('daily_chat_usage');
-        const currentUsage = storedUsage ? parseInt(storedUsage) : 0;
-        
-        // Check if user has a subscription (this would be from auth/database in real app)
-        const userPlan = localStorage.getItem('user_plan') as 'free' | 'pro' | 'premium' || 'free';
+        const userUsage = usageService.getUserUsage(user.id);
+        const subscription = usageService.getUserSubscription(user.id);
         
         setUsage({
-          used: currentUsage,
-          limit: userPlan === 'free' ? 3 : -1, // -1 means unlimited
-          plan: userPlan
+          used: userUsage.requestsUsed,
+          limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1, // -1 means unlimited for paid plans
+          plan: subscription.tier
         });
       } catch (error) {
         console.error('Error loading usage:', error);
@@ -43,13 +45,15 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
     loadUsage();
     
     // Listen for storage changes (usage updates from other tabs)
-    const handleStorageChange = () => {
-      loadUsage();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'usage_updated') {
+        loadUsage();
+      }
     };
     
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [user]);
 
   // Don't show indicator for unlimited plans
   if (usage.plan !== 'free' || usage.limit === -1) {
