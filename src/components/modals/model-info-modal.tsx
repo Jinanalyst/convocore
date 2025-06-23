@@ -100,29 +100,29 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] bg-white dark:bg-zinc-900 overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Bot className="w-5 h-5" />
+      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] bg-white dark:bg-zinc-900 overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="mb-4 sm:mb-6">
+          <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
             Convocore AI Models
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Platform Overview */}
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-700 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-700 p-4 sm:p-6 rounded-lg">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">
               Advanced AI Technology Platform
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
               Convocore brings together cutting-edge AI capabilities through our proprietary model suite, 
               delivering superior performance and specialized functionality for any task.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {capabilities.map((capability, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <capability.icon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <capability.icon className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200">
                     {capability.title}
                   </span>
                 </div>
@@ -132,13 +132,13 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
 
           {/* Convocore Agents */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
               Convocore Specialized Agents
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
               Use @ mentions to activate specialized AI agents for specific tasks
             </p>
-            <div className="grid gap-3 md:grid-cols-2 mb-8">
+            <div className="grid gap-2 sm:gap-3 lg:grid-cols-2 mb-6 sm:mb-8">
               {CONVO_AGENTS.map((agent, index) => {
                 const AgentIcon = getAgentIcon(agent.icon);
                 return (
@@ -151,16 +151,16 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
                     }}
                     title={`Click to copy ${agent.tag}`}
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={cn("w-6 h-6 rounded flex items-center justify-center text-white", agent.color)}>
-                        <AgentIcon className="w-3 h-3" />
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                      <div className={cn("w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-white", agent.color)}>
+                        <AgentIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {agent.tag} - {agent.displayName}
                         </h4>
                       </div>
-                      <Copy className="w-3 h-3 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100" />
+                      <Copy className="w-3 h-3 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0" />
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                       {agent.description}
@@ -188,16 +188,16 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
 
           {/* Available Models */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
               Base AI Models
             </h3>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
               {models.map((model, index) => (
                 <div
                   key={index}
-                  className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="border border-gray-200 dark:border-zinc-700 rounded-lg p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-3 h-3 rounded-full ${model.color}`} />
                       <div>

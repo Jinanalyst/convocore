@@ -635,20 +635,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'notifications':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Notification Preferences</h3>
-              <div className="space-y-4">
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Push notifications</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Browser notifications for new messages</p>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Notification Preferences</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white block">Push notifications</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Browser notifications for new messages</p>
                   </div>
                   <input 
                     type="checkbox" 
                     checked={settings.notifications.push}
                     onChange={(e) => handleNotificationToggle('push', e.target.checked)}
-                    className="rounded border-gray-300 dark:border-zinc-600" 
+                    className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0" 
                   />
                 </label>
               </div>
@@ -658,14 +658,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'privacy':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Privacy Settings</h3>
-              <div className="space-y-4">
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Data collection</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Allow collection of usage data to improve service</p>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Privacy Settings</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white block">Data collection</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Allow collection of usage data to improve service</p>
                   </div>
                   <input 
                     type="checkbox" 
@@ -674,14 +674,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       ...prev, 
                       privacy: { ...prev.privacy, dataCollection: e.target.checked }
                     }))}
-                    className="rounded border-gray-300 dark:border-zinc-600" 
+                    className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0" 
                   />
                 </label>
                 
-                <label className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Analytics</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Help us understand how you use Convocore</p>
+                <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white block">Analytics</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Help us understand how you use Convocore</p>
                   </div>
                   <input 
                     type="checkbox" 
@@ -690,7 +690,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       ...prev, 
                       privacy: { ...prev.privacy, analytics: e.target.checked }
                     }))}
-                    className="rounded border-gray-300 dark:border-zinc-600" 
+                    className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0" 
                   />
                 </label>
               </div>
@@ -700,11 +700,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'billing':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Billing & Usage</h3>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Billing & Usage</h3>
               
-              <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg mb-4">
+              <div className="bg-gray-50 dark:bg-zinc-800 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">Current Usage</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -718,12 +718,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                  <Wallet className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  <div>
-                    <p className="font-medium text-green-900 dark:text-green-100">TRON Wallet Connected</p>
-                    <p className="text-sm text-green-700 dark:text-green-300">TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ</p>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 sm:gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-green-900 dark:text-green-100 text-sm">TRON Wallet Connected</p>
+                    <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 truncate">TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ</p>
                   </div>
                 </div>
                 
@@ -756,10 +756,29 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] max-h-[800px] p-0">
-        <div className="flex h-full">
-          {/* Sidebar */}
-          <div className="w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex flex-col">
+      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] p-0 sm:h-[80vh]">
+        <div className="flex flex-col sm:flex-row h-full">
+          {/* Mobile Header with Tab Selector */}
+          <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
+            </DialogHeader>
+            
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as SettingsTab)}
+              className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop Sidebar */}
+          <div className="hidden sm:flex w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex-col">
             <DialogHeader className="mb-6">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
@@ -788,20 +807,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           {/* Content */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
               {renderTabContent()}
             </div>
             
             {/* Footer */}
-            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex justify-end gap-3 bg-white dark:bg-zinc-900">
-              <Button variant="outline" onClick={() => onOpenChange?.(false)}>
+            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-zinc-900">
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange?.(false)}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving} className={cn(
-                "gap-2",
-                saveStatus === 'success' && "bg-green-600 hover:bg-green-700",
-                saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
-              )}>
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving} 
+                className={cn(
+                  "gap-2 w-full sm:w-auto order-1 sm:order-2",
+                  saveStatus === 'success' && "bg-green-600 hover:bg-green-700",
+                  saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
+                )}
+              >
                 <Save className="w-4 h-4" />
                 {isSaving ? 'Saving...' : 
                  saveStatus === 'success' ? 'Saved!' :
