@@ -244,4 +244,211 @@ export const triggerHapticFeedback = (type: 'light' | 'medium' | 'heavy' = 'ligh
   };
   
   (navigator as any).vibrate(patterns[type]);
+};
+
+// Mobile detection and utilities
+export const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  const userAgent = navigator.userAgent;
+  const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+  const isSmallScreen = window.innerWidth <= 768;
+  
+  return mobileRegex.test(userAgent) || isSmallScreen;
+};
+
+export const isIOS = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+};
+
+export const isAndroid = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /Android/.test(navigator.userAgent);
+};
+
+export const getDeviceType = (): 'mobile' | 'tablet' | 'desktop' => {
+  if (typeof window === 'undefined') return 'desktop';
+  
+  const width = window.innerWidth;
+  
+  if (width <= 480) return 'mobile';
+  if (width <= 768) return 'tablet';
+  return 'desktop';
+};
+
+// Wallet deep link helpers
+export const getWalletDeepLink = (walletId: string, action: string = 'connect'): string | null => {
+  const deepLinks: Record<string, string> = {
+    tronlink: 'tronlinkoutside://pull.activity',
+    metamask: 'https://metamask.app.link/dapp/',
+    trust: 'trust://open_url',
+    phantom: 'phantom://browse/',
+    coinbase: 'https://go.cb-w.com/dapp',
+    okx: 'okx://wallet/dapp/url',
+  };
+
+  return deepLinks[walletId] || null;
+};
+
+// Mobile wallet connection helpers
+export const openWalletApp = (walletId: string, fallbackUrl?: string): void => {
+  const deepLink = getWalletDeepLink(walletId);
+  
+  if (deepLink) {
+    // Try to open the wallet app
+    window.location.href = deepLink;
+    
+    // Fallback to app store after a delay if app doesn't open
+    setTimeout(() => {
+      if (fallbackUrl) {
+        window.open(fallbackUrl, '_blank');
+      }
+    }, 2000);
+  } else if (fallbackUrl) {
+    window.open(fallbackUrl, '_blank');
+  }
+};
+
+// Mobile-optimized wallet detection
+export const checkMobileWalletInstalled = async (walletId: string): Promise<boolean> => {
+  if (!isMobileDevice()) return false;
+  
+  switch (walletId) {
+    case 'metamask':
+      return !!(window as any).ethereum?.isMetaMask;
+    case 'trust':
+      return !!(window as any).ethereum?.isTrust;
+    case 'coinbase':
+      return !!(window as any).ethereum?.isCoinbaseWallet;
+    case 'phantom':
+      return !!(window as any).solana?.isPhantom;
+    case 'tronlink':
+      return !!(window as any).tronLink;
+    default:
+      return false;
+  }
+};
+
+// Mobile authentication helpers
+export const getMobileAuthRedirect = (provider: string): string => {
+  const baseUrl = window.location.origin;
+  const currentPath = window.location.pathname;
+  
+  // For mobile, we want to ensure proper redirect handling
+  if (isMobileDevice()) {
+    return `${baseUrl}/auth/callback?provider=${provider}&redirectTo=${encodeURIComponent(currentPath)}&mobile=true`;
+  }
+  
+  return `${baseUrl}/auth/callback?provider=${provider}&redirectTo=${encodeURIComponent(currentPath)}`;
+};
+
+// Mobile-specific error handling
+export const getMobileErrorMessage = (error: string, provider: string): string => {
+  if (!isMobileDevice()) return error;
+  
+  const mobileMessages: Record<string, string> = {
+    'kakao': 'For the best KakaoTalk login experience on mobile, please open this page in the KakaoTalk browser or install the KakaoTalk app.',
+    'wallet_not_found': 'Wallet app not found. Please install the wallet app from your app store first.',
+    'connection_failed': 'Connection failed. Please make sure you have the latest version of the wallet app installed.',
+    'permission_denied': 'Permission denied. Please allow the wallet app to access this website in your wallet settings.'
+  };
+  
+  return mobileMessages[provider] || mobileMessages[error] || error;
+};
+
+// Touch and gesture utilities for mobile wallet UI
+export const addTouchSupport = (element: HTMLElement): void => {
+  if (!isMobileDevice()) return;
+  
+  element.style.touchAction = 'manipulation';
+  element.style.userSelect = 'none';
+  element.style.webkitUserSelect = 'none';
+  element.style.webkitTapHighlightColor = 'transparent';
+};
+
+// Responsive breakpoint utilities
+export const getBreakpoint = (): 'xs' | 'sm' | 'md' | 'lg' | 'xl' => {
+  if (typeof window === 'undefined') return 'lg';
+  
+  const width = window.innerWidth;
+  
+  if (width < 480) return 'xs';
+  if (width < 640) return 'sm';
+  if (width < 768) return 'md';
+  if (width < 1024) return 'lg';
+  return 'xl';
+};
+
+// Mobile-optimized popup handling
+export const openMobileOptimizedPopup = (url: string, name: string): Window | null => {
+  if (!isMobileDevice()) {
+    // Desktop popup
+    return window.open(url, name, 'width=400,height=600,scrollbars=yes,resizable=yes');
+  }
+  
+  // Mobile - use full window
+  return window.open(url, name);
+};
+
+// Detect if running in wallet browser
+export const isWalletBrowser = (): { isWallet: boolean; walletName?: string } => {
+  if (typeof window === 'undefined') return { isWallet: false };
+  
+  const userAgent = navigator.userAgent.toLowerCase();
+  
+  if (userAgent.includes('metamask')) {
+    return { isWallet: true, walletName: 'MetaMask' };
+  }
+  
+  if (userAgent.includes('trust')) {
+    return { isWallet: true, walletName: 'Trust Wallet' };
+  }
+  
+  if (userAgent.includes('coinbase')) {
+    return { isWallet: true, walletName: 'Coinbase Wallet' };
+  }
+  
+  if (userAgent.includes('tronlink')) {
+    return { isWallet: true, walletName: 'TronLink' };
+  }
+  
+  if ((window as any).ethereum?.isMetaMask) {
+    return { isWallet: true, walletName: 'MetaMask' };
+  }
+  
+  if ((window as any).tronLink) {
+    return { isWallet: true, walletName: 'TronLink' };
+  }
+  
+  return { isWallet: false };
+};
+
+// Mobile viewport utilities
+export const setMobileViewport = (): void => {
+  if (!isMobileDevice()) return;
+  
+  const viewport = document.querySelector('meta[name=viewport]');
+  if (viewport) {
+    viewport.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+    );
+  }
+};
+
+// Safe area handling for mobile devices
+export const getSafeAreaInsets = (): { top: number; bottom: number; left: number; right: number } => {
+  if (typeof window === 'undefined' || !isMobileDevice()) {
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+  
+  const computedStyle = getComputedStyle(document.documentElement);
+  
+  return {
+    top: parseInt(computedStyle.getPropertyValue('--safe-area-inset-top') || '0'),
+    bottom: parseInt(computedStyle.getPropertyValue('--safe-area-inset-bottom') || '0'),
+    left: parseInt(computedStyle.getPropertyValue('--safe-area-inset-left') || '0'),
+    right: parseInt(computedStyle.getPropertyValue('--safe-area-inset-right') || '0'),
+  };
 }; 

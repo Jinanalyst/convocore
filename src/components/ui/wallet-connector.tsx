@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Wallet, ExternalLink, Copy, Check, ChevronDown } from "lucide-react";
+import { Wallet, ExternalLink, Copy, Check, ChevronDown, Smartphone, Monitor, AlertCircle } from "lucide-react";
 import { tronPaymentService, formatTronAddress, CONVO_AI_RECIPIENT_ADDRESS } from "@/lib/blockchain";
 
 interface WalletOption {
@@ -12,8 +12,11 @@ interface WalletOption {
   description: string;
   type: 'tron' | 'ethereum' | 'solana' | 'bitcoin';
   installUrl: string;
+  mobileInstallUrl?: string;
   isInstalled: () => boolean;
   connect: () => Promise<string | null>;
+  supportsMobile: boolean;
+  deepLink?: string;
 }
 
 interface WalletConnectorProps {
@@ -38,8 +41,22 @@ export function WalletConnector({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Define wallet options
+  // Check if user is on mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(isMobileDevice || isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Define wallet options with mobile support
   const walletOptions: WalletOption[] = [
     {
       id: 'tronlink',
@@ -48,11 +65,14 @@ export function WalletConnector({
       description: 'TRON blockchain wallet for USDT payments',
       type: 'tron',
       installUrl: 'https://www.tronlink.org/',
+      mobileInstallUrl: 'https://www.tronlink.org/dlDetails/',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).tronLink,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).tronLink) return null;
         return await tronPaymentService.connectWallet();
-      }
+      },
+      supportsMobile: true,
+      deepLink: 'tronlinkoutside://pull.activity'
     },
     {
       id: 'metamask',
@@ -61,6 +81,7 @@ export function WalletConnector({
       description: 'Popular Ethereum wallet',
       type: 'ethereum',
       installUrl: 'https://metamask.io/',
+      mobileInstallUrl: 'https://metamask.app.link/dapp/',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).ethereum?.isMetaMask) return null;
@@ -71,7 +92,9 @@ export function WalletConnector({
           console.error('MetaMask connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: true,
+      deepLink: 'https://metamask.app.link/dapp/'
     },
     {
       id: 'walletconnect',
@@ -82,10 +105,16 @@ export function WalletConnector({
       installUrl: 'https://walletconnect.com/',
       isInstalled: () => true, // WalletConnect is always available
       connect: async () => {
-        // This would require WalletConnect SDK integration
-        console.log('WalletConnect integration would go here');
+        // Enhanced WalletConnect for mobile
+        if (isMobile) {
+          console.log('WalletConnect mobile integration would go here');
+          // This would require WalletConnect SDK integration
+          return null;
+        }
+        console.log('WalletConnect desktop integration would go here');
         return null;
-      }
+      },
+      supportsMobile: true
     },
     {
       id: 'phantom',
@@ -94,6 +123,7 @@ export function WalletConnector({
       description: 'Solana blockchain wallet',
       type: 'solana',
       installUrl: 'https://phantom.app/',
+      mobileInstallUrl: 'https://phantom.app/download',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).solana?.isPhantom) return null;
@@ -104,7 +134,9 @@ export function WalletConnector({
           console.error('Phantom connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: true,
+      deepLink: 'phantom://browse/'
     },
     {
       id: 'coinbase',
@@ -113,6 +145,7 @@ export function WalletConnector({
       description: 'Coinbase\'s self-custody wallet',
       type: 'ethereum',
       installUrl: 'https://wallet.coinbase.com/',
+      mobileInstallUrl: 'https://wallet.coinbase.com/download',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isCoinbaseWallet,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).ethereum?.isCoinbaseWallet) return null;
@@ -123,7 +156,8 @@ export function WalletConnector({
           console.error('Coinbase Wallet connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: true
     },
     {
       id: 'trust',
@@ -132,6 +166,7 @@ export function WalletConnector({
       description: 'Multi-chain mobile wallet',
       type: 'ethereum',
       installUrl: 'https://trustwallet.com/',
+      mobileInstallUrl: 'https://link.trustwallet.com/open_url',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isTrust,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).ethereum?.isTrust) return null;
@@ -142,7 +177,9 @@ export function WalletConnector({
           console.error('Trust Wallet connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: true,
+      deepLink: 'trust://open_url'
     },
     {
       id: 'okx',
@@ -151,6 +188,7 @@ export function WalletConnector({
       description: 'Multi-chain crypto wallet',
       type: 'ethereum',
       installUrl: 'https://www.okx.com/web3',
+      mobileInstallUrl: 'https://www.okx.com/download',
       isInstalled: () => typeof window !== 'undefined' && !!(window as any).okxwallet,
       connect: async () => {
         if (typeof window === 'undefined' || !(window as any).okxwallet) return null;
@@ -161,7 +199,8 @@ export function WalletConnector({
           console.error('OKX Wallet connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: true
     },
     {
       id: 'binance',
@@ -180,7 +219,8 @@ export function WalletConnector({
           console.error('Binance Wallet connection failed:', error);
           return null;
         }
-      }
+      },
+      supportsMobile: false
     }
   ];
 
@@ -229,7 +269,14 @@ export function WalletConnector({
     setIsDropdownOpen(false);
     
     if (!wallet.isInstalled()) {
-      setError(`${wallet.name} is not installed. Please install it first.`);
+      if (isMobile && wallet.mobileInstallUrl) {
+        setError(`${wallet.name} is not installed. Redirecting to mobile app store...`);
+        setTimeout(() => {
+          window.open(wallet.mobileInstallUrl!, '_blank');
+        }, 1000);
+      } else {
+        setError(`${wallet.name} is not installed. Please install it first.`);
+      }
       return;
     }
 
@@ -357,103 +404,173 @@ export function WalletConnector({
   };
 
   const installWallet = (wallet: WalletOption) => {
-    window.open(wallet.installUrl, '_blank');
+    const installUrl = isMobile && wallet.mobileInstallUrl ? wallet.mobileInstallUrl : wallet.installUrl;
+    window.open(installUrl, '_blank');
   };
+
+  // Filter wallets based on mobile support
+  const filteredWallets = isMobile ? walletOptions.filter(wallet => wallet.supportsMobile) : walletOptions;
 
   return (
     <div className="space-y-4">
       {!walletAddress ? (
-        <div className="p-6 border border-gray-200 rounded-lg bg-white dark:bg-zinc-800 dark:border-zinc-700">
+        <div className="p-4 md:p-6 border border-gray-200 rounded-lg bg-white dark:bg-zinc-800 dark:border-zinc-700">
           <div className="flex items-center gap-3 mb-4">
-            <Wallet className="w-6 h-6 text-blue-600" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Connect Wallet</h3>
+            <Wallet className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Connect Wallet</h3>
+            <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
+              {isMobile ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+              <span>{isMobile ? 'Mobile' : 'Desktop'}</span>
+            </div>
           </div>
           
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
-            Choose your preferred wallet to connect and authenticate.
+          <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+            {isMobile 
+              ? 'Choose your preferred mobile wallet to connect and authenticate.'
+              : 'Choose your preferred wallet to connect and authenticate.'
+            }
           </p>
 
-          {/* Wallet Dropdown */}
-          <div className="relative" id="wallet-dropdown">
-            <Button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              disabled={isConnecting}
-              variant="outline"
-              className="w-full justify-between h-12 text-left"
-            >
-              <div className="flex items-center gap-3">
-                <Wallet className="w-5 h-5 text-gray-500" />
-                <span className="text-gray-700 dark:text-gray-300">
-                  {isConnecting ? 'Connecting...' : 'Select a wallet'}
-                </span>
-              </div>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </Button>
-
-            {/* Dropdown Menu */}
-            {isDropdownOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-                <div className="p-2">
-                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
-                    Available Wallets
-                  </div>
-                  
-                  {walletOptions.map((wallet) => {
-                    const isInstalled = wallet.isInstalled();
-                    return (
-                      <div
-                        key={wallet.id}
-                        className={`flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer group ${
-                          !isInstalled ? 'opacity-60' : ''
-                        }`}
-                        onClick={() => isInstalled ? handleWalletSelect(wallet) : installWallet(wallet)}
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <span className="text-2xl">{wallet.icon}</span>
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                              {wallet.name}
-                              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400">
-                                {wallet.type.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {wallet.description}
-                            </div>
-                          </div>
+          {/* Mobile-optimized wallet grid */}
+          {isMobile ? (
+            <div className="grid grid-cols-1 gap-3">
+              {filteredWallets.map((wallet) => {
+                const isInstalled = wallet.isInstalled();
+                return (
+                  <div
+                    key={wallet.id}
+                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${
+                      isInstalled 
+                        ? 'border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 hover:border-blue-300' 
+                        : 'border-gray-200 dark:border-zinc-700 hover:border-gray-300'
+                    } ${!isInstalled ? 'opacity-60' : ''}`}
+                    onClick={() => isInstalled ? handleWalletSelect(wallet) : installWallet(wallet)}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-2xl">{wallet.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                          {wallet.name}
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400">
+                            {wallet.type.toUpperCase()}
+                          </span>
                         </div>
-                        
-                        {!isInstalled && (
-                          <div className="text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
-                            Install
-                          </div>
-                        )}
-                        
-                        {isInstalled && wallet.id === 'tronlink' && (
-                          <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            Payments
-                          </div>
-                        )}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {wallet.description}
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                    
+                    {!isInstalled && (
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        Install
+                      </div>
+                    )}
+                    
+                    {isInstalled && wallet.id === 'tronlink' && (
+                      <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        Payments
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Desktop dropdown */
+            <div className="relative" id="wallet-dropdown">
+              <Button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                disabled={isConnecting}
+                variant="outline"
+                className="w-full justify-between h-12 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-5 h-5 text-gray-500" />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {isConnecting ? 'Connecting...' : 'Select a wallet'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </Button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                  <div className="p-2">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
+                      Available Wallets
+                    </div>
+                    
+                    {filteredWallets.map((wallet) => {
+                      const isInstalled = wallet.isInstalled();
+                      return (
+                        <div
+                          key={wallet.id}
+                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer group ${
+                            !isInstalled ? 'opacity-60' : ''
+                          }`}
+                          onClick={() => isInstalled ? handleWalletSelect(wallet) : installWallet(wallet)}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-2xl">{wallet.icon}</span>
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                {wallet.name}
+                                <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400">
+                                  {wallet.type.toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {wallet.description}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {!isInstalled && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
+                              Install
+                            </div>
+                          )}
+                          
+                          {isInstalled && wallet.id === 'tronlink' && (
+                            <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                              Payments
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile wallet connection tips */}
+          {isMobile && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Mobile Tip:</strong> If you have a wallet app installed, make sure to open this page in the wallet's built-in browser for the best connection experience.
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="p-6 border border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
+        <div className="p-4 md:p-6 border border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Wallet className="w-6 h-6 text-green-600" />
-              <h3 className="font-semibold text-green-900 dark:text-green-100">Wallet Connected</h3>
+              <Wallet className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+              <h3 className="font-semibold text-green-900 dark:text-green-100 text-sm md:text-base">Wallet Connected</h3>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={disconnect}
-              className="text-green-700 hover:text-green-900 dark:text-green-300 dark:hover:text-green-100"
+              className="text-green-700 hover:text-green-900 dark:text-green-300 dark:hover:text-green-100 text-xs md:text-sm"
             >
               Disconnect
             </Button>
@@ -467,8 +584,8 @@ export function WalletConnector({
               </label>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-lg">{selectedWallet?.icon}</span>
-                <span className="font-medium">{selectedWallet?.name}</span>
-                <span className="text-sm text-green-600 dark:text-green-400">
+                <span className="font-medium text-sm md:text-base">{selectedWallet?.name}</span>
+                <span className="text-xs text-green-600 dark:text-green-400">
                   ({selectedWallet?.type.toUpperCase()})
                 </span>
               </div>
@@ -479,14 +596,14 @@ export function WalletConnector({
                 Wallet Address
               </label>
               <div className="flex items-center gap-2 mt-1">
-                <code className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-green-300 dark:border-green-700 rounded text-sm">
+                <code className="flex-1 px-3 py-2 bg-white dark:bg-zinc-800 border border-green-300 dark:border-green-700 rounded text-xs md:text-sm font-mono">
                   {formatAddress(walletAddress, walletType || '')}
                 </code>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={copyAddress}
-                  className="border-green-300 dark:border-green-700"
+                  className="border-green-300 dark:border-green-700 p-2"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>
@@ -494,7 +611,7 @@ export function WalletConnector({
                   variant="outline"
                   size="sm"
                   onClick={openBlockExplorer}
-                  className="border-green-300 dark:border-green-700"
+                  className="border-green-300 dark:border-green-700 p-2"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </Button>

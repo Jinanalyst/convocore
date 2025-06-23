@@ -1,127 +1,225 @@
-# Kakao Authentication Setup Guide
+# KakaoTalk Authentication Setup Guide
 
-## 🚨 Current Issue: KOE205 Error
-The Kakao login is failing with error code KOE205, which indicates that Kakao OAuth is not properly configured in Supabase.
+## Overview
 
-## 🔧 Step-by-Step Fix
+This guide will help you set up KakaoTalk authentication for both mobile and desktop platforms in Convocore. KakaoTalk is the most popular messaging app in South Korea with over 47 million users.
 
-### 1. Supabase Dashboard Configuration
+## Current Status: ⚠️ Configuration Required
 
-1. **Go to your Supabase Dashboard**
-   - Navigate to: [https://supabase.com/dashboard](https://supabase.com/dashboard)
-   - Select your ConvoCore project
+The Kakao login is currently showing error code KOE205, which indicates that Kakao OAuth is not properly configured in Supabase.
+
+## Prerequisites
+
+- Supabase account with admin access
+- KakaoTalk Developers Console account
+- Domain verification for production use
+
+## 🔧 Setup Instructions
+
+### 1. Supabase Configuration
+
+1. **Access Supabase Dashboard**
+   - Go to: [https://supabase.com/dashboard](https://supabase.com/dashboard)
+   - Navigate to your project → Authentication → Settings
 
 2. **Enable Kakao Authentication**
-   - Go to `Authentication` → `Providers`
+   - Scroll to "Third-party providers"
    - Find "Kakao" in the provider list
-   - Toggle it **ON**
+   - Toggle the switch to enable it
 
 3. **Configure Kakao Provider Settings**
+   - Add your Kakao credentials:
    ```
-   ✅ Enabled: ON
    🔐 Client ID: [Your Kakao App Key]
    🔑 Client Secret: [Your Kakao App Secret]
-   🔗 Redirect URL: https://[your-project-ref].supabase.co/auth/v1/callback
    ```
 
 ### 2. Kakao Developers Console Setup
 
 1. **Create/Access Kakao App**
    - Go to: [https://developers.kakao.com](https://developers.kakao.com)
-   - Create a new app or access existing one
+   - Sign in with your Kakao account
+   - Create a new app or select existing one
 
 2. **Configure OAuth Settings**
    ```
-   App Key (REST API Key): [Copy this to Supabase Client ID]
-   App Secret: [Generate and copy to Supabase Client Secret]
-   
-   Redirect URIs:
-   - https://[your-project-ref].supabase.co/auth/v1/callback
-   - http://localhost:54321/auth/v1/callback (for local development)
+   App Name: Convocore
+   Platform: Web
+   Site Domain: https://convocore.site
+   Redirect URI: https://convocore.site/auth/callback
    ```
 
-3. **Enable Required Scopes**
-   - `profile_nickname`
-   - `account_email`
-   - `profile_image`
+3. **Mobile App Configuration**
+   ```
+   iOS Bundle ID: com.convocore.app (if applicable)
+   Android Package Name: com.convocore.app (if applicable)
+   ```
 
-## 🛠️ Quick Fix Commands
+4. **Enable Required Scopes**
+   - Check the following permissions:
+   ```
+   ✅ profile_nickname (Get user nickname)
+   ✅ profile_image (Get user profile image)
+   ✅ account_email (Get user email)
+   ```
+
+5. **Configure Domains**
+   ```
+   Web Platform Domain: https://convocore.site
+   JavaScript Domain: https://convocore.site
+   ```
+
+### 3. Environment Variables
+
+Add these to your `.env.local` file:
 
 ```bash
-# Add environment variables
-echo "NEXT_PUBLIC_KAKAO_CLIENT_ID=your_kakao_app_key" >> .env.local
-echo "KAKAO_CLIENT_SECRET=your_kakao_app_secret" >> .env.local
+# Kakao OAuth Configuration
+NEXT_PUBLIC_KAKAO_CLIENT_ID=your_kakao_app_key
+KAKAO_CLIENT_SECRET=your_kakao_app_secret
+NEXT_PUBLIC_KAKAO_REDIRECT_URI=https://convocore.site/auth/callback
+```
+
+### 4. Mobile-Specific Configuration
+
+#### iOS Configuration
+```bash
+# Add to Info.plist if using native app
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLName</key>
+        <string>kakao</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>kakao{your_app_key}</string>
+        </array>
+    </dict>
+</array>
+```
+
+#### Android Configuration
+```xml
+<!-- Add to AndroidManifest.xml if using native app -->
+<activity android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity">
+    <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:host="oauth" android:scheme="kakao{your_app_key}" />
+    </intent-filter>
+</activity>
+```
+
+## 📱 Mobile vs Desktop Behavior
+
+### Desktop Experience
+- Opens Kakao OAuth in new browser tab
+- Returns to main application after authentication
+- Supports all major browsers (Chrome, Firefox, Safari, Edge)
+
+### Mobile Experience
+- Attempts to open KakaoTalk app if installed
+- Falls back to mobile web browser if app not available
+- Optimized touch interface for mobile devices
+- Enhanced error handling for mobile-specific issues
+
+## 🚨 Common Issues & Solutions
+
+### Error: KOE205 - Authentication Service Not Configured
+**Solution:** Enable Kakao in Supabase Authentication Providers
+
+### Error: Invalid Redirect URI
+**Solution:** Ensure redirect URIs match exactly in both Kakao and Supabase
+
+### Error: Domain Not Verified
+**Solution:** Verify domain ownership in Kakao Developers Console
+
+### Mobile App Not Opening
+**Solution:** 
+- Ensure Kakao app is published (not in development mode)
+- Check deep link configuration
+- Verify domain settings in Kakao console
+
+## ✅ Testing Checklist
+
+- [ ] Kakao app created and configured
+- [ ] Supabase Kakao provider enabled
+- [ ] Environment variables set correctly
+- [ ] Redirect URIs configured properly
+- [ ] App published in Kakao console
+- [ ] Domain verification completed
+- [ ] Mobile deep links tested
+- [ ] Desktop browser flow tested
+
+## 🔄 Quick Commands
+
+```bash
+# Set up environment variables
+echo "NEXT_PUBLIC_KAKAO_CLIENT_ID=your_app_key" >> .env.local
+echo "KAKAO_CLIENT_SECRET=your_app_secret" >> .env.local
+echo "NEXT_PUBLIC_KAKAO_REDIRECT_URI=https://convocore.site/auth/callback" >> .env.local
 
 # Restart development server
 npm run dev
 ```
 
-## 📞 Immediate Solution
+## 📞 Support & Fallbacks
+
 If Kakao setup is complex, users can use:
-1. **Google authentication** (should work)
-2. **Wallet authentication** (bypass OAuth entirely)
-3. **Demo mode** (continue without login)
+1. **Google Authentication** (Primary fallback)
+2. **Wallet Connection** (Crypto users)
+3. **Magic Link Email** (Universal fallback)
 
-## 🔍 Testing Steps
-
-1. **Local Testing**
-   ```bash
-   npm run dev
-   # Visit http://localhost:3000/auth/login
-   # Try Kakao login
-   ```
-
-2. **Production Testing**
-   ```bash
-   # Deploy to Vercel
-   vercel --prod
-   # Test on live site
-   ```
-
-## 🐛 Common Issues & Solutions
-
-### Issue 1: "Provider not enabled"
-**Solution:** Enable Kakao in Supabase Authentication Providers
-
-### Issue 2: "Invalid redirect URI"
-**Solution:** Ensure redirect URIs match exactly in both Kakao and Supabase
-
-### Issue 3: "Invalid client credentials"
-**Solution:** Double-check Client ID and Secret in both platforms
-
-### Issue 4: KOE205 Error
-**Solution:** 
-- Ensure Kakao app is published (not in development mode)
-- Check that all required scopes are approved
-- Verify domain settings in Kakao console
-
-## 📋 Quick Checklist
-
-- [ ] Kakao app created and configured
-- [ ] Supabase Kakao provider enabled
-- [ ] Environment variables set
-- [ ] Redirect URIs match
-- [ ] Required scopes enabled
-- [ ] App published in Kakao console
-
-## 🚀 Immediate Fix Commands
-
-```bash
-# 1. Check current Supabase configuration
-npx supabase status
-
-# 2. Update environment variables
-echo "NEXT_PUBLIC_KAKAO_CLIENT_ID=your_app_key" >> .env.local
-echo "KAKAO_CLIENT_SECRET=your_app_secret" >> .env.local
-
-# 3. Restart development server
-npm run dev
+### Mobile Fallback Flow
+```
+1. Try Kakao login
+2. If failed → Show Google login option
+3. If Google failed → Show wallet connection
+4. If all failed → Show magic link option
 ```
 
-## 📞 Support
+## 🧪 Testing Authentication
 
-If you continue experiencing issues:
-1. Check Supabase Auth logs
-2. Check Kakao Developer Console logs
-3. Test with Google authentication as fallback
-4. Use wallet authentication as alternative 
+```javascript
+// Try Kakao login
+await signInWithKakao();
+
+// Fallback to Google
+if (kakaoFailed) {
+  await signInWithGoogle();
+}
+
+// Final fallback to wallet
+if (googleFailed) {
+  showWalletConnector();
+}
+```
+
+## 📊 Analytics & Monitoring
+
+Track authentication success rates:
+- Kakao login attempts vs success
+- Mobile vs desktop usage patterns
+- Error frequency and types
+- User preference patterns
+
+## 🌐 Internationalization
+
+Support for multiple languages:
+- Korean (primary for Kakao users)
+- English (international users)
+- Japanese (regional expansion)
+
+## 🔒 Security Considerations
+
+- HTTPS required for all OAuth flows
+- Proper CORS configuration
+- Secure storage of tokens
+- Regular security audits
+- User data privacy compliance
+
+---
+
+*Last updated: January 2024*
+*For technical support: [support@convocore.site](mailto:support@convocore.site)* 
