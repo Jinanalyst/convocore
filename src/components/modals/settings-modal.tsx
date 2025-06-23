@@ -346,31 +346,60 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     switch (activeTab) {
       case 'general':
         return (
-          <div className="space-y-6 pb-8">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Language</label>
-              <select 
-                value={settings.language}
-                onChange={(e) => updateSettings({ language: e.target.value })}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                <option value="en">English</option>
-                <option value="ko">한국어</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Auto-save conversations</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Automatically save your conversations for future reference</p>
-              <label className="flex items-center mt-2">
-                <input 
-                  type="checkbox" 
-                  checked={settings.autoSave}
-                  onChange={(e) => updateSettings({ autoSave: e.target.checked })}
-                  className="rounded border-gray-300 dark:border-zinc-600" 
-                />
-                <span className="ml-2 text-sm">Enable auto-save</span>
-              </label>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">General Settings</h3>
+              
+              <div className="space-y-4 sm:space-y-6">
+                {/* Language Settings */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                    Language
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Choose your preferred language for the interface
+                  </p>
+                  <select 
+                    value={settings.language}
+                    onChange={(e) => updateSettings({ language: e.target.value })}
+                    className="mt-2 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                  >
+                    <option value="en">🇺🇸 English</option>
+                    <option value="ko">🇰🇷 한국어 (Korean)</option>
+                  </select>
+                </div>
+                
+                {/* Auto-save Settings */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      Auto-save conversations
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Automatically save your conversations for future reference
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                    <label className="flex items-start sm:items-center justify-between gap-3 cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white block">
+                          Enable auto-save
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Save conversations automatically when you send messages
+                        </p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.autoSave}
+                        onChange={(e) => updateSettings({ autoSave: e.target.checked })}
+                        className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-0.5 sm:mt-0" 
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -577,71 +606,132 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'ai-model':
         return (
-          <div className="space-y-6 pb-8">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Default Model</label>
-              <select 
-                value={settings.aiModel.defaultModel}
-                onChange={(e) => updateSettings({ 
-                  aiModel: { ...settings.aiModel, defaultModel: e.target.value }
-                })}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                <option value="gpt-4o">GPT-4o (Latest)</option>
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                <option value="claude-3-haiku">Claude 3 Haiku</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Temperature</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Controls randomness: 0 is focused, 1 is creative</p>
-              <input 
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={settings.aiModel.temperature}
-                onChange={(e) => updateSettings({ 
-                  aiModel: { ...settings.aiModel, temperature: parseFloat(e.target.value) }
-                })}
-                className="mt-2 w-full" 
-              />
-              <span className="text-xs text-gray-500">{settings.aiModel.temperature}</span>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Max Tokens</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum length of the response</p>
-              <input 
-                type="range"
-                min="256"
-                max="4096"
-                step="256"
-                value={settings.aiModel.maxTokens}
-                onChange={(e) => updateSettings({ 
-                  aiModel: { ...settings.aiModel, maxTokens: parseInt(e.target.value) }
-                })}
-                className="mt-2 w-full" 
-              />
-              <span className="text-xs text-gray-500">{settings.aiModel.maxTokens} tokens</span>
-            </div>
-            
-            <div>
-              <label className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  checked={settings.aiModel.streamResponse}
-                  onChange={(e) => updateSettings({ 
-                    aiModel: { ...settings.aiModel, streamResponse: e.target.checked }
-                  })}
-                  className="rounded border-gray-300 dark:border-zinc-600" 
-                />
-                <span className="ml-2 text-sm font-medium text-gray-900 dark:text-white">Stream responses</span>
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">Show responses as they are generated</p>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">AI Model Settings</h3>
+              
+              <div className="space-y-4 sm:space-y-6">
+                {/* Default Model Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                    Default Model
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Choose your preferred AI model for conversations
+                  </p>
+                  <select 
+                    value={settings.aiModel.defaultModel}
+                    onChange={(e) => updateSettings({ 
+                      aiModel: { ...settings.aiModel, defaultModel: e.target.value }
+                    })}
+                    className="mt-2 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                  >
+                    <option value="convocore-omni">🚀 Convocore Omni (Default)</option>
+                    <option value="convocore-alpha">🧠 Convocore Alpha</option>
+                    <option value="convocore-turbo">⚡ Convocore Turbo</option>
+                    <option value="convocore-nova">✨ Convocore Nova</option>
+                  </select>
+                </div>
+                
+                {/* Temperature Setting */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      Temperature
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Controls randomness: 0 is focused, 1 is creative
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                    <input 
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={settings.aiModel.temperature}
+                      onChange={(e) => updateSettings({ 
+                        aiModel: { ...settings.aiModel, temperature: parseFloat(e.target.value) }
+                      })}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider" 
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      <span>Focused (0.0)</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Current: {settings.aiModel.temperature}
+                      </span>
+                      <span>Creative (1.0)</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Max Tokens Setting */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      Max Tokens
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Maximum length of the response
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                    <input 
+                      type="range"
+                      min="256"
+                      max="4096"
+                      step="256"
+                      value={settings.aiModel.maxTokens}
+                      onChange={(e) => updateSettings({ 
+                        aiModel: { ...settings.aiModel, maxTokens: parseInt(e.target.value) }
+                      })}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider" 
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      <span>Short (256)</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Current: {settings.aiModel.maxTokens} tokens
+                      </span>
+                      <span>Long (4096)</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Stream Response Setting */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      Response Streaming
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Show responses as they are generated for faster interaction
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                    <label className="flex items-start sm:items-center justify-between gap-3 cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white block">
+                          Enable streaming responses
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          See AI responses appear word by word as they're generated
+                        </p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.aiModel.streamResponse}
+                        onChange={(e) => updateSettings({ 
+                          aiModel: { ...settings.aiModel, streamResponse: e.target.checked }
+                        })}
+                        className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-0.5 sm:mt-0" 
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
