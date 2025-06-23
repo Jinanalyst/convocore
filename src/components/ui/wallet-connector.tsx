@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Wallet, ExternalLink, Copy, Check, ChevronDown, Smartphone, Monitor, AlertCircle } from "lucide-react";
+import { Wallet, ExternalLink, Copy, Check, ChevronDown, ChevronUp, Smartphone, Monitor, AlertCircle, X, CheckCircle } from "lucide-react";
 import { tronPaymentService, formatTronAddress, CONVO_AI_RECIPIENT_ADDRESS } from "@/lib/blockchain";
 
 interface WalletOption {
@@ -42,21 +42,9 @@ export function WalletConnector({
   const [error, setError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [installedWallets, setInstalledWallets] = useState<Set<string>>(new Set());
 
-  // Check if user is on mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isSmallScreen = window.innerWidth <= 768;
-      setIsMobile(isMobileDevice || isSmallScreen);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Define wallet options with mobile support
+  // Updated wallet options with better detection - MOVED BEFORE useEffect
   const walletOptions: WalletOption[] = [
     {
       id: 'tronlink',
@@ -66,10 +54,37 @@ export function WalletConnector({
       type: 'tron',
       installUrl: 'https://www.tronlink.org/',
       mobileInstallUrl: 'https://www.tronlink.org/dlDetails/',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).tronLink,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).tronLink || !!(window as any).tronWeb || !!(window as any).tron;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).tronLink) return null;
-        return await tronPaymentService.connectWallet();
+        if (typeof window === 'undefined') return null;
+        
+        // Try multiple TronLink detection methods
+        const tronLink = (window as any).tronLink;
+        const tronWeb = (window as any).tronWeb;
+        
+        if (tronLink) {
+          try {
+            const result = await tronPaymentService.connectWallet();
+            console.log('TronLink connection result:', result);
+            return result;
+          } catch (error) {
+            console.error('TronLink connection error:', error);
+            return null;
+          }
+        } else if (tronWeb) {
+          try {
+            if (tronWeb.defaultAddress?.base58) {
+              return tronWeb.defaultAddress.base58;
+            }
+          } catch (error) {
+            console.error('TronWeb connection error:', error);
+          }
+        }
+        
+        return null;
       },
       supportsMobile: true,
       deepLink: 'tronlinkoutside://pull.activity'
@@ -82,11 +97,22 @@ export function WalletConnector({
       type: 'ethereum',
       installUrl: 'https://metamask.io/',
       mobileInstallUrl: 'https://metamask.app.link/dapp/',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isMetaMask,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).ethereum?.isMetaMask || !!(window as any).web3?.currentProvider?.isMetaMask;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).ethereum?.isMetaMask) return null;
+        if (typeof window === 'undefined') return null;
+        
+        const ethereum = (window as any).ethereum;
+        if (!ethereum?.isMetaMask) return null;
+        
         try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Attempting MetaMask connection...');
+          const accounts = await ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          console.log('MetaMask accounts:', accounts);
           return accounts[0] || null;
         } catch (error) {
           console.error('MetaMask connection failed:', error);
@@ -97,26 +123,6 @@ export function WalletConnector({
       deepLink: 'https://metamask.app.link/dapp/'
     },
     {
-      id: 'walletconnect',
-      name: 'WalletConnect',
-      icon: '🔄',
-      description: 'Connect any mobile wallet',
-      type: 'ethereum',
-      installUrl: 'https://walletconnect.com/',
-      isInstalled: () => true, // WalletConnect is always available
-      connect: async () => {
-        // Enhanced WalletConnect for mobile
-        if (isMobile) {
-          console.log('WalletConnect mobile integration would go here');
-          // This would require WalletConnect SDK integration
-          return null;
-        }
-        console.log('WalletConnect desktop integration would go here');
-        return null;
-      },
-      supportsMobile: true
-    },
-    {
       id: 'phantom',
       name: 'Phantom',
       icon: '👻',
@@ -124,11 +130,22 @@ export function WalletConnector({
       type: 'solana',
       installUrl: 'https://phantom.app/',
       mobileInstallUrl: 'https://phantom.app/download',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).solana?.isPhantom,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).solana?.isPhantom || 
+               !!(window as any).phantom?.solana ||
+               !!(window as any).phantom;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).solana?.isPhantom) return null;
+        if (typeof window === 'undefined') return null;
+        
+        const solana = (window as any).solana || (window as any).phantom?.solana;
+        if (!solana?.isPhantom) return null;
+        
         try {
-          const response = await (window as any).solana.connect();
+          console.log('Attempting Phantom connection...');
+          const response = await solana.connect();
+          console.log('Phantom connection response:', response);
           return response.publicKey.toString();
         } catch (error) {
           console.error('Phantom connection failed:', error);
@@ -139,6 +156,21 @@ export function WalletConnector({
       deepLink: 'phantom://browse/'
     },
     {
+      id: 'walletconnect',
+      name: 'WalletConnect',
+      icon: '🔄',
+      description: 'Connect any mobile wallet',
+      type: 'ethereum',
+      installUrl: 'https://walletconnect.com/',
+      isInstalled: () => true, // Always available as it's a protocol
+      connect: async () => {
+        console.log('WalletConnect connection would require SDK integration');
+        // TODO: Implement actual WalletConnect SDK
+        return null;
+      },
+      supportsMobile: true
+    },
+    {
       id: 'coinbase',
       name: 'Coinbase Wallet',
       icon: '🔵',
@@ -146,11 +178,22 @@ export function WalletConnector({
       type: 'ethereum',
       installUrl: 'https://wallet.coinbase.com/',
       mobileInstallUrl: 'https://wallet.coinbase.com/download',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isCoinbaseWallet,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).ethereum?.isCoinbaseWallet || 
+               !!(window as any).coinbaseWalletExtension ||
+               !!(window as any).ethereum?.selectedProvider?.isCoinbaseWallet;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).ethereum?.isCoinbaseWallet) return null;
+        if (typeof window === 'undefined') return null;
+        
+        const ethereum = (window as any).ethereum;
+        if (!ethereum?.isCoinbaseWallet) return null;
+        
         try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Attempting Coinbase Wallet connection...');
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Coinbase Wallet accounts:', accounts);
           return accounts[0] || null;
         } catch (error) {
           console.error('Coinbase Wallet connection failed:', error);
@@ -167,11 +210,22 @@ export function WalletConnector({
       type: 'ethereum',
       installUrl: 'https://trustwallet.com/',
       mobileInstallUrl: 'https://link.trustwallet.com/open_url',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).ethereum?.isTrust,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).ethereum?.isTrust || 
+               !!(window as any).trustwallet ||
+               !!(window as any).ethereum?.isTrustWallet;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).ethereum?.isTrust) return null;
+        if (typeof window === 'undefined') return null;
+        
+        const ethereum = (window as any).ethereum;
+        if (!ethereum?.isTrust) return null;
+        
         try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Attempting Trust Wallet connection...');
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Trust Wallet accounts:', accounts);
           return accounts[0] || null;
         } catch (error) {
           console.error('Trust Wallet connection failed:', error);
@@ -189,11 +243,22 @@ export function WalletConnector({
       type: 'ethereum',
       installUrl: 'https://www.okx.com/web3',
       mobileInstallUrl: 'https://www.okx.com/download',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).okxwallet,
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).okxwallet || 
+               !!(window as any).okexchain ||
+               !!(window as any).ethereum?.isOKExWallet;
+      },
       connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).okxwallet) return null;
+        if (typeof window === 'undefined') return null;
+        
+        const okxwallet = (window as any).okxwallet;
+        if (!okxwallet) return null;
+        
         try {
-          const accounts = await (window as any).okxwallet.request({ method: 'eth_requestAccounts' });
+          console.log('Attempting OKX Wallet connection...');
+          const accounts = await okxwallet.request({ method: 'eth_requestAccounts' });
+          console.log('OKX Wallet accounts:', accounts);
           return accounts[0] || null;
         } catch (error) {
           console.error('OKX Wallet connection failed:', error);
@@ -201,28 +266,163 @@ export function WalletConnector({
         }
       },
       supportsMobile: true
-    },
-    {
-      id: 'binance',
-      name: 'Binance Wallet',
-      icon: '🟡',
-      description: 'Binance Chain wallet',
-      type: 'ethereum',
-      installUrl: 'https://www.binance.org/en/binance-wallet',
-      isInstalled: () => typeof window !== 'undefined' && !!(window as any).BinanceChain,
-      connect: async () => {
-        if (typeof window === 'undefined' || !(window as any).BinanceChain) return null;
-        try {
-          const accounts = await (window as any).BinanceChain.request({ method: 'eth_requestAccounts' });
-          return accounts[0] || null;
-        } catch (error) {
-          console.error('Binance Wallet connection failed:', error);
-          return null;
-        }
-      },
-      supportsMobile: false
     }
   ];
+
+  // Check if user is on mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(isMobileDevice || isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Enhanced wallet detection with comprehensive methods
+  useEffect(() => {
+    const detectInstalledWallets = async () => {
+      const detected = new Set<string>();
+      
+      // Wait for wallets to inject themselves
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('🔍 Starting wallet detection...');
+      console.log('Window object keys:', Object.keys(window).filter(key => 
+        key.toLowerCase().includes('wallet') || 
+        key.toLowerCase().includes('ethereum') || 
+        key.toLowerCase().includes('solana') || 
+        key.toLowerCase().includes('tron') ||
+        key.toLowerCase().includes('phantom') ||
+        key.toLowerCase().includes('metamask')
+      ));
+      
+      // Check for each wallet with improved detection
+      walletOptions.forEach(wallet => {
+        try {
+          let isInstalled = false;
+          
+          // Enhanced detection based on wallet type
+          switch (wallet.id) {
+            case 'tronlink':
+              isInstalled = !!(window as any).tronLink || 
+                           !!(window as any).tronWeb || 
+                           !!(window as any).tron;
+              if (isInstalled) {
+                console.log('TronLink detection details:', {
+                  tronLink: !!(window as any).tronLink,
+                  tronWeb: !!(window as any).tronWeb,
+                  tron: !!(window as any).tron,
+                  ready: (window as any).tronLink?.ready
+                });
+              }
+              break;
+              
+            case 'metamask':
+              isInstalled = !!(window as any).ethereum?.isMetaMask ||
+                           !!(window as any).web3?.currentProvider?.isMetaMask;
+              if (isInstalled) {
+                console.log('MetaMask detection details:', {
+                  ethereum: !!(window as any).ethereum,
+                  isMetaMask: (window as any).ethereum?.isMetaMask,
+                  web3: !!(window as any).web3
+                });
+              }
+              break;
+              
+            case 'phantom':
+              isInstalled = !!(window as any).solana?.isPhantom ||
+                           !!(window as any).phantom?.solana ||
+                           !!(window as any).phantom;
+              if (isInstalled) {
+                console.log('Phantom detection details:', {
+                  solana: !!(window as any).solana,
+                  isPhantom: (window as any).solana?.isPhantom,
+                  phantom: !!(window as any).phantom
+                });
+              }
+              break;
+              
+            case 'coinbase':
+              isInstalled = !!(window as any).ethereum?.isCoinbaseWallet ||
+                           !!(window as any).coinbaseWalletExtension ||
+                           !!(window as any).ethereum?.selectedProvider?.isCoinbaseWallet;
+              break;
+              
+            case 'trust':
+              isInstalled = !!(window as any).ethereum?.isTrust ||
+                           !!(window as any).trustwallet ||
+                           !!(window as any).ethereum?.isTrustWallet;
+              break;
+              
+            case 'okx':
+              isInstalled = !!(window as any).okxwallet ||
+                           !!(window as any).okexchain ||
+                           !!(window as any).ethereum?.isOKExWallet;
+              break;
+              
+            case 'walletconnect':
+              // WalletConnect is always available as it's a protocol
+              isInstalled = true;
+              break;
+              
+            default:
+              isInstalled = wallet.isInstalled();
+          }
+          
+          if (isInstalled) {
+            detected.add(wallet.id);
+            console.log(`✅ Detected ${wallet.name} wallet`);
+          } else {
+            console.log(`❌ ${wallet.name} not detected`);
+          }
+        } catch (error) {
+          console.log(`❌ Error detecting ${wallet.name}:`, error);
+        }
+      });
+      
+      // Additional global detection check
+      console.log('🌐 Global wallet objects:', {
+        ethereum: !!(window as any).ethereum,
+        tronLink: !!(window as any).tronLink,
+        solana: !!(window as any).solana,
+        phantom: !!(window as any).phantom,
+        okxwallet: !!(window as any).okxwallet,
+        coinbaseWalletExtension: !!(window as any).coinbaseWalletExtension,
+        trustwallet: !!(window as any).trustwallet
+      });
+      
+      console.log(`🎯 Detected ${detected.size} wallets:`, Array.from(detected));
+      setInstalledWallets(detected);
+    };
+
+    // Initial detection
+    detectInstalledWallets();
+    
+    // Re-check periodically for newly installed wallets
+    const interval = setInterval(detectInstalledWallets, 3000);
+    
+    // Listen for wallet events
+    const handleWalletEvents = () => {
+      console.log('👂 Wallet event detected, re-checking...');
+      detectInstalledWallets();
+    };
+
+    // Listen for common wallet injection events
+    window.addEventListener('ethereum#initialized', handleWalletEvents);
+    window.addEventListener('tronLink#initialized', handleWalletEvents);
+    window.addEventListener('load', handleWalletEvents);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('ethereum#initialized', handleWalletEvents);
+      window.removeEventListener('tronLink#initialized', handleWalletEvents);
+      window.removeEventListener('load', handleWalletEvents);
+    };
+  }, []);
 
   useEffect(() => {
     checkWalletConnection();
@@ -374,7 +574,6 @@ export function WalletConnector({
       case 'coinbase':
       case 'trust':
       case 'okx':
-      case 'binance':
         url = `https://etherscan.io/address/${walletAddress}`;
         break;
       case 'phantom':
@@ -408,8 +607,16 @@ export function WalletConnector({
     window.open(installUrl, '_blank');
   };
 
-  // Filter wallets based on mobile support
+  // Filter and sort wallets: installed first, then by mobile support
   const filteredWallets = isMobile ? walletOptions.filter(wallet => wallet.supportsMobile) : walletOptions;
+  const sortedWallets = [...filteredWallets].sort((a, b) => {
+    const aInstalled = installedWallets.has(a.id);
+    const bInstalled = installedWallets.has(b.id);
+    
+    if (aInstalled && !bInstalled) return -1;
+    if (!aInstalled && bInstalled) return 1;
+    return 0;
+  });
 
   return (
     <div className="space-y-4">
@@ -425,139 +632,205 @@ export function WalletConnector({
           </div>
           
           <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            {isMobile 
-              ? 'Choose your preferred mobile wallet to connect and authenticate.'
-              : 'Choose your preferred wallet to connect and authenticate.'
-            }
+            Choose your preferred wallet to connect and authenticate.
           </p>
 
-          {/* Mobile-optimized wallet grid */}
-          {isMobile ? (
-            <div className="grid grid-cols-1 gap-3">
-              {filteredWallets.map((wallet) => {
-                const isInstalled = wallet.isInstalled();
-                return (
-                  <div
-                    key={wallet.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all ${
-                      isInstalled 
-                        ? 'border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 hover:border-blue-300' 
-                        : 'border-gray-200 dark:border-zinc-700 hover:border-gray-300'
-                    } ${!isInstalled ? 'opacity-60' : ''}`}
-                    onClick={() => isInstalled ? handleWalletSelect(wallet) : installWallet(wallet)}
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="text-2xl">{wallet.icon}</span>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                          {wallet.name}
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400">
-                            {wallet.type.toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {wallet.description}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {!isInstalled && (
-                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                        Install
-                      </div>
-                    )}
-                    
-                    {isInstalled && wallet.id === 'tronlink' && (
-                      <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        Payments
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* Desktop dropdown */
-            <div className="relative" id="wallet-dropdown">
-              <Button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                disabled={isConnecting}
-                variant="outline"
-                className="w-full justify-between h-12 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <Wallet className="w-5 h-5 text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {isConnecting ? 'Connecting...' : 'Select a wallet'}
-                  </span>
-                </div>
+          {/* Unified dropdown for both mobile and desktop */}
+          <div className="relative" id="wallet-dropdown">
+            <Button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              disabled={isConnecting}
+              variant="outline"
+              className="w-full justify-between h-12 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-gray-500" />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {isConnecting ? 'Connecting...' : 'Select a wallet'}
+                </span>
+              </div>
+              {isMobile ? (
+                <ChevronUp className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              ) : (
                 <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </Button>
+              )}
+            </Button>
 
-              {/* Dropdown Menu */}
-              {isDropdownOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-                  <div className="p-2">
-                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
-                      Available Wallets
+            {/* Drop-up/Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className={`absolute left-0 right-0 ${isMobile ? 'bottom-full mb-2' : 'top-full mt-2'} bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
+                <div className="p-2">
+                  {/* Mobile close button */}
+                  {isMobile && (
+                    <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-zinc-700 mb-2">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Select Wallet</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="p-1 h-auto"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
-                    
-                    {filteredWallets.map((wallet) => {
-                      const isInstalled = wallet.isInstalled();
-                      return (
+                  )}
+
+                  {/* Detected wallets section */}
+                  {installedWallets.size > 0 && (
+                    <div className="mb-2">
+                      <div className="text-xs font-medium text-green-600 dark:text-green-400 px-3 py-2 uppercase tracking-wide flex items-center gap-2">
+                        <CheckCircle className="w-3 h-3" />
+                        Detected Wallets
+                      </div>
+                      
+                      {sortedWallets.filter(wallet => installedWallets.has(wallet.id)).map((wallet) => (
                         <div
                           key={wallet.id}
-                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer group ${
-                            !isInstalled ? 'opacity-60' : ''
-                          }`}
-                          onClick={() => isInstalled ? handleWalletSelect(wallet) : installWallet(wallet)}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 dark:hover:bg-green-950 cursor-pointer group transition-all min-h-[60px]"
+                          onClick={() => handleWalletSelect(wallet)}
                         >
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="text-2xl">{wallet.icon}</span>
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                                {wallet.name}
-                                <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400">
-                                  {wallet.type.toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {wallet.description}
-                              </div>
+                          <div className="flex-shrink-0">
+                            <span className="text-xl">{wallet.icon}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                              <span className="truncate">{wallet.name}</span>
+                              <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900 rounded-full text-green-700 dark:text-green-300 flex-shrink-0">
+                                READY
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                              {isMobile ? 'Tap to connect' : wallet.description}
                             </div>
                           </div>
-                          
-                          {!isInstalled && (
-                            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
+                          <div className="flex-shrink-0 ml-2">
+                            <div className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors min-w-[70px] text-center">
+                              Connect
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Available wallets section */}
+                  {sortedWallets.filter(wallet => !installedWallets.has(wallet.id)).length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide flex items-center gap-2">
+                        <AlertCircle className="w-3 h-3" />
+                        Available Wallets
+                      </div>
+                      
+                      {sortedWallets.filter(wallet => !installedWallets.has(wallet.id)).map((wallet) => (
+                        <div
+                          key={wallet.id}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer group opacity-70 transition-all min-h-[60px]"
+                          onClick={() => installWallet(wallet)}
+                        >
+                          <div className="flex-shrink-0">
+                            <span className="text-xl opacity-60">{wallet.icon}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                              <span className="truncate">{wallet.name}</span>
+                              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded-full text-gray-600 dark:text-gray-400 flex-shrink-0">
+                                {wallet.type.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                              {wallet.description}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            <div className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors min-w-[70px] text-center group-hover:bg-blue-700">
                               Install
                             </div>
-                          )}
-                          
-                          {isInstalled && wallet.id === 'tronlink' && (
-                            <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                              Payments
-                            </div>
-                          )}
+                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                      ))}
+                    </div>
+                  )}
 
-          {/* Mobile wallet connection tips */}
+                  {/* No wallets detected message */}
+                  {installedWallets.size === 0 && (
+                    <div className="p-3 text-center">
+                      <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        No wallets detected
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        {isMobile 
+                          ? 'Install a wallet app and refresh this page'
+                          : 'Install a wallet extension to get started'
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile-specific tips */}
           {isMobile && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-blue-700 dark:text-blue-300">
-                  <strong>Mobile Tip:</strong> If you have a wallet app installed, make sure to open this page in the wallet's built-in browser for the best connection experience.
+                  <strong>Mobile Tip:</strong> For the best experience, open this page from your wallet's built-in browser after installing the app.
                 </div>
               </div>
             </div>
           )}
+
+          {/* Debug Section - Remove in production */}
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                🔍 Wallet Detection Debug
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log('🔄 Manual wallet detection triggered');
+                  window.location.reload();
+                }}
+                className="text-xs"
+              >
+                Refresh Detection
+              </Button>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+              <div>Detected: {installedWallets.size} wallets</div>
+              <div>Browser: {isMobile ? 'Mobile' : 'Desktop'}</div>
+              <div>Window objects: {Object.keys(window).filter(key => 
+                key.toLowerCase().includes('wallet') || 
+                key.toLowerCase().includes('ethereum') || 
+                key.toLowerCase().includes('solana') || 
+                key.toLowerCase().includes('tron') ||
+                key.toLowerCase().includes('phantom')
+              ).join(', ') || 'None found'}</div>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-blue-600 dark:text-blue-400">View Detection Details</summary>
+                <div className="mt-2 p-2 bg-white dark:bg-zinc-800 rounded text-xs font-mono">
+                  {JSON.stringify({
+                    ethereum: !!(window as any).ethereum,
+                    'ethereum.isMetaMask': !!(window as any).ethereum?.isMetaMask,
+                    'ethereum.isCoinbaseWallet': !!(window as any).ethereum?.isCoinbaseWallet,
+                    'ethereum.isTrust': !!(window as any).ethereum?.isTrust,
+                    tronLink: !!(window as any).tronLink,
+                    tronWeb: !!(window as any).tronWeb,
+                    'solana.isPhantom': !!(window as any).solana?.isPhantom,
+                    phantom: !!(window as any).phantom,
+                    okxwallet: !!(window as any).okxwallet,
+                    installedCount: installedWallets.size,
+                    detectedWallets: Array.from(installedWallets)
+                  }, null, 2)}
+                </div>
+              </details>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="p-4 md:p-6 border border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
