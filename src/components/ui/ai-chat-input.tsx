@@ -94,19 +94,55 @@ const AIChatInput = ({
   // Detect @ mentions in input
   const detectMentions = useCallback((value: string, cursorPos: number) => {
     const beforeCursor = value.substring(0, cursorPos);
-    const mentionMatch = beforeCursor.match(/@(model|aiagent)(\w*)?$/);
+    
+    // More flexible matching - detect @ followed by partial words
+    const mentionMatch = beforeCursor.match(/@(\w*)$/);
     
     if (mentionMatch) {
-      const mentionType = mentionMatch[1] === 'model' ? 'model' : 'agent';
-      const query = mentionMatch[2] || '';
+      const query = mentionMatch[1].toLowerCase();
       const startPos = cursorPos - mentionMatch[0].length;
       
-      setShowMentions(true);
-      setMentionType(mentionType);
-      setMentionQuery(query);
-      setMentionStartPos(startPos);
-      setSelectedMentionIndex(0);
-      setMentionItems(filterMentionItems(mentionType, query));
+      console.log('🔍 Mention detected:', { query, startPos, beforeCursor });
+      
+      // Determine type based on what user is typing
+      let mentionType: 'model' | 'agent' | null = null;
+      
+      if (query === '' || 'model'.startsWith(query) || 'models'.startsWith(query)) {
+        mentionType = 'model';
+      } else if ('aiagent'.startsWith(query) || 'agent'.startsWith(query)) {
+        mentionType = 'agent';
+      } else {
+        // Check if query matches any model or agent names
+        const modelMatches = MODELS.some(m => 
+          m.name.toLowerCase().includes(query) || m.id.toLowerCase().includes(query)
+        );
+        const agentMatches = AI_AGENTS.some(a => 
+          a.name.toLowerCase().includes(query) || a.tag.toLowerCase().includes(query)
+        );
+        
+        if (modelMatches && !agentMatches) mentionType = 'model';
+        else if (agentMatches && !modelMatches) mentionType = 'agent';
+        else if (query.length > 0) {
+          // Default to showing both by preferring agents for ambiguous cases
+          mentionType = 'agent';
+        }
+      }
+      
+      if (mentionType) {
+        const filteredItems = filterMentionItems(mentionType, query);
+        console.log('✅ Showing mentions:', { type: mentionType, count: filteredItems.length });
+        
+        setShowMentions(true);
+        setMentionType(mentionType);
+        setMentionQuery(query);
+        setMentionStartPos(startPos);
+        setSelectedMentionIndex(0);
+        setMentionItems(filteredItems);
+      } else {
+        setShowMentions(false);
+        setMentionType(null);
+        setMentionQuery("");
+      }
     } else {
       setShowMentions(false);
       setMentionType(null);
@@ -117,7 +153,9 @@ const AIChatInput = ({
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const cursorPos = e.target.selectionStart || 0;
+    const cursorPos = e.target.selectionStart || value.length;
+    
+    console.log('📝 Input changed:', { value, cursorPos, lastChar: value[cursorPos - 1] });
     
     setInputValue(value);
     detectMentions(value, cursorPos);
@@ -254,6 +292,13 @@ const AIChatInput = ({
         }}
         onClick={handleActivate}
       >
+        {/* Debug indicator */}
+        {showMentions && (
+          <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded z-50">
+            Debug: {mentionType} ({mentionItems.length})
+          </div>
+        )}
+
         {/* Mention Menu */}
         <AnimatePresence>
           {showMentions && mentionItems.length > 0 && (
@@ -263,7 +308,8 @@ const AIChatInput = ({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="absolute bottom-full mb-2 left-0 right-0 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50"
+              className="absolute bottom-full mb-2 left-0 right-0 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg max-h-60 overflow-y-auto z-[60] shadow-2xl"
+              style={{ minHeight: '100px' }}
             >
               <div className="p-2">
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-zinc-700">
@@ -323,18 +369,28 @@ const AIChatInput = ({
             </button>
 
             <div className="relative flex-1 min-w-0">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyPress}
-                className="flex-1 border-0 outline-0 rounded-md py-2 px-1 sm:px-2 text-sm sm:text-base bg-transparent w-full font-normal text-gray-900 dark:text-white disabled:opacity-50"
-                style={{ position: "relative", zIndex: 1 }}
-                onFocus={handleActivate}
-                disabled={disabled}
-                placeholder={isActive || inputValue ? "Ask me anything..." : ""}
-              />
+                              <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyPress}
+                  onKeyUp={(e) => {
+                    // Also detect mentions on key up to catch cursor position changes
+                    const cursorPos = e.currentTarget.selectionStart || inputValue.length;
+                    detectMentions(inputValue, cursorPos);
+                  }}
+                  onClick={(e) => {
+                    // Detect mentions when clicking to change cursor position
+                    const cursorPos = e.currentTarget.selectionStart || inputValue.length;
+                    detectMentions(inputValue, cursorPos);
+                  }}
+                  className="flex-1 border-0 outline-0 rounded-md py-2 px-1 sm:px-2 text-sm sm:text-base bg-transparent w-full font-normal text-gray-900 dark:text-white disabled:opacity-50"
+                  style={{ position: "relative", zIndex: 1 }}
+                  onFocus={handleActivate}
+                  disabled={disabled}
+                  placeholder={isActive || inputValue ? "Ask me anything..." : ""}
+                />
               <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
                 <AnimatePresence mode="wait">
                   {showPlaceholder && !isActive && !inputValue && (
