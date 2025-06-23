@@ -344,10 +344,10 @@ export function Sidebar({
                       onMouseEnter={() => setHoveredChatId(chat.id)}
                       onMouseLeave={() => setHoveredChatId(null)}
                     >
-                      <button
+                      <div
                         onClick={() => handleChatSelect(chat.id)}
                         className={cn(
-                          "w-full text-left transition-all duration-200",
+                          "w-full text-left transition-all duration-200 cursor-pointer",
                           isCollapsed ? "p-2 flex justify-center" : "p-3"
                         )}
                         title={isCollapsed ? chat.title : undefined}
@@ -388,7 +388,7 @@ export function Sidebar({
                             )}
                           </div>
                         )}
-                      </button>
+                      </div>
                     </div>
                   ))}
                 </div>
