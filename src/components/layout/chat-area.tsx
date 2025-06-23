@@ -444,9 +444,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-4 sm:pt-12 pb-3 sm:pb-8">
             <ConvocoreLogo size="lg" className="justify-center mb-3 sm:mb-6" />
             
-            <h1 className="hidden sm:block text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              Welcome to Convocore
-            </h1>
+
             
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
               Your intelligent conversational AI platform
@@ -537,10 +535,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
             <div className="text-center space-y-4 max-w-md mx-auto px-4">
               <ConvocoreLogo className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50" />
               <div className="space-y-2">
-                {/* Hide welcome title on mobile, show on desktop */}
-                <h3 className="hidden sm:block text-lg font-medium text-muted-foreground">
-                  Welcome to Convocore AI
-                </h3>
+
                 <p className="text-sm text-muted-foreground/80">
                   Start a conversation by typing a message below. You can use specialized agents by mentioning them with @ (e.g., @codegen, @writer, @debugger).
                 </p>
