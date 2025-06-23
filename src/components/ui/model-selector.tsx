@@ -41,6 +41,12 @@ const models = [
     description: "Compact and efficient model for quick responses and daily conversations",
     provider: "Convocore",
   },
+  {
+    id: "convoart",
+    name: "ConvoArt",
+    description: "Advanced text-to-image generation powered by DeepAI technology",
+    provider: "Convocore",
+  },
 ];
 
 interface ModelSelectorProps {

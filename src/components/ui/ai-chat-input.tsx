@@ -21,6 +21,7 @@ const MODELS = [
   { id: "claude-3-opus-20240229", name: "Convocore Alpha", icon: "🧠", description: "Advanced reasoning" },
   { id: "claude-3-sonnet-20240229", name: "Convocore Nova", icon: "⭐", description: "Balanced performance" },
   { id: "deepseek/deepseek-r1:free", name: "ConvoMini", icon: "🤏", description: "Compact and efficient" },
+  { id: "convoart", name: "ConvoArt", icon: "🎨", description: "AI-powered image generation" },
 ];
 
 // Available AI agents

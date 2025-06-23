@@ -63,7 +63,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       defaultModel: 'gpt-4o',
       temperature: 0.7,
       maxTokens: 2048,
-      streamResponse: true
+      streamResponse: true,
+      convoArtApiKey: '9475df54-f35e-4f20-ae0c-95e99c6c54f3'
     },
     privacy: {
       dataCollection: true,
@@ -636,6 +637,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <option value="gpt-4-turbo">⚡ Convocore Turbo</option>
                     <option value="claude-3-sonnet-20240229">✨ Convocore Nova</option>
                     <option value="deepseek/deepseek-r1:free">🤏 ConvoMini</option>
+                    <option value="convoart">🎨 ConvoArt (Image Generation)</option>
                   </select>
                 </div>
                 
@@ -735,6 +737,40 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-0.5 sm:mt-0" 
                       />
                     </label>
+                  </div>
+                </div>
+
+                {/* ConvoArt API Key Setting */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      ConvoArt API Key
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Your DeepAI API key for ConvoArt image generation
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shrink-0">
+                        <Palette className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="password"
+                          value={settings.aiModel.convoArtApiKey}
+                          onChange={(e) => updateSettings({
+                            aiModel: { ...settings.aiModel, convoArtApiKey: e.target.value }
+                          })}
+                          placeholder="Enter your DeepAI API key"
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 transition-colors"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          Get your API key from <a href="https://deepai.org/api" target="_blank" rel="noopener noreferrer" className="text-purple-600 dark:text-purple-400 hover:underline">deepai.org/api</a>
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
