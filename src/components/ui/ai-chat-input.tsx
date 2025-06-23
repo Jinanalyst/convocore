@@ -116,9 +116,9 @@ const AIChatInput = ({
         onClick={handleActivate}
       >
         <div className="flex flex-col items-stretch w-full h-full dark:bg-zinc-800 rounded-[32px]">
-          <div className="flex items-center gap-2 p-3 rounded-full bg-white dark:bg-zinc-800 max-w-3xl w-full">
+          <div className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-full bg-white dark:bg-zinc-800 max-w-3xl w-full">
             <button
-              className="p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50"
+              className="p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50 shrink-0"
               title="Attach file"
               type="button"
               tabIndex={-1}
@@ -128,33 +128,34 @@ const AIChatInput = ({
               }}
               disabled={disabled}
             >
-              <Paperclip size={20} className="text-gray-600 dark:text-gray-400" />
+              <Paperclip size={18} className="text-gray-600 dark:text-gray-400 sm:w-5 sm:h-5" />
             </button>
 
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <input
                 ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 border-0 outline-0 rounded-md py-2 text-base bg-transparent w-full font-normal text-gray-900 dark:text-white disabled:opacity-50"
+                className="flex-1 border-0 outline-0 rounded-md py-2 px-1 sm:px-2 text-sm sm:text-base bg-transparent w-full font-normal text-gray-900 dark:text-white disabled:opacity-50"
                 style={{ position: "relative", zIndex: 1 }}
                 onFocus={handleActivate}
                 disabled={disabled}
                 placeholder={isActive || inputValue ? "Ask me anything..." : ""}
               />
-              <div className="absolute left-0 top-0 w-full h-full pointer-events-none flex items-center px-3 py-2">
+              <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
                 <AnimatePresence mode="wait">
                   {showPlaceholder && !isActive && !inputValue && (
                     <motion.span
                       key={placeholderIndex}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base"
                       style={{
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         zIndex: 0,
+                        maxWidth: "calc(100% - 8px)",
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -168,7 +169,7 @@ const AIChatInput = ({
             </div>
 
             <button
-              className="p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50"
+              className="p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50 shrink-0"
               title="Voice input"
               type="button"
               tabIndex={-1}
@@ -178,17 +179,17 @@ const AIChatInput = ({
               }}
               disabled={disabled}
             >
-              <Mic size={20} className="text-gray-600 dark:text-gray-400" />
+              <Mic size={18} className="text-gray-600 dark:text-gray-400 sm:w-5 sm:h-5" />
             </button>
             <button
-              className="flex items-center gap-1 bg-black hover:bg-zinc-700 dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black p-3 rounded-full font-medium justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 bg-black hover:bg-zinc-700 dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black p-2 sm:p-3 rounded-full font-medium justify-center disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               title="Send"
               type="button"
               tabIndex={-1}
               onClick={handleSend}
               disabled={disabled || !inputValue.trim()}
             >
-              <Send size={18} />
+              <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
             </button>
           </div>
 

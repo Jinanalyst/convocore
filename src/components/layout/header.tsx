@@ -107,7 +107,7 @@ export function Header({
 
   return (
     <header className={cn(
-      "flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-black border-b border-gray-200 dark:border-zinc-800 safe-area-top",
+      "flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 mt-6 sm:mt-6 bg-white dark:bg-black border-b border-gray-200 dark:border-zinc-800 safe-area-top",
       className
     )}>
       {/* Mobile Menu Button */}
