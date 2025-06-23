@@ -187,7 +187,36 @@ export default function ConvocorePage() {
 
   const handleSendMessage = (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
-    // In a real app, this would send the message to the AI service
+    
+    // Update the current chat's last message and timestamp
+    if (activeChatId) {
+      setChats(prevChats => 
+        prevChats.map(chat => 
+          chat.id === activeChatId 
+            ? { 
+                ...chat, 
+                lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                timestamp: new Date()
+              }
+            : chat
+        )
+      );
+      
+      // Update localStorage for wallet users
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      if (walletConnected) {
+        const updatedChats = chats.map(chat => 
+          chat.id === activeChatId 
+            ? { 
+                ...chat, 
+                lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                timestamp: new Date()
+              }
+            : chat
+        );
+        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+      }
+    }
   };
 
   const handleShare = () => {
@@ -280,6 +309,7 @@ export default function ConvocorePage() {
           }}
           onDeleteChat={handleDeleteChat}
           activeChatId={activeChatId || undefined}
+          chats={chats}
         />
       </div>
 

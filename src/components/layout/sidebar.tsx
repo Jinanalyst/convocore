@@ -48,6 +48,7 @@ interface SidebarProps {
   activeChatId?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  chats?: Chat[];
 }
 
 interface LibraryItem {
@@ -75,7 +76,8 @@ export function Sidebar({
   onUseLibraryItem,
   activeChatId,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  chats = []
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
@@ -86,51 +88,13 @@ export function Sidebar({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Real chat data from Supabase
-  const [chats, setChats] = useState<Chat[]>([]);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [recentChats, setRecentChats] = useState<Chat[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load data on component mount
   useEffect(() => {
-    loadChats();
     loadLibraryItems();
   }, []);
-
-  const loadChats = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Demo chats for testing
-      const demoChats: Chat[] = [
-        {
-          id: "demo-1",
-          title: "Welcome to Convocore",
-          lastMessage: "Hello! How can I help you today?",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        },
-        {
-          id: "demo-2",
-          title: "Getting Started Guide",
-          lastMessage: "Let me know what you would like to explore...",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        },
-        {
-          id: "demo-3",
-          title: "Code Generation Help",
-          lastMessage: "I can help you write and debug code...",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        },
-      ];
-
-      setChats(demoChats);
-      setRecentChats(demoChats.slice(0, 5));
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error loading chats:", error);
-      setIsLoading(false);
-    }
-  };
 
   const loadLibraryItems = async () => {
     try {
@@ -162,7 +126,6 @@ export function Sidebar({
     e.stopPropagation();
     if (action === "delete") {
       onDeleteChat?.(chatId);
-      setChats(prev => prev.filter(chat => chat.id !== chatId));
     }
   };
 
