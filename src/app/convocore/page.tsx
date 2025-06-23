@@ -18,12 +18,27 @@ interface Chat {
 export default function ConvocorePage() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
 
-  // Load chats on component mount
+  // Load chats on component mount and detect mobile
   useEffect(() => {
     loadChats();
+    
+    // Mobile detection
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
+      // On mobile, start with sidebar collapsed
+      if (isMobileDevice) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const loadChats = async () => {
@@ -231,23 +246,48 @@ export default function ConvocorePage() {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-black">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-white dark:bg-black relative">
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && !sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
+      {/* Sidebar - Desktop: Normal layout, Mobile: Fixed overlay */}
       <div className={cn(
-        "flex-shrink-0 transition-all duration-300",
-        sidebarCollapsed ? "w-0" : "w-80"
+        "transition-all duration-300 z-50",
+        isMobile 
+          ? cn(
+              "fixed left-0 top-0 h-full w-80 transform",
+              sidebarCollapsed ? "-translate-x-full" : "translate-x-0"
+            )
+          : cn(
+              "flex-shrink-0",
+              sidebarCollapsed ? "w-0" : "w-80"
+            )
       )}>
         <Sidebar
           className="h-full"
           onNewChat={handleNewChat}
-          onSelectChat={handleSelectChat}
+          onSelectChat={(chatId) => {
+            handleSelectChat(chatId);
+            // Auto-close sidebar on mobile after selecting chat
+            if (isMobile) {
+              setSidebarCollapsed(true);
+            }
+          }}
           onDeleteChat={handleDeleteChat}
           activeChatId={activeChatId || undefined}
         />
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content - Full width on mobile, adjusted on desktop */}
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0",
+        isMobile ? "w-full" : ""
+      )}>
         {/* Header */}
         <Header
           currentChatTitle={getCurrentChatTitle()}
@@ -267,10 +307,13 @@ export default function ConvocorePage() {
         </div>
       </div>
 
-      {/* Sidebar Toggle Button (Mobile) */}
+      {/* Sidebar Toggle Button - Always visible on mobile, hidden on desktop when sidebar is open */}
       <button
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className="fixed top-4 left-4 z-50 md:hidden bg-white dark:bg-zinc-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700"
+        className={cn(
+          "fixed top-4 left-4 z-50 bg-white dark:bg-zinc-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 transition-opacity",
+          isMobile ? "block" : sidebarCollapsed ? "block" : "hidden"
+        )}
         aria-label="Toggle sidebar"
       >
         <svg
