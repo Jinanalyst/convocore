@@ -350,6 +350,135 @@ export default function DemoPage() {
           </div>
         </div>
 
+        {/* Native Share API Tests */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 border border-gray-200 dark:border-zinc-700">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Native Share API Tests</h3>
+          <div className="space-y-4">
+            {/* Web Share API Support */}
+            <div className="p-3 border border-gray-200 dark:border-zinc-700 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-gray-900 dark:text-white">Web Share API Support</span>
+                <span className={`text-sm px-2 py-1 rounded ${
+                  (typeof navigator !== 'undefined' && 'share' in navigator)
+                    ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' 
+                    : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+                }`}>
+                  {(typeof navigator !== 'undefined' && 'share' in navigator) ? '✓ Supported' : '✗ Not Supported'}
+                </span>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {deviceInfo?.isMobile 
+                  ? 'Mobile devices typically support native sharing to apps like WhatsApp, Twitter, etc.'
+                  : 'Desktop browsers may have limited or no Web Share API support. Will fallback to clipboard.'}
+              </div>
+            </div>
+
+            {/* Share Test Buttons */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">📤</span>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      Share Demo Chat
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Test native share with a sample conversation
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const { shareService } = await import('@/lib/share-service');
+                    const success = await shareService.shareChat('demo_chat_123', 'AI Demo Conversation');
+                    addTestResult(`Share test: ${success ? 'Success' : 'Failed/Fallback used'}`);
+                  }}
+                  className="text-xs"
+                >
+                  Test Share
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🔗</span>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      Copy Link Only
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Test clipboard functionality
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const { shareService } = await import('@/lib/share-service');
+                    const success = await shareService.shareChat('demo_chat_456', 'Clipboard Test', { 
+                      platform: 'clipboard' 
+                    });
+                    addTestResult(`Clipboard test: ${success ? 'Link copied' : 'Failed'}`);
+                  }}
+                  className="text-xs"
+                  variant="outline"
+                >
+                  Copy Link
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🌐</span>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      Force Native Share
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {deviceInfo?.isMobile ? 'Will show native share sheet' : 'Will fallback to clipboard'}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    const { shareService } = await import('@/lib/share-service');
+                    const success = await shareService.shareChat('demo_chat_789', 'Native Share Test', { 
+                      platform: 'native' 
+                    });
+                    addTestResult(`Native share test: ${success ? 'Success' : 'Fallback used'}`);
+                  }}
+                  className="text-xs"
+                  variant="secondary"
+                >
+                  Native Share
+                </Button>
+              </div>
+            </div>
+
+            {/* Expected Behavior */}
+            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Expected Behavior:</h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                {deviceInfo?.isMobile ? (
+                  <>
+                    <li>• <strong>Mobile:</strong> Should show native share sheet with apps like WhatsApp, Twitter, etc.</li>
+                    <li>• <strong>Apps Available:</strong> SMS, Email, Social media, Notes, etc.</li>
+                    <li>• <strong>Fallback:</strong> If share cancelled, copies link to clipboard</li>
+                  </>
+                ) : (
+                  <>
+                    <li>• <strong>Desktop:</strong> Limited Web Share API support, will copy to clipboard</li>
+                    <li>• <strong>Notification:</strong> Shows "Link copied to clipboard" message</li>
+                    <li>• <strong>Modal:</strong> May open additional share options modal</li>
+                  </>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Kakao Authentication Test */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 border border-gray-200 dark:border-zinc-700">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">KakaoTalk Authentication</h3>

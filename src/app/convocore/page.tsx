@@ -247,6 +247,11 @@ export default function ConvocorePage() {
   };
 
   const handleShare = () => {
+    if (!activeChatId) {
+      console.log('⚠️ No active chat to share');
+      return;
+    }
+
     console.log("✅ Share button clicked! Opening share modal for chat:", activeChatId);
     console.log("Current chat title:", getCurrentChatTitle());
     setShareModalOpen(true);

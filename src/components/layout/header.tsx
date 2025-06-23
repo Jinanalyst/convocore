@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/lib/mobile-utils";
+import { shareService } from "@/lib/share-service";
 import { ProfileModal } from "@/components/modals/profile-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { BillingModal } from "@/components/modals/billing-modal";
@@ -83,6 +84,28 @@ export function Header({
       onShare?.();
     } else {
       // Call parent share handler with export preference
+      onShare?.();
+    }
+  };
+
+  const handleNativeShare = async () => {
+    // Check if we have a chat to share
+    if (!currentChatId || !currentChatTitle) {
+      console.log('No chat to share');
+      return;
+    }
+
+    try {
+      const success = await shareService.shareChat(currentChatId, currentChatTitle);
+      
+      // If sharing failed and we should show the modal as fallback
+      if (!success) {
+        console.log('Native share failed, opening modal fallback');
+        onShare?.();
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      // Fallback to modal
       onShare?.();
     }
   };
@@ -152,7 +175,7 @@ export function Header({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onShare}
+            onClick={handleNativeShare}
             className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 touch-feedback h-10 w-10"
             aria-label="Share chat"
             disabled={!currentChatId}
@@ -251,7 +274,7 @@ export function Header({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onShare}
+            onClick={handleNativeShare}
             className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 h-9 w-9"
             aria-label="Share chat"
             disabled={!currentChatId}
