@@ -340,12 +340,7 @@ const AIChatInput = ({
         }}
         onClick={handleActivate}
       >
-        {/* Debug indicator */}
-        {showMentions && (
-          <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded z-50">
-            Debug: {mentionType} ({mentionItems.length})
-          </div>
-        )}
+        {/* Debug indicator - hidden for production */}
 
         {/* Mention Menu */}
         <AnimatePresence>
