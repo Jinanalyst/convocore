@@ -49,7 +49,7 @@ function extractUserIdFromRequest(request: NextRequest): string | null {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, model = 'gpt-4o', chatId, includeWebSearch, think, deepSearch } = body;
+    const { messages, model = 'gpt-4o', chatId, includeWebSearch, think, deepSearch, language = 'en' } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
       messageCount: messages.length,
       lastMessage: messages[messages.length - 1]?.content?.substring(0, 100),
       webSearch: includeWebSearch || deepSearch,
-      think: think
+      think: think,
+      language: language
     });
 
     // Check API configuration status
@@ -126,25 +127,50 @@ export async function POST(request: NextRequest) {
     let systemPrompt = '';
     let detectedAgent = null;
     
+    // Add language preference to system prompt
+    const languageInstructions = language === 'ko' 
+      ? '\n\n중요: 사용자가 한국어를 선호하므로 한국어로 응답해 주세요. 단, 코드나 기술적 용어는 영어를 병행 사용할 수 있습니다.\n\n'
+      : '\n\nPlease respond in English unless the user specifically requests another language.\n\n';
+    
+    systemPrompt += languageInstructions;
+
     // Handle Think mode - add deeper reasoning instructions
     if (think) {
-      systemPrompt += `\n\nYou are in THINK mode. Please:
+      const thinkInstructions = language === 'ko' 
+        ? `\n\n사고 모드(THINK MODE) 활성화됨. 다음을 수행해 주세요:
+1. 문제를 단계별로 분석하기
+2. 다양한 관점과 접근법 고려하기  
+3. 추론 과정을 보여주기
+4. 결론에 대한 자세한 설명 제공하기
+5. 잠재적 예외 사항이나 복잡성 고려하기\n\n`
+        : `\n\nYou are in THINK mode. Please:
 1. Break down the problem step by step
 2. Consider multiple perspectives and approaches
 3. Show your reasoning process
 4. Provide detailed explanations for your conclusions
 5. Think through potential edge cases or complications\n\n`;
+      
+      systemPrompt += thinkInstructions;
     }
 
     // Handle Web Search/Deep Search mode
     const webSearchRequested = includeWebSearch || deepSearch;
     if (webSearchRequested) {
-      systemPrompt += `\n\nYou are in WEB SEARCH mode. When responding:
+      const webSearchInstructions = language === 'ko'
+        ? `\n\n웹 검색 모드(WEB SEARCH MODE) 활성화됨. 응답 시:
+1. 현재 정보가 필요한 질문의 경우, 일반적으로 웹 검색을 수행할 것임을 알려주기
+2. 어떤 유형의 검색을 수행할지 명시하기
+3. 현재 지식으로 최선의 답변 제공하기
+4. 정보가 오래되었을 수 있음을 명시하고 현재 출처 확인 권장하기
+5. 속보나 최신 이벤트의 경우, 지식 마감일을 명확히 명시하기\n\n`
+        : `\n\nYou are in WEB SEARCH mode. When responding:
 1. If the question requires current information, acknowledge that you would normally search the web
 2. Indicate what type of search you would perform
 3. Provide the best answer you can with your current knowledge
 4. Note when information might be outdated and suggest the user verify with current sources
 5. For breaking news or very recent events, clearly state your knowledge cutoff\n\n`;
+      
+      systemPrompt += webSearchInstructions;
     }
     
     // Check for any agent mentions in the message

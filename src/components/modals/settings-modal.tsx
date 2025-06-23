@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BillingModal } from "@/components/modals/billing-modal";
+import { useLanguage } from '@/lib/language-context';
 
 interface SettingsModalProps {
   open?: boolean;
@@ -42,6 +43,7 @@ type SettingsTab = 'general' | 'account' | 'ai-model' | 'appearance' | 'notifica
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { user } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState({
     theme: 'system',
@@ -213,17 +215,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   };
 
   const applyLanguage = (language: string) => {
+    // Update the language context which will trigger UI updates
+    setLanguage(language as 'en' | 'ko');
+    
     // Set document language attribute
     document.documentElement.lang = language;
     
-    // Store in localStorage for persistence
-    localStorage.setItem('convocore-language', language);
-    
-    // You could also integrate with i18n libraries here
     console.log(`Language changed to: ${language}`);
-    
-    // For now, we'll just show a notification that language changed
-    // In a real app, you'd reload the interface with new language strings
   };
 
   const requestNotificationPermission = async () => {
@@ -308,6 +306,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const updateSettings = (updates: Partial<typeof settings>) => {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
+    
+    // Handle language changes immediately
+    if (updates.language) {
+      applyLanguage(updates.language);
+    }
+    
     // Auto-save certain settings immediately
     if (updates.theme || updates.language) {
       saveSettings(newSettings);
@@ -354,18 +358,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 {/* Language Settings */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-900 dark:text-white">
-                    Language
+                    {t('settings.language')}
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Choose your preferred language for the interface
                   </p>
                   <select 
-                    value={settings.language}
+                    value={language}
                     onChange={(e) => updateSettings({ language: e.target.value })}
                     className="mt-2 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                   >
-                    <option value="en">🇺🇸 English</option>
-                    <option value="ko">🇰🇷 한국어 (Korean)</option>
+                    <option value="en">🇺🇸 {t('settings.english')}</option>
+                    <option value="ko">🇰🇷 {t('settings.korean')}</option>
                   </select>
                 </div>
                 

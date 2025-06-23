@@ -34,6 +34,7 @@ import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -57,6 +58,7 @@ export function Header({
 }: HeaderProps) {
   const isMobile = useIsMobile();
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -158,7 +160,7 @@ export function Header({
           `}
         >
           <Link href="/pricing">
-            {isMobile ? "Upgrade" : "Upgrade to Pro"}
+            {isMobile ? t('subscription.upgrade') : t('header.upgradeToPro')}
           </Link>
         </Button>
       </div>

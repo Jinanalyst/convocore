@@ -7,6 +7,7 @@ import { SettingsModal } from "@/components/modals/settings-modal";
 import { SearchModal } from "@/components/modals/search-modal";
 import { LibraryModal } from "@/components/modals/library-modal";
 import { ModelInfoModal } from "@/components/modals/model-info-modal";
+import { useLanguage } from "@/lib/language-context";
 import { 
   Plus, 
   MessageSquare, 
@@ -79,6 +80,7 @@ export function Sidebar({
   onToggleCollapse,
   chats = []
 }: SidebarProps) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -200,8 +202,8 @@ export function Sidebar({
             isCollapsed ? "px-0 justify-center" : "justify-start gap-2"
           )}
         >
-          <Plus className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span>New Chat</span>}
+          <Plus className="w-4 h-4" />
+          {!isCollapsed && t('chat.newConversation')}
         </Button>
       </div>
 

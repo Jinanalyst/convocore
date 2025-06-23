@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
 import { VoiceModal } from "@/components/modals/voice-modal";
 import { usageService } from "@/lib/usage-service";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from '@/lib/language-context';
 import { 
   Copy, 
   ThumbsUp, 
@@ -53,12 +54,15 @@ interface ChatAreaProps {
 
 export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [currentAgent, setCurrentAgent] = useState<ConvoAgent | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
+  const [model, setModel] = useState('gpt-4o');
+  const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load real messages from Supabase
@@ -124,14 +128,18 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean, options?: { think?: boolean; deepSearch?: boolean }) => {
+  const sendMessageWithOptions = useCallback(async (
+    content: string,
+    options?: { think?: boolean; deepSearch?: boolean }
+  ) => {
     if (!content.trim()) return;
 
     console.log('📨 ChatArea received message with options:', {
       content: content.substring(0, 50) + '...',
       model,
       includeWebSearch,
-      options
+      options,
+      language
     });
 
     const newMessage: Message = {
@@ -154,7 +162,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       // Detect agent from message content
       const detectedAgent = detectAgentFromMessage(content);
 
-      // Call API with enhanced options
+      // Call API with enhanced options including language
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -170,7 +178,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           chatId,
           includeWebSearch: includeWebSearch || options?.deepSearch,
           deepSearch: options?.deepSearch,
-          think: options?.think
+          think: options?.think,
+          language: language // Pass language preference to API
         }),
       });
 
@@ -201,19 +210,19 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
     } catch (error) {
       console.error('Error sending message:', error);
-      
       const errorMessage: Message = {
         id: generateId(),
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        content: language === 'ko' 
+          ? '죄송합니다. 메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
+          : 'Sorry, there was an error processing your message. Please try again.',
         role: 'assistant',
         timestamp: new Date()
       };
-      
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
-  };
+  }, [messages, model, includeWebSearch, chatId, language, onSendMessage]);
 
   const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
     try {
@@ -275,7 +284,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const handleVoiceTranscriptComplete = (transcript: string) => {
     console.log('Voice transcript received:', transcript);
     // Auto-submit the voice message with default model
-    handleSendMessage(transcript, 'convocore-omni');
+    sendMessageWithOptions(transcript);
   };
 
   const formatTimestamp = (date: Date) => {
@@ -387,7 +396,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
               <AIChatInput
                 onSendMessage={(message, options) => {
                   // Use default model and handle new options
-                  handleSendMessage(message, 'gpt-4', undefined, options);
+                  sendMessageWithOptions(message, options);
                 }}
                 onAttachFile={handleFileUpload}
                 onVoiceInput={handleVoiceInput}
@@ -540,7 +549,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         <AIChatInput
           onSendMessage={(message, options) => {
             // Use default model and handle new options
-            handleSendMessage(message, 'gpt-4', undefined, options);
+            sendMessageWithOptions(message, options);
           }}
           onAttachFile={handleFileUpload}
           onVoiceInput={handleVoiceInput}
