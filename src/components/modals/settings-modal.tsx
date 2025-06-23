@@ -677,7 +677,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'notifications':
         return (
-          <div className="space-y-4 sm:space-y-6 pb-8">
+          <div className="space-y-4 sm:space-y-6 pb-6">
             <div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Notification Preferences</h3>
               
@@ -745,17 +745,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
 
                 {/* Chat Notifications */}
-                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors list-none">
                     <div className="flex items-center gap-3">
                       <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Chat Notifications</span>
                     </div>
-                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
-                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3 bg-gray-50/50 dark:bg-zinc-800/50">
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex-1 min-w-0">
                         <span className="text-sm text-gray-900 dark:text-white block">Chat Completed</span>
@@ -784,17 +784,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </details>
 
                 {/* System Notifications */}
-                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors list-none">
                     <div className="flex items-center gap-3">
                       <Settings className="w-4 h-4 text-green-600 dark:text-green-400" />
                       <span className="text-sm font-medium text-gray-900 dark:text-white">System Notifications</span>
                     </div>
-                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
-                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3 bg-gray-50/50 dark:bg-zinc-800/50">
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex-1 min-w-0">
                         <span className="text-sm text-gray-900 dark:text-white block">Usage Alerts</span>
@@ -835,17 +835,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </details>
 
                 {/* Audio & Preferences */}
-                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors list-none">
                     <div className="flex items-center gap-3">
                       <Volume2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Audio & Preferences</span>
                     </div>
-                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
-                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3 bg-gray-50/50 dark:bg-zinc-800/50">
                     <label className="flex items-center justify-between cursor-pointer">
                       <div className="flex-1 min-w-0">
                         <span className="text-sm text-gray-900 dark:text-white block">Notification Sounds</span>
@@ -1037,7 +1037,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] p-0 sm:h-[85vh]">
+      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[90vh] p-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row h-full">
           {/* Mobile Header with Tab Selector */}
           <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4 flex-shrink-0">
@@ -1087,12 +1087,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Scrollable Content Area */}
+            <div 
+              className="flex-1 overflow-y-auto p-4 sm:p-6" 
+              style={{ 
+                maxHeight: 'calc(90vh - 80px)',
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#cbd5e0 transparent'
+              }}
+            >
               {renderTabContent()}
             </div>
             
-            {/* Footer */}
+            {/* Fixed Footer */}
             <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-zinc-900 flex-shrink-0">
               <Button 
                 variant="outline" 
