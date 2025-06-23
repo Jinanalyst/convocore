@@ -6,6 +6,7 @@ import { Button } from './button';
 import { Badge } from './badge';
 import { AIAgent, ChatMessage, ConversationContext, ToolResult, AgentCapability } from '@/lib/advanced-ai-agent';
 import { advancedAIAgent } from '@/lib/advanced-ai-agent';
+import { formatAIResponseToParagraphs } from '@/lib/utils';
 import { nanoid } from 'nanoid';
 import { 
   BotIcon, 
@@ -485,7 +486,12 @@ function MessageComponent({ message, onRegenerate, onCopy }: MessageComponentPro
 
         <Card className="p-4">
           <div className="prose dark:prose-invert max-w-none">
-            <div className="whitespace-pre-wrap">{message.content}</div>
+            <div className="whitespace-pre-wrap">
+              {message.role === 'assistant' 
+                ? formatAIResponseToParagraphs(message.content)
+                : message.content
+              }
+            </div>
           </div>
 
           {/* Metadata */}

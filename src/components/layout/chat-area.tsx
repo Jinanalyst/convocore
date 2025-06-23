@@ -30,7 +30,7 @@ import {
   VolumeX,
   Trash2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatAIResponseToParagraphs } from "@/lib/utils";
 import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { notificationService } from '@/lib/notification-service';
@@ -579,7 +579,10 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
                     )}
                     
                     <div className="whitespace-pre-wrap text-sm">
-                      {message.content}
+                      {message.role === 'assistant' 
+                        ? formatAIResponseToParagraphs(message.content)
+                        : message.content
+                      }
                     </div>
                     
                     <div className="flex items-center justify-between">

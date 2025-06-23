@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ConvocoreLogo } from '@/components/ui/convocore-logo';
 import { Button } from '@/components/ui/button';
+import { formatAIResponseToParagraphs } from '@/lib/utils';
 import { Share2, Copy, Eye, MessageSquare, Calendar, User, Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -229,7 +230,12 @@ export default function SharedChatPage() {
                   }`}
                 >
                   <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="whitespace-pre-wrap">
+                  {message.role === 'assistant' 
+                    ? formatAIResponseToParagraphs(message.content)
+                    : message.content
+                  }
+                </p>
                   </div>
                 </div>
                 

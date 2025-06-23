@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, formatAIResponseToParagraphs } from '@/lib/utils';
 import { useIsMobile, useViewportHeight, useKeyboardOpen, useSwipeGesture } from '@/lib/mobile-utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -449,7 +449,10 @@ const MessageComponent: React.FC<{
       <div className="flex-1 space-y-2">
         <div className="prose prose-sm dark:prose-invert max-w-none">
           <div className="whitespace-pre-wrap text-gray-900 dark:text-white">
-            {message.content}
+            {message.role === 'assistant' 
+              ? formatAIResponseToParagraphs(message.content)
+              : message.content
+            }
           </div>
         </div>
 
