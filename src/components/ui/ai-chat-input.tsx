@@ -68,6 +68,12 @@ const AIChatInput = ({
 
   const handleSend = () => {
     if (inputValue.trim() && !disabled) {
+      console.log('🚀 AIChatInput sending message with options:', {
+        message: inputValue.trim(),
+        think: thinkActive,
+        deepSearch: deepSearchActive
+      });
+      
       onSendMessage?.(inputValue.trim(), {
         think: thinkActive,
         deepSearch: deepSearchActive,

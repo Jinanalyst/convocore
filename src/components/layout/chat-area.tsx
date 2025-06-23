@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 
+// Helper function to generate unique IDs
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
 interface Message {
   id: string;
   content: string;
@@ -119,169 +122,95 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean) => {
+  const handleSendMessage = async (content: string, model: string, includeWebSearch?: boolean, options?: { think?: boolean; deepSearch?: boolean }) => {
     if (!content.trim()) return;
 
-    // Check usage limit before processing
-    if (user && !usageService.canMakeRequest(user.id)) {
-      const usage = usageService.getUserUsage(user.id);
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        content: `🚫 **Daily Limit Reached**\n\nYou've used ${usage.requestsUsed}/${usage.requestsLimit} requests today.\n\nUpgrade to Pro (20 USDT/month) for 1,000 requests or Premium (40 USDT/month) for 5,000 requests per month.`,
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      return;
-    }
+    console.log('📨 ChatArea received message with options:', {
+      content: content.substring(0, 50) + '...',
+      model,
+      includeWebSearch,
+      options
+    });
 
-    console.log('🚀 Sending message:', { content, model, chatId });
-
-    // Detect if user is calling a specific agent
-    const detectedAgent = detectAgentFromMessage(content);
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
+    const newMessage: Message = {
+      id: generateId(),
+      content: content.trim(),
       role: 'user',
-      timestamp: new Date(),
-      agent: detectedAgent || undefined
+      timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+    // Add user message immediately
+    setMessages(prev => [...prev, newMessage]);
+    setIsTyping(true);
 
     try {
-      // Create a chatId if we don't have one
-      const currentChatId = chatId || `chat_${Date.now()}`;
-      
-      // Save user message to database if we have a chatId
-      if (currentChatId !== 'chat_demo') {
-        try {
-          await saveMessage(currentChatId, content, 'user');
-        } catch (error) {
-          console.log('Could not save message to database (expected in demo mode):', error);
-        }
+      // Save user message
+      if (chatId) {
+        await saveMessage(chatId, content.trim(), 'user');
       }
 
-      // Prepare the message content for API
-      let apiContent = content;
-      if (detectedAgent) {
-        // Format message with agent-specific system prompt
-        apiContent = formatMessageWithAgent(content, detectedAgent);
-      }
+      // Detect agent from message content
+      const detectedAgent = detectAgentFromMessage(content);
 
-      // Prepare messages for API
-      const apiMessages = [...messages, { 
-        role: 'user' as const, 
-        content: apiContent 
-      }];
-
-      console.log('📤 Calling chat API with', apiMessages.length, 'messages');
-
-      // Call the chat API
+      // Call API with enhanced options
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: apiMessages,
+          messages: [...messages, newMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp
+          })),
           model,
-          chatId: currentChatId,
-          temperature: 0.7,
-          maxTokens: 4096,
+          chatId,
+          includeWebSearch: includeWebSearch || options?.deepSearch,
+          deepSearch: options?.deepSearch,
+          think: options?.think
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Handle rate limiting specifically
-        if (response.status === 429 && errorData.type === 'RATE_LIMIT_EXCEEDED') {
-          const errorMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: `🚫 ${errorData.error}\n\nYou can upgrade to Pro (20 USDT/month) or Premium (40 USDT/month) for unlimited chats. Visit our pricing page to learn more.`,
-            role: 'assistant',
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, errorMessage]);
-          return; // Don't increment usage if rate limited
-        }
-
-        // Handle API configuration errors
-        if (response.status === 503) {
-          const errorMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: `🔧 **Configuration Issue**\n\n${errorData.details || errorData.error}\n\nPlease check your environment variables and restart the development server.`,
-            role: 'assistant',
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, errorMessage]);
-          return;
-        }
-
-        // Handle other API errors with details
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `⚠️ **Error (${response.status})**\n\n${errorData.details || errorData.error || 'Unknown error occurred'}\n\n${errorData.suggestion || 'Please try again or contact support.'}`,
-          role: 'assistant',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
-        return;
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       
-      // Increment real usage tracking after successful response
-      if (user) {
-        try {
-          const result = usageService.incrementUsage(user.id);
-          console.log('Usage updated:', result);
-          
-          // Trigger storage event for other components to update
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'usage_updated',
-            newValue: user.id,
-            oldValue: null
-          }));
-        } catch (error) {
-          console.warn('Failed to update usage tracking:', error);
-        }
-      }
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response,
+      const assistantMessage: Message = {
+        id: generateId(),
+        content: data.response || 'Sorry, I could not generate a response.',
         role: 'assistant',
         timestamp: new Date(),
         agent: detectedAgent || undefined
       };
-      
-      setMessages(prev => [...prev, aiMessage]);
 
-      // Save AI response to database if we have a chatId
-      if (currentChatId !== 'chat_demo') {
-        await saveMessage(currentChatId, data.response, 'assistant');
+      // Add assistant message
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Save assistant message
+      if (chatId) {
+        await saveMessage(chatId, assistantMessage.content, 'assistant');
       }
+
+      // Call external callback if provided
+      onSendMessage?.(content, model, includeWebSearch);
+
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('Error sending message:', error);
       
-      // Show error message to user
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your API keys in the .env.local file and try again.`,
+        id: generateId(),
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
         role: 'assistant',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setIsTyping(false);
     }
-
-    onSendMessage?.(content, model, includeWebSearch);
   };
 
   const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
@@ -474,7 +403,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
               <AIChatInput
                 onSendMessage={(message, options) => {
                   // Use default model and handle new options
-                  handleSendMessage(message, 'gpt-4', options?.deepSearch);
+                  handleSendMessage(message, 'gpt-4', undefined, options);
                 }}
                 onAttachFile={handleFileUpload}
                 onVoiceInput={handleVoiceInput}
@@ -620,7 +549,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         <AIChatInput
           onSendMessage={(message, options) => {
             // Use default model and handle new options
-            handleSendMessage(message, 'gpt-4', options?.deepSearch);
+            handleSendMessage(message, 'gpt-4', undefined, options);
           }}
           onAttachFile={handleFileUpload}
           onVoiceInput={handleVoiceInput}

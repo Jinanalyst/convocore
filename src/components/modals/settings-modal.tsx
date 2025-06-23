@@ -708,24 +708,73 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">Current Usage</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>AI Requests this month</span>
-                    <span className="font-medium">1,247 / Unlimited</span>
+                    <span>
+                      {subscription?.tier === 'free' ? 'Requests today' : 'Requests this month'}
+                    </span>
+                    <span className="font-medium">
+                      {usage?.requestsUsed || 0} / {usage?.requestsLimit || 10}
+                      {subscription?.tier === 'free' ? ' per day' : ' per month'}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>API Calls</span>
-                    <span className="font-medium">523 / Unlimited</span>
+                    <span>Subscription Plan</span>
+                    <span className="font-medium capitalize flex items-center gap-1">
+                      {subscription?.tier || 'free'}
+                      {subscription?.tier === 'pro' && <Crown className="w-3 h-3 text-yellow-500" />}
+                      {subscription?.tier === 'premium' && <Zap className="w-3 h-3 text-purple-500" />}
+                    </span>
                   </div>
+                  {usage && usage.requestsUsed > 0 && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>Usage Progress</span>
+                        <span>{Math.round((usage.requestsUsed / usage.requestsLimit) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            (usage.requestsUsed / usage.requestsLimit) > 0.8 
+                              ? 'bg-red-500' 
+                              : (usage.requestsUsed / usage.requestsLimit) > 0.6 
+                                ? 'bg-yellow-500' 
+                                : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min((usage.requestsUsed / usage.requestsLimit) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
               <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center gap-2 sm:gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-green-900 dark:text-green-100 text-sm">TRON Wallet Connected</p>
-                    <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 truncate">TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ</p>
+                {user?.authType === 'wallet' && user.walletAddress && (
+                  <div className="flex items-center gap-2 sm:gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-green-900 dark:text-green-100 text-sm">
+                        {user.walletType || 'Crypto'} Wallet Connected
+                      </p>
+                      <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 truncate">
+                        {user.walletAddress}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {user?.authType === 'supabase' && (
+                  <div className="flex items-center gap-2 sm:gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-blue-900 dark:text-blue-100 text-sm">
+                        Google Account Connected
+                      </p>
+                      <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 
                 <Button 
                   variant="outline" 
@@ -733,17 +782,28 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   onClick={() => setShowBillingModal(true)}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
-                  View Billing History
+                  {subscription?.tier === 'free' ? 'Upgrade Plan' : 'View Billing History'}
                 </Button>
                 
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setShowBillingModal(true)}
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Manage Wallet
-                </Button>
+                {user?.authType === 'wallet' ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setShowBillingModal(true)}
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Manage Wallet
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setShowBillingModal(true)}
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Payment Options
+                  </Button>
+                )}
               </div>
             </div>
           </div>

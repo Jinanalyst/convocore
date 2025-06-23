@@ -23,7 +23,7 @@ class UsageService {
 
   // Plan limits
   private readonly PLAN_LIMITS = {
-    free: 10,
+    free: 3,
     pro: 1000,
     premium: 5000
   };

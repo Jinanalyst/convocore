@@ -49,7 +49,7 @@ function extractUserIdFromRequest(request: NextRequest): string | null {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, model = 'gpt-4o', chatId } = body;
+    const { messages, model = 'gpt-4o', chatId, includeWebSearch, think, deepSearch } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
     console.log('📨 Chat API Request:', {
       model,
       messageCount: messages.length,
-      lastMessage: messages[messages.length - 1]?.content?.substring(0, 100)
+      lastMessage: messages[messages.length - 1]?.content?.substring(0, 100),
+      webSearch: includeWebSearch || deepSearch,
+      think: think
     });
 
     // Check API configuration status
@@ -124,6 +126,27 @@ export async function POST(request: NextRequest) {
     let systemPrompt = '';
     let detectedAgent = null;
     
+    // Handle Think mode - add deeper reasoning instructions
+    if (think) {
+      systemPrompt += `\n\nYou are in THINK mode. Please:
+1. Break down the problem step by step
+2. Consider multiple perspectives and approaches
+3. Show your reasoning process
+4. Provide detailed explanations for your conclusions
+5. Think through potential edge cases or complications\n\n`;
+    }
+
+    // Handle Web Search/Deep Search mode
+    const webSearchRequested = includeWebSearch || deepSearch;
+    if (webSearchRequested) {
+      systemPrompt += `\n\nYou are in WEB SEARCH mode. When responding:
+1. If the question requires current information, acknowledge that you would normally search the web
+2. Indicate what type of search you would perform
+3. Provide the best answer you can with your current knowledge
+4. Note when information might be outdated and suggest the user verify with current sources
+5. For breaking news or very recent events, clearly state your knowledge cutoff\n\n`;
+    }
+    
     // Check for any agent mentions in the message
     for (const agent of CONVO_AGENTS) {
       if (userContent.toLowerCase().includes(agent.tag.toLowerCase())) {
@@ -134,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     // If an agent is detected, use its system prompt
     if (detectedAgent) {
-      systemPrompt = detectedAgent.systemPrompt;
+      systemPrompt += detectedAgent.systemPrompt;
       console.log(`🤖 Agent detected: ${detectedAgent.name} (${detectedAgent.tag})`);
       
       // Clean the message by removing the agent tag
@@ -153,7 +176,7 @@ Focus on providing actionable, detailed solutions that match your capabilities. 
       userMessage.content = enhancedMessage;
     } else {
       // Default system prompt for general conversations
-      systemPrompt = `You are Convocore AI, a helpful and knowledgeable assistant. You provide accurate, helpful responses while being conversational and engaging. You can help with a wide range of topics including coding, writing, analysis, and general questions.
+      const baseSystemPrompt = `You are Convocore AI, a helpful and knowledgeable assistant. You provide accurate, helpful responses while being conversational and engaging. You can help with a wide range of topics including coding, writing, analysis, and general questions.
 
 Available specialized agents that users can invoke with @ mentions:
 ${CONVO_AGENTS.map(agent => `- ${agent.tag}: ${agent.description}`).join('\n')}
@@ -165,6 +188,8 @@ When responding:
 2. Provide clear explanations
 3. Include relevant examples when appropriate
 4. Suggest specialized agents if the user's request would benefit from their expertise`;
+      
+      systemPrompt = baseSystemPrompt + systemPrompt;
     }
 
     // Prepare messages for AI with context
@@ -175,18 +200,19 @@ When responding:
     }));
 
     // Add system context if available and not using specialized agent
-    if (!detectedAgent && (systemPrompt || conversationContext)) {
+    if (!detectedAgent && systemPrompt) {
       const contextMessage = {
         role: 'system' as const,
-        content: [systemPrompt, conversationContext].filter(Boolean).join('\n\n')
+        content: [systemPrompt, conversationContext].filter(Boolean).join('\n\n'),
+        timestamp: new Date()
       };
       processedMessages.unshift(contextMessage);
     }
 
     console.log('🧠 Calling AI service with', processedMessages.length, 'messages');
 
-    // Convert processed messages to proper ChatMessage format
-    const chatMessages: ChatMessage[] = processedMessages.map(msg => ({
+    // Convert processed messages to proper ChatMessage format for AI service
+    const chatMessages = processedMessages.map(msg => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.content
     }));
@@ -238,6 +264,7 @@ When responding:
 
     return NextResponse.json({ 
       response: aiResponse,
+      content: aiResponse,
       model: model,
       chatId: chatId || `chat_${Date.now()}`,
       agentUsed: detectedAgent ? {
@@ -246,7 +273,11 @@ When responding:
         displayName: detectedAgent.displayName,
         capabilities: detectedAgent.capabilities
       } : null,
-      apiStatus
+      apiStatus,
+      features: {
+        thinkMode: think,
+        webSearchMode: webSearchRequested
+      }
     });
 
   } catch (error) {
