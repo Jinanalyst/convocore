@@ -1205,18 +1205,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[90vh] p-0 overflow-hidden">
-        <div className="flex flex-col sm:flex-row h-full">
+      <DialogContent className="w-full max-w-4xl p-0 overflow-hidden flex flex-col h-[95vh] max-h-[95vh] sm:h-[90vh] sm:max-h-[90vh] md:h-[85vh] md:max-h-[85vh] m-2 sm:m-4 md:m-6 lg:m-8">
+        <div className="flex flex-col sm:flex-row h-full min-h-0">
           {/* Mobile Header with Tab Selector */}
-          <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4 flex-shrink-0">
-            <DialogHeader className="mb-4">
+          <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-3 sm:p-4 flex-shrink-0">
+            <DialogHeader className="mb-3">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
             
             <select
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value as SettingsTab)}
-              className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+              className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm"
             >
               {tabs.map((tab) => (
                 <option key={tab.id} value={tab.id}>
@@ -1227,8 +1227,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Desktop Sidebar */}
-          <div className="hidden sm:flex w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex-col flex-shrink-0">
-            <DialogHeader className="mb-6">
+          <div className="hidden sm:flex w-56 md:w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-3 md:p-4 flex-col flex-shrink-0">
+            <DialogHeader className="mb-4 md:mb-6">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
             
@@ -1240,14 +1240,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as SettingsTab)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-lg transition-colors",
+                      "w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 text-left text-xs md:text-sm rounded-lg transition-colors",
                       activeTab === tab.id
                         ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{tab.label}</span>
                   </button>
                 );
               })}
@@ -1255,43 +1255,40 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Scrollable Content Area */}
-            <div 
-              className="flex-1 overflow-y-auto p-4 sm:p-6" 
-              style={{ 
-                maxHeight: 'calc(90vh - 80px)',
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e0 transparent'
-              }}
-            >
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Scrollable Content Area - Responsive height calculation */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
               {renderTabContent()}
             </div>
             
-            {/* Fixed Footer */}
-            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-zinc-900 flex-shrink-0">
-              <Button 
-                variant="outline" 
-                onClick={() => onOpenChange?.(false)}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSave} 
-                disabled={isSaving} 
-                className={cn(
-                  "gap-2 w-full sm:w-auto order-1 sm:order-2",
-                  saveStatus === 'success' && "bg-green-600 hover:bg-green-700",
-                  saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
-                )}
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 
-                 saveStatus === 'success' ? 'Saved!' :
-                 saveStatus === 'error' ? 'Error!' :
-                 'Save Changes'}
-              </Button>
+            {/* Fixed Footer - Fully responsive spacing */}
+            <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex-shrink-0 p-3 sm:p-4 pb-4 sm:pb-4 md:pb-4 safe-area-inset-bottom">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => onOpenChange?.(false)}
+                  className="w-full sm:w-auto order-2 sm:order-1 h-10 sm:h-10 md:h-11 text-sm px-4"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving} 
+                  className={cn(
+                    "gap-2 w-full sm:w-auto order-1 sm:order-2 h-10 sm:h-10 md:h-11 text-sm px-4",
+                    saveStatus === 'success' && "bg-green-600 hover:bg-green-700",
+                    saveStatus === 'error' && "bg-red-600 hover:bg-red-700"
+                  )}
+                >
+                  <Save className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">
+                    {isSaving ? 'Saving...' : 
+                     saveStatus === 'success' ? 'Saved!' :
+                     saveStatus === 'error' ? 'Error!' :
+                     'Save Changes'}
+                  </span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
