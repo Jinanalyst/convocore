@@ -1,7 +1,7 @@
 {
   "name": "Convocore - Where AI Meets Web3",
   "short_name": "Convocore",
-  "description": "Advanced AI chat platform with blockchain payments. Experience intelligent conversations with code generation, problem solving, and secure USDT payments on TRON blockchain.",
+  "description": "Advanced AI chat platform with blockchain payments. Experience intelligent conversations with code generation, problem solving, and secure USDT payments on multiple blockchains.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

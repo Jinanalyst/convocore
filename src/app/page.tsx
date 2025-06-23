@@ -34,7 +34,7 @@ export default function Home() {
       <div className="sr-only">
         <h1>Convocore - AI Meets Web3</h1>
         <p>
-          AI chat with secure USDT payments on TRON blockchain.
+          AI chat with secure USDT payments on multiple blockchains.
         </p>
       </div>
 
@@ -66,7 +66,7 @@ export default function Home() {
               : 'text-sm sm:text-base md:text-xl lg:text-2xl py-4'
           }`}>
             <span className="block">AI chat with secure</span>
-            <span className="block">USDT payments on TRON blockchain.</span>
+                            <span className="block">USDT payments on multiple blockchains.</span>
           </div>
           
           {/* CTA Button - Enhanced for Mobile */}

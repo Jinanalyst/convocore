@@ -346,7 +346,7 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
             transition={{ delay: 0.2 }}
             className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
           >
-            AI chat with secure USDT payments on TRON blockchain. Start a conversation to unlock intelligent assistance.
+            AI chat with secure USDT payments on multiple blockchains. Start a conversation to unlock intelligent assistance.
           </motion.p>
         </div>
 

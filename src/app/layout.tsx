@@ -13,11 +13,11 @@ export const metadata: Metadata = {
     template: "%s | Convocore",
     default: "Convocore - AI Meets Web3"
   },
-  description: "AI chat with blockchain payments. Secure USDT payments on TRON blockchain.",
+  description: "AI chat with blockchain payments. Secure USDT payments on multiple blockchains.",
   keywords: [
-    "AI chat", "conversational AI", "blockchain payments", "USDT payments", "TRON", 
-    "Web3 AI", "code generation", "smart contracts", "crypto payments", "AI assistant",
-    "AI chat with USDT payments", "blockchain AI assistant", "TRON AI platform"
+    "AI chat", "conversational AI", "blockchain payments", "USDT payments", "TRON", "Ethereum", "BSC", "Polygon",
+    "Web3 AI", "code generation", "smart contracts", "crypto payments", "AI assistant", "PayPal payments",
+    "AI chat with USDT payments", "blockchain AI assistant", "multi-chain AI platform"
   ],
   authors: [{ name: "Convocore Team" }],
   creator: "Convocore",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     url: 'https://convocore.site',
     siteName: 'Convocore',
     title: 'Convocore - AI Meets Web3',
-    description: 'AI chat with blockchain payments. Secure USDT payments on TRON blockchain.',
+    description: 'AI chat with blockchain payments. Secure USDT payments on multiple blockchains.',
     images: [
       {
         url: '/og-image.png',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Convocore - AI Meets Web3',
-    description: 'AI chat with blockchain payments. Secure USDT payments on TRON blockchain.',
+    description: 'AI chat with blockchain payments. Secure USDT payments on multiple blockchains.',
     images: ['/twitter-image.png'],
     creator: '@convocore',
   },
