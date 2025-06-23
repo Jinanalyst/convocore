@@ -344,7 +344,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     switch (activeTab) {
       case 'general':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-8">
             <div>
               <label className="text-sm font-medium text-gray-900 dark:text-white">Language</label>
               <select 
@@ -375,7 +375,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'account':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-8">
             {/* Profile Section */}
             <div className="space-y-4">
               {/* Avatar and Basic Info */}
@@ -575,54 +575,56 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'ai-model':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-8">
             <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Default AI Model</label>
+              <label className="text-sm font-medium text-gray-900 dark:text-white">Default Model</label>
               <select 
                 value={settings.aiModel.defaultModel}
                 onChange={(e) => updateSettings({ 
                   aiModel: { ...settings.aiModel, defaultModel: e.target.value }
                 })}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
-                <option value="gpt-4o">Convocore Omni</option>
-                <option value="gpt-4-turbo">Convocore Turbo</option>
-                <option value="claude-3-opus-20240229">Convocore Alpha</option>
-                <option value="claude-3-sonnet-20240229">Convocore Nova</option>
+                <option value="gpt-4o">GPT-4o (Latest)</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                <option value="claude-3-haiku">Claude 3 Haiku</option>
               </select>
             </div>
             
             <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">
-                Temperature: {settings.aiModel.temperature}
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Controls randomness in responses (0 = focused, 1 = creative)</p>
+              <label className="text-sm font-medium text-gray-900 dark:text-white">Temperature</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Controls randomness: 0 is focused, 1 is creative</p>
               <input 
-                type="range" 
-                min="0" 
-                max="1" 
+                type="range"
+                min="0"
+                max="1"
                 step="0.1"
                 value={settings.aiModel.temperature}
                 onChange={(e) => updateSettings({ 
                   aiModel: { ...settings.aiModel, temperature: parseFloat(e.target.value) }
                 })}
-                className="mt-2 w-full"
+                className="mt-2 w-full" 
               />
+              <span className="text-xs text-gray-500">{settings.aiModel.temperature}</span>
             </div>
             
             <div>
               <label className="text-sm font-medium text-gray-900 dark:text-white">Max Tokens</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum length of AI responses</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum length of the response</p>
               <input 
-                type="number" 
-                min="100" 
-                max="4000"
+                type="range"
+                min="256"
+                max="4096"
+                step="256"
                 value={settings.aiModel.maxTokens}
                 onChange={(e) => updateSettings({ 
                   aiModel: { ...settings.aiModel, maxTokens: parseInt(e.target.value) }
                 })}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-2 w-full" 
               />
+              <span className="text-xs text-gray-500">{settings.aiModel.maxTokens} tokens</span>
             </div>
             
             <div>
@@ -637,16 +639,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 />
                 <span className="ml-2 text-sm font-medium text-gray-900 dark:text-white">Stream responses</span>
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">Show responses as they're generated</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">Show responses as they are generated</p>
             </div>
           </div>
         );
 
       case 'appearance':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
-              <label className="text-sm font-medium text-gray-900 dark:text-white">Theme</label>
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Theme</h3>
               <div className="mt-2 space-y-2">
                 {[
                   { value: 'light', label: 'Light', icon: Sun },
@@ -673,7 +675,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'notifications':
         return (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Notification Preferences</h3>
               
@@ -854,7 +856,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'privacy':
         return (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Privacy Settings</h3>
               <div className="space-y-3 sm:space-y-4">
@@ -896,7 +898,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       case 'billing':
         return (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-4 sm:space-y-6 pb-8">
             <div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Billing & Usage</h3>
               
@@ -1012,10 +1014,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] p-0 sm:h-[80vh]">
+      <DialogContent className="w-full max-w-4xl h-[95vh] max-h-[900px] p-0 sm:h-[85vh]">
         <div className="flex flex-col sm:flex-row h-full">
           {/* Mobile Header with Tab Selector */}
-          <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4">
+          <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4 flex-shrink-0">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
@@ -1034,7 +1036,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Desktop Sidebar */}
-          <div className="hidden sm:flex w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex-col">
+          <div className="hidden sm:flex w-64 bg-gray-50 dark:bg-zinc-800 border-r border-gray-200 dark:border-zinc-700 p-4 flex-col flex-shrink-0">
             <DialogHeader className="mb-6">
               <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
             </DialogHeader>
@@ -1062,13 +1064,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-zinc-600 scrollbar-track-transparent">
               {renderTabContent()}
             </div>
             
             {/* Footer */}
-            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-zinc-900">
+            <div className="border-t border-gray-200 dark:border-zinc-700 p-4 flex flex-col sm:flex-row justify-end gap-3 bg-white dark:bg-zinc-900 flex-shrink-0">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange?.(false)}
