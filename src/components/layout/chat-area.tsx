@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
+import { VoiceModal } from "@/components/modals/voice-modal";
 import { usageService } from "@/lib/usage-service";
 import { useAuth } from "@/lib/auth-context";
 import { 
@@ -57,6 +58,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [currentAgent, setCurrentAgent] = useState<ConvoAgent | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load real messages from Supabase
@@ -266,32 +268,14 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   };
 
   const handleVoiceInput = () => {
-    console.log('Voice input requested');
-    // In a real implementation, this would start voice recording
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log('Voice transcript:', transcript);
-        // Auto-submit the voice message
-        handleSendMessage(transcript, 'gpt-4o');
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        alert('Speech recognition error: ' + event.error);
-      };
-      
-      recognition.start();
-    } else {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
-    }
+    console.log('Voice input requested - opening voice modal');
+    setVoiceModalOpen(true);
+  };
+
+  const handleVoiceTranscriptComplete = (transcript: string) => {
+    console.log('Voice transcript received:', transcript);
+    // Auto-submit the voice message with default model
+    handleSendMessage(transcript, 'convocore-omni');
   };
 
   const formatTimestamp = (date: Date) => {
@@ -412,6 +396,13 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
             </div>
           </div>
         </div>
+
+        {/* Voice Modal */}
+        <VoiceModal
+          open={voiceModalOpen}
+          onOpenChange={setVoiceModalOpen}
+          onTranscriptComplete={handleVoiceTranscriptComplete}
+        />
       </div>
     );
   }
@@ -556,6 +547,13 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           className="w-full"
         />
       </div>
+
+      {/* Voice Modal */}
+      <VoiceModal
+        open={voiceModalOpen}
+        onOpenChange={setVoiceModalOpen}
+        onTranscriptComplete={handleVoiceTranscriptComplete}
+      />
     </div>
   );
 } 
