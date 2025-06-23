@@ -73,13 +73,13 @@ export default function DemoPage() {
           </Link>
           <div className="flex items-center gap-4">
             <Button asChild variant="ghost">
-              <Link href="/chat">Chat</Link>
+                                  <Link href="/convocore">Chat</Link>
             </Button>
             <Button asChild variant="ghost">
               <Link href="/pricing">Pricing</Link>
             </Button>
             <Button asChild>
-              <Link href="/chat">Get Started</Link>
+                                  <Link href="/convocore">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function DemoPage() {
             </p>
             <div className="flex gap-4">
               <Button asChild>
-                <Link href="/chat">Try Live Chat</Link>
+                                  <Link href="/convocore">Try Live Chat</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/pricing">View Pricing</Link>

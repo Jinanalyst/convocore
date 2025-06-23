@@ -193,7 +193,7 @@ class NotificationService {
       action: chatId ? {
         label: 'View Chat',
         onClick: () => {
-          window.location.href = `/chat?id=${chatId}`;
+          window.location.href = `/convocore?id=${chatId}`;
         }
       } : undefined
     });

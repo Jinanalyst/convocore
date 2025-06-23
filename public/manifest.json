@@ -68,7 +68,7 @@
       "name": "Start New Chat",
       "short_name": "New Chat",
       "description": "Start a new AI conversation",
-      "url": "/chat",
+      "url": "/convocore",
       "icons": [
         {
           "src": "/icon-192.png",

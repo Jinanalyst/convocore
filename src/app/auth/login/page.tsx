@@ -16,7 +16,7 @@ function LoginPageContent() {
   
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/chat';
+  const redirectTo = searchParams.get('redirectTo') || '/convocore';
   const { signInWithGoogle, signInWithWallet } = useAuth();
 
   // Check for auth callback errors

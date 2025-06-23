@@ -114,7 +114,7 @@ export default function Home() {
                 <div className="bg-white/10 dark:bg-black/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
                   <div className="text-center">
                     <div className="text-green-500 dark:text-green-400 font-semibold">Payments</div>
-                    <div className="text-gray-600 dark:text-gray-400 mt-1">USDT on TRON</div>
+                    <div className="text-gray-600 dark:text-gray-400 mt-1">PayPal & USDT</div>
                   </div>
                 </div>
               </div>

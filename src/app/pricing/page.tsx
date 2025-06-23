@@ -50,7 +50,7 @@ export default function PricingPage() {
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-              <Link href="/chat">Try Chat</Link>
+                                    <Link href="/convocore">Try Chat</Link>
             </Button>
             <Button asChild size="sm" className="text-sm">
               <Link href="/auth/login">
