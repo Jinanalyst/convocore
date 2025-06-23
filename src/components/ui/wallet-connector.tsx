@@ -43,6 +43,12 @@ export function WalletConnector({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [installedWallets, setInstalledWallets] = useState<Set<string>>(new Set());
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle client-side mounting to prevent SSR issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Updated wallet options with better detection - MOVED BEFORE useEffect
   const walletOptions: WalletOption[] = [
@@ -271,6 +277,8 @@ export function WalletConnector({
 
   // Check if user is on mobile device
   useEffect(() => {
+    if (!isMounted) return;
+    
     const checkMobile = () => {
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isSmallScreen = window.innerWidth <= 768;
@@ -280,10 +288,12 @@ export function WalletConnector({
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [isMounted]);
 
   // Enhanced wallet detection with comprehensive methods
   useEffect(() => {
+    if (!isMounted) return;
+    
     const detectInstalledWallets = async () => {
       const detected = new Set<string>();
       
@@ -291,14 +301,16 @@ export function WalletConnector({
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log('🔍 Starting wallet detection...');
-      console.log('Window object keys:', Object.keys(window).filter(key => 
-        key.toLowerCase().includes('wallet') || 
-        key.toLowerCase().includes('ethereum') || 
-        key.toLowerCase().includes('solana') || 
-        key.toLowerCase().includes('tron') ||
-        key.toLowerCase().includes('phantom') ||
-        key.toLowerCase().includes('metamask')
-      ));
+      if (typeof window !== 'undefined') {
+        console.log('Window object keys:', Object.keys(window).filter(key => 
+          key.toLowerCase().includes('wallet') || 
+          key.toLowerCase().includes('ethereum') || 
+          key.toLowerCase().includes('solana') || 
+          key.toLowerCase().includes('tron') ||
+          key.toLowerCase().includes('phantom') ||
+          key.toLowerCase().includes('metamask')
+        ));
+      }
       
       // Check for each wallet with improved detection
       walletOptions.forEach(wallet => {
@@ -385,15 +397,17 @@ export function WalletConnector({
       });
       
       // Additional global detection check
-      console.log('🌐 Global wallet objects:', {
-        ethereum: !!(window as any).ethereum,
-        tronLink: !!(window as any).tronLink,
-        solana: !!(window as any).solana,
-        phantom: !!(window as any).phantom,
-        okxwallet: !!(window as any).okxwallet,
-        coinbaseWalletExtension: !!(window as any).coinbaseWalletExtension,
-        trustwallet: !!(window as any).trustwallet
-      });
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Global wallet objects:', {
+          ethereum: !!(window as any).ethereum,
+          tronLink: !!(window as any).tronLink,
+          solana: !!(window as any).solana,
+          phantom: !!(window as any).phantom,
+          okxwallet: !!(window as any).okxwallet,
+          coinbaseWalletExtension: !!(window as any).coinbaseWalletExtension,
+          trustwallet: !!(window as any).trustwallet
+        });
+      }
       
       console.log(`🎯 Detected ${detected.size} wallets:`, Array.from(detected));
       setInstalledWallets(detected);
@@ -412,21 +426,27 @@ export function WalletConnector({
     };
 
     // Listen for common wallet injection events
-    window.addEventListener('ethereum#initialized', handleWalletEvents);
-    window.addEventListener('tronLink#initialized', handleWalletEvents);
-    window.addEventListener('load', handleWalletEvents);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ethereum#initialized', handleWalletEvents);
+      window.addEventListener('tronLink#initialized', handleWalletEvents);
+      window.addEventListener('load', handleWalletEvents);
+    }
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('ethereum#initialized', handleWalletEvents);
-      window.removeEventListener('tronLink#initialized', handleWalletEvents);
-      window.removeEventListener('load', handleWalletEvents);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('ethereum#initialized', handleWalletEvents);
+        window.removeEventListener('tronLink#initialized', handleWalletEvents);
+        window.removeEventListener('load', handleWalletEvents);
+      }
     };
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => {
-    checkWalletConnection();
-  }, []);
+    if (isMounted) {
+      checkWalletConnection();
+    }
+  }, [isMounted]);
 
   useEffect(() => {
     if (walletAddress && walletType === 'tronlink') {
@@ -436,6 +456,8 @@ export function WalletConnector({
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isMounted) return;
+    
     const handleClickOutside = (event: MouseEvent) => {
       const dropdown = document.getElementById('wallet-dropdown');
       if (dropdown && !dropdown.contains(event.target as Node)) {
@@ -445,12 +467,14 @@ export function WalletConnector({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMounted]);
 
   const checkWalletConnection = async () => {
+    if (typeof window === 'undefined') return;
+    
     try {
       // Check TronLink first (for backward compatibility)
-      if (typeof window !== 'undefined' && (window as any).tronLink?.ready) {
+      if ((window as any).tronLink?.ready) {
         const tronLink = (window as any).tronLink;
         if (tronLink.tronWeb?.defaultAddress?.base58) {
           const address = tronLink.tronWeb.defaultAddress.base58;
@@ -472,7 +496,9 @@ export function WalletConnector({
       if (isMobile && wallet.mobileInstallUrl) {
         setError(`${wallet.name} is not installed. Redirecting to mobile app store...`);
         setTimeout(() => {
-          window.open(wallet.mobileInstallUrl!, '_blank');
+          if (typeof window !== 'undefined') {
+            window.open(wallet.mobileInstallUrl!, '_blank');
+          }
         }, 1000);
       } else {
         setError(`${wallet.name} is not installed. Please install it first.`);
@@ -490,6 +516,12 @@ export function WalletConnector({
         setWalletAddress(address);
         setWalletType(wallet.id);
         onWalletConnected?.(address, wallet.id);
+        
+        // Redirect to convocore page after successful connection
+        console.log('Wallet connected successfully, redirecting to /convocore');
+        if (typeof window !== 'undefined') {
+          window.location.href = '/convocore';
+        }
       } else {
         setError(`Failed to connect ${wallet.name}. Please try again.`);
       }
@@ -555,7 +587,7 @@ export function WalletConnector({
   };
 
   const copyAddress = async () => {
-    if (walletAddress) {
+    if (walletAddress && typeof window !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(walletAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -563,7 +595,7 @@ export function WalletConnector({
   };
 
   const openBlockExplorer = () => {
-    if (!walletAddress || !walletType) return;
+    if (!walletAddress || !walletType || typeof window === 'undefined') return;
     
     let url = '';
     switch (walletType) {
@@ -603,6 +635,8 @@ export function WalletConnector({
   };
 
   const installWallet = (wallet: WalletOption) => {
+    if (typeof window === 'undefined') return;
+    
     const installUrl = isMobile && wallet.mobileInstallUrl ? wallet.mobileInstallUrl : wallet.installUrl;
     window.open(installUrl, '_blank');
   };
@@ -617,6 +651,23 @@ export function WalletConnector({
     if (!aInstalled && bInstalled) return 1;
     return 0;
   });
+
+  // Render loading state during SSR
+  if (!isMounted) {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 md:p-6 border border-gray-200 rounded-lg bg-white dark:bg-zinc-800 dark:border-zinc-700">
+          <div className="flex items-center gap-3 mb-4">
+            <Wallet className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Connect Wallet</h3>
+          </div>
+          <div className="animate-pulse">
+            <div className="h-12 bg-gray-200 dark:bg-zinc-700 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -783,54 +834,56 @@ export function WalletConnector({
             </div>
           )}
 
-          {/* Debug Section - Remove in production */}
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                🔍 Wallet Detection Debug
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  console.log('🔄 Manual wallet detection triggered');
-                  window.location.reload();
-                }}
-                className="text-xs"
-              >
-                Refresh Detection
-              </Button>
+          {/* Debug Section - Safe for SSR */}
+          {typeof window !== 'undefined' && (
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  🔍 Wallet Detection Debug
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('🔄 Manual wallet detection triggered');
+                    window.location.reload();
+                  }}
+                  className="text-xs"
+                >
+                  Refresh Detection
+                </Button>
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <div>Detected: {installedWallets.size} wallets</div>
+                <div>Browser: {isMobile ? 'Mobile' : 'Desktop'}</div>
+                <div>Window objects: {Object.keys(window).filter(key => 
+                  key.toLowerCase().includes('wallet') || 
+                  key.toLowerCase().includes('ethereum') || 
+                  key.toLowerCase().includes('solana') || 
+                  key.toLowerCase().includes('tron') ||
+                  key.toLowerCase().includes('phantom')
+                ).join(', ') || 'None found'}</div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-blue-600 dark:text-blue-400">View Detection Details</summary>
+                  <div className="mt-2 p-2 bg-white dark:bg-zinc-800 rounded text-xs font-mono">
+                    {JSON.stringify({
+                      ethereum: !!(window as any).ethereum,
+                      'ethereum.isMetaMask': !!(window as any).ethereum?.isMetaMask,
+                      'ethereum.isCoinbaseWallet': !!(window as any).ethereum?.isCoinbaseWallet,
+                      'ethereum.isTrust': !!(window as any).ethereum?.isTrust,
+                      tronLink: !!(window as any).tronLink,
+                      tronWeb: !!(window as any).tronWeb,
+                      'solana.isPhantom': !!(window as any).solana?.isPhantom,
+                      phantom: !!(window as any).phantom,
+                      okxwallet: !!(window as any).okxwallet,
+                      installedCount: installedWallets.size,
+                      detectedWallets: Array.from(installedWallets)
+                    }, null, 2)}
+                  </div>
+                </details>
+              </div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-              <div>Detected: {installedWallets.size} wallets</div>
-              <div>Browser: {isMobile ? 'Mobile' : 'Desktop'}</div>
-              <div>Window objects: {Object.keys(window).filter(key => 
-                key.toLowerCase().includes('wallet') || 
-                key.toLowerCase().includes('ethereum') || 
-                key.toLowerCase().includes('solana') || 
-                key.toLowerCase().includes('tron') ||
-                key.toLowerCase().includes('phantom')
-              ).join(', ') || 'None found'}</div>
-              <details className="mt-2">
-                <summary className="cursor-pointer text-blue-600 dark:text-blue-400">View Detection Details</summary>
-                <div className="mt-2 p-2 bg-white dark:bg-zinc-800 rounded text-xs font-mono">
-                  {JSON.stringify({
-                    ethereum: !!(window as any).ethereum,
-                    'ethereum.isMetaMask': !!(window as any).ethereum?.isMetaMask,
-                    'ethereum.isCoinbaseWallet': !!(window as any).ethereum?.isCoinbaseWallet,
-                    'ethereum.isTrust': !!(window as any).ethereum?.isTrust,
-                    tronLink: !!(window as any).tronLink,
-                    tronWeb: !!(window as any).tronWeb,
-                    'solana.isPhantom': !!(window as any).solana?.isPhantom,
-                    phantom: !!(window as any).phantom,
-                    okxwallet: !!(window as any).okxwallet,
-                    installedCount: installedWallets.size,
-                    detectedWallets: Array.from(installedWallets)
-                  }, null, 2)}
-                </div>
-              </details>
-            </div>
-          </div>
+          )}
         </div>
       ) : (
         <div className="p-4 md:p-6 border border-green-200 rounded-lg bg-green-50 dark:bg-green-950 dark:border-green-800">
