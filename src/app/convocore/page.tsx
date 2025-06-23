@@ -43,15 +43,31 @@ export default function ConvocorePage() {
 
   const loadChats = async () => {
     try {
+      console.log('🔄 Loading chats...');
+      
       // Check if user is authenticated via wallet or Supabase
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
-        // For wallet users, load chats from localStorage or provide demo data
+        // For wallet users, load chats from localStorage
         const savedChats = localStorage.getItem('wallet_chats');
         if (savedChats) {
           const parsedChats = JSON.parse(savedChats);
-          setChats(parsedChats);
+          // Filter out demo chats if there are real chats
+          const realChats = parsedChats.filter((chat: Chat) => 
+            !chat.id.startsWith('demo_') && chat.lastMessage !== 'Hello! How can I help you today?'
+          );
+          
+          if (realChats.length > 0) {
+            setChats(realChats);
+            console.log('📥 Loaded', realChats.length, 'real wallet chats');
+            return;
+          } else {
+            // Only show demo chats if no real chats exist
+            setChats(parsedChats);
+            console.log('📝 Loaded demo chats for wallet user');
+            return;
+          }
         } else {
           // Start with demo chats for new wallet users to show functionality
           const demoChats: Chat[] = [
@@ -76,9 +92,24 @@ export default function ConvocorePage() {
           ];
           setChats(demoChats);
           localStorage.setItem('wallet_chats', JSON.stringify(demoChats));
+          console.log('🆕 Created demo chats for new wallet user');
         }
-        console.log('Loaded chats for wallet user');
         return;
+      }
+
+      // Check for local storage chats (fallback for unauthenticated users)
+      const localChats = localStorage.getItem('local_chats');
+      if (localChats) {
+        const parsedLocalChats = JSON.parse(localChats);
+        const realLocalChats = parsedLocalChats.filter((chat: Chat) => 
+          !chat.id.startsWith('demo_') && chat.lastMessage !== 'Hello! How can I help you today?'
+        );
+        
+        if (realLocalChats.length > 0) {
+          setChats(realLocalChats);
+          console.log('📥 Loaded', realLocalChats.length, 'local chats');
+          return;
+        }
       }
 
       // For Supabase authenticated users
@@ -100,8 +131,8 @@ export default function ConvocorePage() {
         .limit(20);
 
       if (error) {
-        console.error('Error loading chats:', error);
-        // Fallback to demo chats for unauthenticated users
+        console.warn('Could not load Supabase chats (expected if not configured):', error);
+        // Fallback to demo chats for users without Supabase
         const demoChats: Chat[] = [
           {
             id: `demo_${Date.now()}_1`,
@@ -123,6 +154,7 @@ export default function ConvocorePage() {
           },
         ];
         setChats(demoChats);
+        console.log('📝 Loaded demo chats (Supabase unavailable)');
         return;
       }
 
@@ -156,8 +188,10 @@ export default function ConvocorePage() {
           },
         ];
         setChats(demoChats);
+        console.log('📝 No Supabase conversations found, showing demo chats');
       } else {
         setChats(formattedChats);
+        console.log('📥 Loaded', formattedChats.length, 'Supabase conversations');
       }
     } catch (error) {
       console.error('Error loading chats:', error);
@@ -183,77 +217,12 @@ export default function ConvocorePage() {
         },
       ];
       setChats(demoChats);
-    }
-  };
-
-  const handleNewChat = async () => {
-    try {
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      
-      if (walletConnected) {
-        // For wallet users, create chat locally
-        const newChatId = `wallet_chat_${Date.now()}`;
-        const newChat: Chat = {
-          id: newChatId,
-          title: `New Chat ${new Date().toLocaleDateString()}`,
-          lastMessage: 'Start a new conversation...',
-          timestamp: new Date(),
-        };
-
-        const updatedChats = [newChat, ...chats];
-        setChats(updatedChats);
-        setActiveChatId(newChatId);
-        
-        // Save to localStorage
-        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-        console.log('Created new chat for wallet user');
-        return;
-      }
-
-      // For Supabase authenticated users
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        return;
-      }
-
-      const { data: newConversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: `New Chat ${new Date().toLocaleDateString()}`,
-          model: 'gpt-4o'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating new chat:', error);
-        return;
-      }
-
-      // Add to local state
-      const newChat: Chat = {
-        id: newConversation.id,
-        title: newConversation.title,
-        lastMessage: 'Start a new conversation...',
-        timestamp: new Date(newConversation.created_at),
-      };
-
-      setChats(prev => [newChat, ...prev]);
-      setActiveChatId(newConversation.id);
-    } catch (error) {
-      console.error('Error creating new chat:', error);
-      // Fallback to just clearing active chat
-      setActiveChatId(null);
+      console.log('🆘 Error loading chats, fallback to demo chats');
     }
   };
 
   const handleSelectChat = (chatId: string) => {
+    console.log('🎯 Selecting chat:', chatId);
     setActiveChatId(chatId);
   };
 
@@ -278,32 +247,25 @@ export default function ConvocorePage() {
     
     // Update the current chat's last message and timestamp
     if (activeChatId) {
-      setChats(prevChats => 
-        prevChats.map(chat => 
-          chat.id === activeChatId 
-            ? { 
-                ...chat, 
-                lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-                timestamp: new Date()
-              }
-            : chat
-        )
+      const updatedChats = chats.map(chat => 
+        chat.id === activeChatId 
+          ? { 
+              ...chat, 
+              lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+              timestamp: new Date()
+            }
+          : chat
       );
+      setChats(updatedChats);
       
       // Update localStorage for wallet users
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       if (walletConnected) {
-        const updatedChats = chats.map(chat => 
-          chat.id === activeChatId 
-            ? { 
-                ...chat, 
-                lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-                timestamp: new Date()
-              }
-            : chat
-        );
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
       }
+    } else {
+      // If no active chat, create a new one with this message
+      handleNewChat(message);
     }
   };
 
@@ -360,6 +322,98 @@ export default function ConvocorePage() {
     
     const currentChat = chats.find(chat => chat.id === activeChatId);
     return currentChat?.title;
+  };
+
+  const handleNewChat = async (initialMessage?: string) => {
+    try {
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected) {
+        // For wallet users, create chat locally
+        const newChatId = `wallet_chat_${Date.now()}`;
+        const newChat: Chat = {
+          id: newChatId,
+          title: initialMessage ? 
+            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
+            `New Chat ${new Date().toLocaleDateString()}`,
+          lastMessage: initialMessage || 'Start a new conversation...',
+          timestamp: new Date(),
+        };
+
+        const updatedChats = [newChat, ...chats];
+        setChats(updatedChats);
+        setActiveChatId(newChatId);
+        
+        // Save to localStorage
+        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+        console.log('✅ Created new chat for wallet user:', newChatId);
+        return newChatId;
+      }
+
+      // For Supabase authenticated users
+      const { createClientComponentClient } = await import('@/lib/supabase');
+      const supabase = createClientComponentClient();
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        // Fallback to local storage for unauthenticated users
+        const newChatId = `local_chat_${Date.now()}`;
+        const newChat: Chat = {
+          id: newChatId,
+          title: initialMessage ? 
+            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
+            `New Chat ${new Date().toLocaleDateString()}`,
+          lastMessage: initialMessage || 'Start a new conversation...',
+          timestamp: new Date(),
+        };
+
+        const updatedChats = [newChat, ...chats];
+        setChats(updatedChats);
+        setActiveChatId(newChatId);
+        
+        // Save to localStorage as fallback
+        localStorage.setItem('local_chats', JSON.stringify(updatedChats));
+        console.log('📦 Created fallback local chat:', newChatId);
+        return newChatId;
+      }
+
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: initialMessage ? 
+            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
+            `New Chat ${new Date().toLocaleDateString()}`,
+          model: 'gpt-4o'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating new chat:', error);
+        return;
+      }
+
+      // Add to local state
+      const newChat: Chat = {
+        id: newConversation.id,
+        title: newConversation.title,
+        lastMessage: initialMessage || 'Start a new conversation...',
+        timestamp: new Date(newConversation.created_at),
+      };
+
+      const updatedChats = [newChat, ...chats];
+      setChats(updatedChats);
+      setActiveChatId(newConversation.id);
+      console.log('✅ Created new Supabase chat:', newConversation.id);
+      return newConversation.id;
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      // Fallback to just clearing active chat
+      setActiveChatId(null);
+    }
   };
 
   return (

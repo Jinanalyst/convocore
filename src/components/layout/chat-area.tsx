@@ -75,48 +75,64 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   }, [chatId]);
 
   const loadMessages = async (conversationId: string) => {
+    if (!conversationId) return;
+
     try {
-      // Skip loading if no proper conversation ID
-      if (!conversationId || conversationId === 'chat_demo') {
-        console.log('Demo mode - not loading messages from database');
-        setMessages([]);
+      setIsLoading(true);
+      console.log('🔄 Loading messages for conversation:', conversationId);
+
+      // Check if user is using wallet authentication
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_')) {
+        // For wallet users or demo chats, load from localStorage
+        const savedMessages = localStorage.getItem(`chat_messages_${conversationId}`);
+        if (savedMessages) {
+          const parsedMessages = JSON.parse(savedMessages);
+          const formattedMessages: Message[] = parsedMessages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(formattedMessages);
+          console.log('📥 Loaded', formattedMessages.length, 'messages from localStorage');
+        } else {
+          console.log('📭 No saved messages found for this chat');
+          setMessages([]);
+        }
         return;
       }
 
-      // Check if we have Supabase configuration
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.log('Supabase not configured, using local storage instead');
-        setMessages([]);
-        return;
-      }
-
+      // For Supabase authenticated users, load from database
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      const { data: messagesData, error } = await supabase
+      const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.warn('Could not load messages from Supabase (expected if not configured):', error.message);
+        console.error('Error loading messages:', error);
         setMessages([]);
         return;
       }
 
-      const formattedMessages: Message[] = messagesData?.map(msg => ({
+      const formattedMessages: Message[] = messages?.map(msg => ({
         id: msg.id,
         content: msg.content,
-        role: msg.role as 'user' | 'assistant',
-        timestamp: new Date(msg.created_at),
+        role: msg.role,
+        timestamp: new Date(msg.created_at)
       })) || [];
 
       setMessages(formattedMessages);
+      console.log('📥 Loaded', formattedMessages.length, 'messages from database');
+      
     } catch (error) {
-      console.warn('Could not load messages (expected if Supabase not configured):', error instanceof Error ? error.message : 'Unknown error');
-      // Fallback to empty messages if Supabase not configured
+      console.error('Error loading messages:', error);
       setMessages([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -226,6 +242,50 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
   const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
     try {
+      console.log('💾 Saving message:', { conversationId, role, content: content.substring(0, 50) + '...' });
+
+      // Check if user is using wallet authentication
+      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+      
+      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_')) {
+        // For wallet users or demo chats, save to localStorage
+        const messageToSave = {
+          id: generateId(),
+          content,
+          role,
+          timestamp: new Date().toISOString()
+        };
+
+        // Get existing messages
+        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
+        const messages = existingMessages ? JSON.parse(existingMessages) : [];
+        
+        // Add new message
+        messages.push(messageToSave);
+        
+        // Save back to localStorage
+        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
+        console.log('✅ Message saved to localStorage');
+        
+        // Also update the chat list with the latest message
+        const walletChats = localStorage.getItem('wallet_chats');
+        if (walletChats) {
+          const chats = JSON.parse(walletChats);
+          const updatedChats = chats.map((chat: any) => 
+            chat.id === conversationId 
+              ? { 
+                  ...chat, 
+                  lastMessage: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+                  timestamp: new Date().toISOString()
+                }
+              : chat
+          );
+          localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+        }
+        return;
+      }
+
+      // For Supabase authenticated users, save to database
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
@@ -238,10 +298,42 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         });
 
       if (error) {
-        console.error('Error saving message:', error);
+        console.error('Error saving message to database:', error);
+        // Fallback to localStorage if database fails
+        const messageToSave = {
+          id: generateId(),
+          content,
+          role,
+          timestamp: new Date().toISOString()
+        };
+
+        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
+        const messages = existingMessages ? JSON.parse(existingMessages) : [];
+        messages.push(messageToSave);
+        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
+        console.log('📦 Fallback: Message saved to localStorage');
+      } else {
+        console.log('✅ Message saved to database');
       }
     } catch (error) {
       console.error('Error saving message:', error);
+      // Final fallback to localStorage
+      try {
+        const messageToSave = {
+          id: generateId(),
+          content,
+          role,
+          timestamp: new Date().toISOString()
+        };
+
+        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
+        const messages = existingMessages ? JSON.parse(existingMessages) : [];
+        messages.push(messageToSave);
+        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
+        console.log('🆘 Emergency fallback: Message saved to localStorage');
+      } catch (fallbackError) {
+        console.error('Failed to save message even with fallback:', fallbackError);
+      }
     }
   };
 
