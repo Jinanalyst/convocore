@@ -102,35 +102,66 @@ const AIChatInput = ({
       const query = mentionMatch[1].toLowerCase();
       const startPos = cursorPos - mentionMatch[0].length;
       
-      console.log('🔍 Mention detected:', { query, startPos, beforeCursor });
+      console.log('🔍 Mention detected:', { 
+        query, 
+        startPos, 
+        beforeCursor,
+        fullMatch: mentionMatch[0],
+        queryLength: query.length 
+      });
       
       // Determine type based on what user is typing
       let mentionType: 'model' | 'agent' | null = null;
       
-      if (query === '' || 'model'.startsWith(query) || 'models'.startsWith(query)) {
+      // Show both models and agents when just typing @
+      if (query === '') {
+        mentionType = 'model'; // Start with models, user can type more to get agents
+      }
+      // Check for explicit model keywords
+      else if ('model'.startsWith(query) || 'models'.startsWith(query)) {
         mentionType = 'model';
-      } else if ('aiagent'.startsWith(query) || 'agent'.startsWith(query)) {
+      }
+      // Check for explicit agent keywords
+      else if ('aiagent'.startsWith(query) || 'agent'.startsWith(query) || query === 'ai') {
         mentionType = 'agent';
-      } else {
+      }
+      // Check for specific agent tags (like @codegen, @debugger, etc.)
+      else if (query.startsWith('code') || query.startsWith('debug') || query.startsWith('ui') || 
+               query.startsWith('image') || query.startsWith('write') || query.startsWith('analys') ||
+               query.startsWith('consul') || query.startsWith('calc') || query.startsWith('seo') ||
+               query.startsWith('deploy') || query.startsWith('chat') || query.startsWith('db')) {
+        mentionType = 'agent';
+      }
+      else {
         // Check if query matches any model or agent names
         const modelMatches = MODELS.some(m => 
           m.name.toLowerCase().includes(query) || m.id.toLowerCase().includes(query)
         );
         const agentMatches = AI_AGENTS.some(a => 
-          a.name.toLowerCase().includes(query) || a.tag.toLowerCase().includes(query)
+          a.name.toLowerCase().includes(query) || a.tag.toLowerCase().includes(query.replace('@', ''))
         );
         
-        if (modelMatches && !agentMatches) mentionType = 'model';
-        else if (agentMatches && !modelMatches) mentionType = 'agent';
-        else if (query.length > 0) {
-          // Default to showing both by preferring agents for ambiguous cases
+        if (modelMatches && !agentMatches) {
+          mentionType = 'model';
+        } else if (agentMatches && !modelMatches) {
+          mentionType = 'agent';
+        } else if (agentMatches || modelMatches) {
+          // If both match, prefer agents since they're more specific
+          mentionType = 'agent';
+        } else if (query.length > 0) {
+          // For unrecognized queries, try agents first
           mentionType = 'agent';
         }
       }
       
       if (mentionType) {
         const filteredItems = filterMentionItems(mentionType, query);
-        console.log('✅ Showing mentions:', { type: mentionType, count: filteredItems.length });
+        console.log('✅ Showing mentions:', { 
+          type: mentionType, 
+          count: filteredItems.length,
+          query,
+          detectionReason: mentionType === 'agent' ? 'Agent keywords/tags detected' : 'Model keywords detected'
+        });
         
         setShowMentions(true);
         setMentionType(mentionType);
