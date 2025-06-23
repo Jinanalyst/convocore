@@ -39,6 +39,12 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
         const userUsage = usageService.getUserUsage(user.id);
         const subscription = usageService.getUserSubscription(user.id);
         
+        console.log('🔄 Loading usage for user:', user.id, {
+          used: userUsage.requestsUsed,
+          limit: userUsage.requestsLimit,
+          plan: subscription.tier
+        });
+        
         setUsage({
           used: userUsage.requestsUsed,
           limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1, // -1 means unlimited for paid plans
@@ -51,15 +57,33 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
 
     loadUsage();
     
-    // Listen for storage changes (usage updates from other tabs)
+    // Listen for storage changes (usage updates from other tabs or components)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'usage_updated') {
+      if (e.key === 'usage_updated' || e.key?.startsWith('user_usage_')) {
+        console.log('📊 Usage storage change detected, reloading...');
         loadUsage();
       }
     };
     
+    // Also listen for custom events
+    const handleUsageUpdate = () => {
+      console.log('📊 Custom usage update event detected, reloading...');
+      loadUsage();
+    };
+    
+    // Periodic refresh to ensure UI stays in sync
+    const refreshInterval = setInterval(() => {
+      loadUsage();
+    }, 5000); // Refresh every 5 seconds
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('usageUpdated', handleUsageUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('usageUpdated', handleUsageUpdate);
+      clearInterval(refreshInterval);
+    };
   }, [user]);
 
   // Don't show indicator for unlimited plans

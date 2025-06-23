@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { aiService } from '@/lib/ai-service';
 import { CONVO_AGENTS, getAgentByTag, formatMessageWithAgent } from '@/lib/model-agents';
 import { memoryService } from '@/lib/memory-service';
+import { usageService } from '@/lib/usage-service';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
@@ -47,56 +48,100 @@ function extractUserIdFromRequest(request: NextRequest): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 Chat API called');
+  
   try {
     const body = await request.json();
-    const { messages, model = 'gpt-4o', chatId, includeWebSearch, think, deepSearch, language = 'en' } = body;
+    const { 
+      messages, 
+      model = 'gpt-4o', 
+      chatId, 
+      includeWebSearch = false, 
+      deepSearch = false,
+      think = false,
+      language = 'en'
+    } = body;
 
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: 'Messages array is required' },
-        { status: 400 }
-      );
-    }
-
-    console.log('📨 Chat API Request:', {
+    console.log('📨 Received request:', {
+      messageCount: messages?.length,
       model,
-      messageCount: messages.length,
-      lastMessage: messages[messages.length - 1]?.content?.substring(0, 100),
-      webSearch: includeWebSearch || deepSearch,
-      think: think,
-      language: language
+      includeWebSearch,
+      deepSearch,
+      think,
+      language,
+      lastMessage: messages?.[messages.length - 1]?.content?.substring(0, 50) + '...'
     });
 
-    // Check API configuration status
-    const apiStatus = await aiService.validateConfiguration();
-    console.log('🔑 API Configuration Status:', apiStatus);
-
-    if (!apiStatus.openai && !apiStatus.anthropic) {
-      console.error('❌ No AI API keys configured');
+    // Validate request
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({
-        error: 'AI service not configured',
-        details: 'Please configure OPENAI_API_KEY or ANTHROPIC_API_KEY in your environment variables',
-        configStatus: apiStatus
-      }, { status: 503 });
+        error: 'Messages array is required and cannot be empty'
+      }, { status: 400 });
     }
 
-    // Get user ID from session or wallet
+    // Basic API status check
+    const apiStatus = {
+      openaiConfigured: !!process.env.OPENAI_API_KEY,
+      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
+      supabaseConfigured: !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+      timestamp: new Date().toISOString()
+    };
+
+    // Extract user ID for rate limiting and usage tracking
     let userId = 'anonymous';
     
-    // Try to get user from Supabase auth
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    // Try to get user ID from wallet authentication (cookies)
+    const walletConnected = request.cookies.get('wallet_connected')?.value === 'true';
+    const walletAddress = request.cookies.get('wallet_address')?.value;
+    
+    if (walletConnected && walletAddress) {
+      userId = `wallet_${walletAddress.toLowerCase()}`;
+      console.log('🔗 Wallet user detected:', userId);
+    } else {
+      // Try Supabase authentication
       try {
         const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           userId = user.id;
+          console.log('👤 Supabase user detected:', userId);
         }
       } catch (error) {
-        console.log('Supabase auth not available:', error);
+        console.log('⚠️ Supabase auth not available:', error);
+      }
+    }
+
+    // Check usage limits for authenticated users
+    if (userId !== 'anonymous') {
+      const canMakeRequest = usageService.canMakeRequest(userId);
+      
+      if (!canMakeRequest) {
+        const userUsage = usageService.getUserUsage(userId);
+        const subscription = usageService.getUserSubscription(userId);
+        
+        console.log('🚫 Usage limit exceeded for user:', userId, {
+          used: userUsage.requestsUsed,
+          limit: userUsage.requestsLimit,
+          plan: subscription.tier
+        });
+        
+        return NextResponse.json({
+          error: 'Usage limit exceeded',
+          details: subscription.tier === 'free' 
+            ? `Daily limit of ${userUsage.requestsLimit} chats reached. Upgrade to Pro for unlimited chats.`
+            : `Monthly limit of ${userUsage.requestsLimit} chats reached.`,
+          usage: {
+            used: userUsage.requestsUsed,
+            limit: userUsage.requestsLimit,
+            plan: subscription.tier,
+            resetDate: userUsage.resetDate
+          },
+          upgradeUrl: '/pricing'
+        }, { status: 429 });
       }
     }
 
@@ -248,6 +293,28 @@ When responding:
     try {
       aiResponse = await aiService.generateResponse(chatMessages, model);
       console.log('✅ AI response generated successfully');
+      
+      // Increment usage count after successful AI response
+      if (userId !== 'anonymous') {
+        try {
+          const result = usageService.incrementUsage(userId);
+          console.log('📊 Usage incremented:', {
+            userId,
+            success: result.success,
+            used: result.usage.requestsUsed,
+            limit: result.usage.requestsLimit,
+            plan: result.usage.plan
+          });
+          
+          // Trigger storage event for UI updates
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('usage_updated', Date.now().toString());
+            window.dispatchEvent(new StorageEvent('storage', { key: 'usage_updated' }));
+          }
+        } catch (usageError) {
+          console.error('Failed to increment usage:', usageError);
+        }
+      }
     } catch (aiError) {
       console.error('🚨 AI Service Error:', aiError);
       

@@ -108,6 +108,9 @@ class UsageService {
     };
 
     this.saveUsage(userId, updatedUsage);
+    
+    // Trigger events for UI updates
+    this.triggerUsageUpdate();
 
     return {
       success: true,
@@ -213,6 +216,9 @@ class UsageService {
   private saveUsage(userId: string, usage: UserUsage): void {
     try {
       localStorage.setItem(`${this.STORAGE_KEY}_${userId}`, JSON.stringify(usage));
+      
+      // Trigger storage event for cross-tab communication
+      this.triggerUsageUpdate();
     } catch (error) {
       console.error('Error saving usage:', error);
     }
@@ -287,6 +293,22 @@ class UsageService {
     }
     
     return allData;
+  }
+
+  private triggerUsageUpdate(): void {
+    try {
+      // Set a timestamp for storage event
+      localStorage.setItem('usage_updated', Date.now().toString());
+      
+      // Dispatch custom event for same-tab communication
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('usageUpdated', {
+          detail: { timestamp: Date.now() }
+        }));
+      }
+    } catch (error) {
+      console.error('Error triggering usage update:', error);
+    }
   }
 }
 
