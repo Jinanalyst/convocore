@@ -23,11 +23,13 @@ class NotificationService {
   private listeners: ((state: NotificationState) => void)[] = [];
   private notifications: Notification[] = [];
   private permission: NotificationPermission = 'default';
+  private settings: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.checkPermission();
       this.loadStoredNotifications();
+      this.loadSettings();
     }
   }
 
@@ -92,6 +94,11 @@ class NotificationService {
   }
 
   addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) {
+    // Check if this type of notification should be shown
+    if (!this.shouldShowNotification(notification.type)) {
+      return null;
+    }
+
     const newNotification: Notification = {
       ...notification,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -111,8 +118,14 @@ class NotificationService {
     this.saveNotifications();
     this.notifyListeners();
 
-    // Show browser notification if permission granted and page is not visible
-    if (typeof window !== 'undefined' && this.permission === 'granted' && document.hidden) {
+    // Play notification sound if enabled
+    this.playNotificationSound();
+
+    // Show browser notification if permission granted and push notifications enabled
+    if (typeof window !== 'undefined' && 
+        this.permission === 'granted' && 
+        this.settings?.notifications?.push && 
+        document.hidden) {
       this.showBrowserNotification(newNotification);
     }
 
@@ -227,6 +240,79 @@ class NotificationService {
       avatar: 'ℹ️',
       duration: 5000
     });
+  }
+
+  private loadSettings() {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('convocore-settings');
+      if (stored) {
+        this.settings = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  }
+
+  private shouldShowNotification(type: string): boolean {
+    if (!this.settings?.notifications) return true;
+    
+    // Map notification types to settings
+    const typeMap: { [key: string]: string } = {
+      'chat': 'chatComplete',
+      'success': 'systemUpdates',
+      'error': 'securityAlerts',
+      'warning': 'usageAlerts',
+      'info': 'systemUpdates'
+    };
+    
+    const settingKey = typeMap[type] || 'push';
+    return this.settings.notifications[settingKey] !== false;
+  }
+
+  private shouldPlaySound(): boolean {
+    return this.settings?.notifications?.sound !== false;
+  }
+
+  private playNotificationSound() {
+    if (!this.shouldPlaySound()) return;
+    
+    try {
+      // Create a simple notification sound using AudioContext
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.warn('Could not play notification sound:', error);
+    }
+  }
+
+  // Method to refresh settings when they change
+  refreshSettings() {
+    this.loadSettings();
+  }
+
+  // Method to check if notifications are enabled for a specific type
+  isNotificationEnabled(type: string): boolean {
+    return this.shouldShowNotification(type);
+  }
+
+  // Method to get current notification settings
+  getNotificationSettings() {
+    return this.settings?.notifications || {};
   }
 }
 

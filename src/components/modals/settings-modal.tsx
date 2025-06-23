@@ -46,7 +46,14 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     language: 'en',
     autoSave: true,
     notifications: {
-      push: false
+      push: false,
+      sound: true,
+      chatComplete: true,
+      newMessage: true,
+      systemUpdates: false,
+      marketingEmails: false,
+      securityAlerts: true,
+      usageAlerts: true
     },
     aiModel: {
       defaultModel: 'gpt-4o',
@@ -154,6 +161,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         applyLanguage(newSettings.language);
       }
 
+      // Refresh notification service settings
+      if (typeof window !== 'undefined') {
+        const { notificationService } = await import('@/lib/notification-service');
+        notificationService.refreshSettings();
+      }
+
       // For Supabase users, save to database
       if (user?.authType === 'supabase') {
         const { createClientComponentClient } = await import('@/lib/supabase');
@@ -219,7 +232,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     return false;
   };
 
-  const handleNotificationToggle = async (type: 'push', value: boolean) => {
+  const handleNotificationToggle = async (type: keyof typeof settings.notifications, value: boolean) => {
     if (type === 'push' && value) {
       const hasPermission = await requestNotificationPermission();
       if (!hasPermission) {
@@ -232,6 +245,31 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       ...prev, 
       notifications: { ...prev.notifications, [type]: value }
     }));
+
+    // Auto-save notification settings immediately
+    const newSettings = { 
+      ...settings, 
+      notifications: { ...settings.notifications, [type]: value }
+    };
+    await saveSettings(newSettings);
+  };
+
+  const testNotification = async () => {
+    const { notificationService } = await import('@/lib/notification-service');
+    
+    // Check if push notifications are enabled
+    if (settings.notifications.push && 'Notification' in window && Notification.permission === 'granted') {
+      notificationService.notifySuccess(
+        'Test Notification',
+        'Great! Your notifications are working perfectly. You\'ll receive alerts when your chats are ready.'
+      );
+    } else {
+      // Show in-app notification instead
+      notificationService.notifyInfo(
+        'Test Notification',
+        'This is how notifications will appear. Enable push notifications to receive alerts when the app is closed.'
+      );
+    }
   };
 
   const tabs = [
@@ -638,19 +676,177 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <div className="space-y-4 sm:space-y-6">
             <div>
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Notification Preferences</h3>
-              <div className="space-y-3 sm:space-y-4">
-                <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white block">Push notifications</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Browser notifications for new messages</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.push}
-                    onChange={(e) => handleNotificationToggle('push', e.target.checked)}
-                    className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0" 
-                  />
-                </label>
+              
+              {/* Notification Permission Status */}
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Browser Notifications
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    typeof window !== 'undefined' && 'Notification' in window 
+                      ? Notification.permission === 'granted' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : Notification.permission === 'denied'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                  }`}>
+                    {typeof window !== 'undefined' && 'Notification' in window 
+                      ? Notification.permission === 'granted' 
+                        ? 'Enabled' 
+                        : Notification.permission === 'denied' 
+                        ? 'Blocked' 
+                        : 'Not Requested'
+                      : 'Not Supported'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {typeof window !== 'undefined' && 'Notification' in window 
+                    ? Notification.permission === 'granted'
+                      ? 'You can receive browser notifications when the app is closed.'
+                      : Notification.permission === 'denied'
+                      ? 'Notifications are blocked. Please enable them in your browser settings.'
+                      : 'Click "Test Notification" to enable browser notifications.'
+                    : 'Your browser does not support notifications.'}
+                </p>
+                
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={testNotification}
+                  className="mt-2"
+                >
+                  <Bell className="w-3 h-3 mr-1" />
+                  Test Notification
+                </Button>
+              </div>
+
+              {/* Notification Categories */}
+              <div className="space-y-4 sm:space-y-5">
+                {/* Push Notifications */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Push Notifications</h4>
+                  
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Enable Push Notifications</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Receive browser notifications when the app is closed</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.push}
+                      onChange={(e) => handleNotificationToggle('push', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Notification Sounds</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Play sound when receiving notifications</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.sound}
+                      onChange={(e) => handleNotificationToggle('sound', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+                </div>
+
+                {/* Chat Notifications */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Chat Notifications</h4>
+                  
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Chat Completed</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify when AI has finished responding</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.chatComplete}
+                      onChange={(e) => handleNotificationToggle('chatComplete', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">New Messages</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify about new chat messages</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.newMessage}
+                      onChange={(e) => handleNotificationToggle('newMessage', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+                </div>
+
+                {/* System Notifications */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">System Notifications</h4>
+                  
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Usage Alerts</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify when approaching usage limits</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.usageAlerts}
+                      onChange={(e) => handleNotificationToggle('usageAlerts', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Security Alerts</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Important security notifications and login alerts</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.securityAlerts}
+                      onChange={(e) => handleNotificationToggle('securityAlerts', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">System Updates</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">New features and system updates</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.systemUpdates}
+                      onChange={(e) => handleNotificationToggle('systemUpdates', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+                </div>
+
+                {/* Marketing Notifications */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Marketing & Promotions</h4>
+                  
+                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Marketing Emails</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Promotional offers and product updates</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={settings.notifications.marketingEmails}
+                      onChange={(e) => handleNotificationToggle('marketingEmails', e.target.checked)}
+                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
