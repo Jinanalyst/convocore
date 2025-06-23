@@ -86,7 +86,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith(route)
   );
 
-  if (isAuthRoute && user) {
+  if (isAuthRoute && (user || walletConnected)) {
     const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/convocore';
     return NextResponse.redirect(new URL(redirectTo, request.url));
   }

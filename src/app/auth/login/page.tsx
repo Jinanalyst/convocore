@@ -58,7 +58,8 @@ function LoginPageContent() {
 
     try {
       await signInWithGoogle();
-      router.push(redirectTo);
+      // Don't redirect here - let the auth state change handler do it
+      // The OAuth flow will handle the redirect through the callback
     } catch (err: any) {
       console.error('Google login error:', err);
       
@@ -67,7 +68,7 @@ function LoginPageContent() {
       } else {
         setError(`Google login failed: ${err.message}`);
       }
-    } finally {
+      
       setLoading(false);
       setLoginType(null);
     }

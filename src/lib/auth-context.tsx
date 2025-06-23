@@ -39,9 +39,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient();
 
-  // Check for existing authentication on mount
+  // Check for existing authentication on mount and listen for auth changes
   useEffect(() => {
     checkAuth();
+
+    // Listen for auth state changes (like successful OAuth)
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          console.log('Auth state changed: SIGNED_IN');
+          checkAuth().then(() => {
+            // Check if we need to redirect after successful auth
+            const redirectTo = localStorage.getItem('auth_redirect_to');
+            if (redirectTo) {
+              localStorage.removeItem('auth_redirect_to');
+              window.location.href = redirectTo;
+            }
+          });
+        } else if (event === 'SIGNED_OUT') {
+          console.log('Auth state changed: SIGNED_OUT');
+          checkAuth();
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, []);
 
   const checkAuth = async () => {
@@ -117,10 +141,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Google authentication is not configured');
     }
 
+    // Store the intended redirect location
+    const redirectTo = '/convocore';
+    localStorage.setItem('auth_redirect_to', redirectTo);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent('/convocore')}`,
+        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -129,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) {
+      localStorage.removeItem('auth_redirect_to');
       throw error;
     }
   };
