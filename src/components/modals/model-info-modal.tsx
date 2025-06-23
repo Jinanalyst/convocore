@@ -56,6 +56,16 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
       speed: "Fast",
       isDefault: false,
       color: "bg-indigo-500"
+    },
+    {
+      name: "ConvoMini",
+      provider: "Convocore",
+      description: "Compact and efficient model for quick responses and daily conversations",
+      features: ["Quick Responses", "Daily Conversations", "Efficient Processing", "32K Context"],
+      contextLength: "32,000 tokens",
+      speed: "Very Fast",
+      isDefault: false,
+      color: "bg-orange-500"
     }
   ];
 

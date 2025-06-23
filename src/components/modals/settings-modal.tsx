@@ -631,10 +631,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     })}
                     className="mt-2 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                   >
-                    <option value="convocore-omni">🚀 Convocore Omni (Default)</option>
-                    <option value="convocore-alpha">🧠 Convocore Alpha</option>
-                    <option value="convocore-turbo">⚡ Convocore Turbo</option>
-                    <option value="convocore-nova">✨ Convocore Nova</option>
+                    <option value="gpt-4o">🚀 Convocore Omni (Default)</option>
+                    <option value="claude-3-opus-20240229">🧠 Convocore Alpha</option>
+                    <option value="gpt-4-turbo">⚡ Convocore Turbo</option>
+                    <option value="claude-3-sonnet-20240229">✨ Convocore Nova</option>
+                    <option value="deepseek/deepseek-r1:free">🤏 ConvoMini</option>
                   </select>
                 </div>
                 

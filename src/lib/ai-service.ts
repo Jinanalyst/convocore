@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 // AI Service Configuration
 export interface AIServiceConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'openrouter';
   model: string;
   temperature?: number;
   maxTokens?: number;
@@ -80,6 +80,13 @@ export const AI_MODELS = {
     maxTokens: 4096,
     contextLength: 200000,
   },
+  'deepseek/deepseek-r1:free': {
+    provider: 'openrouter' as const,
+    name: 'ConvoMini',
+    description: 'Compact and efficient model for quick responses and daily conversations',
+    maxTokens: 4096,
+    contextLength: 32000,
+  },
 } as const;
 
 // Initialize OpenAI client
@@ -90,6 +97,12 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 // Anthropic client initialization
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+}) : null;
+
+// Initialize OpenRouter client (using OpenAI SDK with custom base URL)
+const openrouter = process.env.OPENROUTER_API_KEY ? new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
 }) : null;
 
 export interface ChatMessage {
@@ -120,6 +133,8 @@ export async function sendChatMessage(
       return await sendOpenAIMessage(messages, model, temperature, maxTokens, stream);
     } else if (provider === 'anthropic') {
       return await sendAnthropicMessage(messages, model, temperature, maxTokens);
+    } else if (provider === 'openrouter') {
+      return await sendOpenRouterMessage(messages, model, temperature, maxTokens);
     } else {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
@@ -260,16 +275,63 @@ async function sendAnthropicMessage(
   }
 }
 
+async function sendOpenRouterMessage(
+  messages: ChatMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number
+): Promise<ChatResponse> {
+  if (!openrouter) {
+    throw new Error('OpenRouter API key not configured. Please add OPENROUTER_API_KEY to your .env.local file.');
+  }
+
+  console.log(`🔄 Calling OpenRouter API with model: ${model}`);
+
+  try {
+    const completion = await openrouter.chat.completions.create({
+      model: model,
+      messages: messages.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content,
+      })),
+      temperature,
+      max_tokens: maxTokens,
+      stream: false,
+    });
+
+    const choice = completion.choices[0];
+    if (!choice?.message?.content) {
+      throw new Error('No response content from OpenRouter API');
+    }
+
+    console.log('✅ OpenRouter response received successfully');
+
+    return {
+      content: choice.message.content,
+      model,
+      usage: completion.usage ? {
+        promptTokens: completion.usage.prompt_tokens,
+        completionTokens: completion.usage.completion_tokens,
+        totalTokens: completion.usage.total_tokens,
+      } : undefined,
+    };
+  } catch (error) {
+    console.error('❌ OpenRouter API Error:', error);
+    throw error;
+  }
+}
+
 // Utility function to get model configuration
 export async function getModelConfig(modelId: string): Promise<(typeof AI_MODELS)[keyof typeof AI_MODELS] | null> {
   return AI_MODELS[modelId as keyof typeof AI_MODELS] || null;
 }
 
 // Utility function to validate API keys
-export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: boolean }> {
+export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: boolean; openrouter: boolean }> {
   return {
     openai: !!process.env.OPENAI_API_KEY,
     anthropic: !!process.env.ANTHROPIC_API_KEY,
+    openrouter: !!process.env.OPENROUTER_API_KEY,
   };
 }
 
@@ -280,6 +342,7 @@ export const aiService = {
     console.log('📊 Config check:', {
       openaiKey: !!process.env.OPENAI_API_KEY,
       anthropicKey: !!process.env.ANTHROPIC_API_KEY,
+      openrouterKey: !!process.env.OPENROUTER_API_KEY,
       model: model
     });
 
@@ -303,6 +366,10 @@ export const aiService = {
     
     if (modelConfig.provider === 'anthropic' && !process.env.ANTHROPIC_API_KEY) {
       throw new Error('Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your .env.local file.');
+    }
+
+    if (modelConfig.provider === 'openrouter' && !process.env.OPENROUTER_API_KEY) {
+      throw new Error('OpenRouter API key not configured. Please add OPENROUTER_API_KEY to your .env.local file.');
     }
 
     const config: AIServiceConfig = {

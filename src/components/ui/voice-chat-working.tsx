@@ -484,7 +484,8 @@ export function VoiceChat({
                 'gpt-4o': 'Convocore Omni',
                 'gpt-4-turbo': 'Convocore Turbo',
                 'claude-3-opus-20240229': 'Convocore Alpha',
-                'claude-3-sonnet-20240229': 'Convocore Nova'
+                'claude-3-sonnet-20240229': 'Convocore Nova',
+                'deepseek/deepseek-r1:free': 'ConvoMini'
               };
               return modelNames[selectedModel] || 'Convocore';
             })()}

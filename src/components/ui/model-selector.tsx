@@ -35,6 +35,12 @@ const models = [
     description: "Balanced performance, fast response, suitable for practical daily tasks",
     provider: "Convocore",
   },
+  {
+    id: "deepseek/deepseek-r1:free",
+    name: "ConvoMini",
+    description: "Compact and efficient model for quick responses and daily conversations",
+    provider: "Convocore",
+  },
 ];
 
 interface ModelSelectorProps {
