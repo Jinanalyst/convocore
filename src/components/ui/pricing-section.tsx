@@ -11,7 +11,7 @@ const pricingPlans = [
     price: "$0",
     period: "forever",
     description: "Perfect for trying out ConvoAI",
-    dailyLimit: "10 requests per day",
+    dailyLimit: "3 requests per day",
     features: [
       "Basic AI features",
       "Standard response time",

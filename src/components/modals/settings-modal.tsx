@@ -712,7 +712,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       {subscription?.tier === 'free' ? 'Requests today' : 'Requests this month'}
                     </span>
                     <span className="font-medium">
-                      {usage?.requestsUsed || 0} / {usage?.requestsLimit || 10}
+                      {usage?.requestsUsed || 0} / {usage?.requestsLimit || 3}
                       {subscription?.tier === 'free' ? ' per day' : ' per month'}
                     </span>
                   </div>

@@ -19,7 +19,7 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
     plan: 'free' | 'pro' | 'premium';
   }>({
     used: 0,
-    limit: 10,
+    limit: 3,
     plan: 'free'
   });
 
