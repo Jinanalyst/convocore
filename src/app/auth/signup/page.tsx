@@ -324,21 +324,20 @@ function SignupPageContent() {
             </Button>
 
             {/* Kakao Signup - Coming Soon */}
-            <div className="relative">
-              <Button
-                type="button"
-                disabled={true}
-                variant="outline"
-                className="w-full bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-800 cursor-not-allowed"
-              >
-                <KakaoIcon className="w-5 h-5 mr-2 text-gray-500" />
+            <Button
+              type="button"
+              disabled={true}
+              variant="outline"
+              className="w-full bg-gray-200 dark:bg-zinc-700 border-gray-300 dark:border-zinc-600 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+            >
+              <div className="flex items-center justify-center gap-3 w-full">
+                <KakaoIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 <span>Continue with Kakao</span>
-                <span className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">
+                <span className="ml-auto text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full font-semibold">
                   Coming Soon
                 </span>
-              </Button>
-              <div className="absolute inset-0 bg-gray-900 bg-opacity-30 rounded-md pointer-events-none"></div>
-            </div>
+              </div>
+            </Button>
           </div>
         </form>
 

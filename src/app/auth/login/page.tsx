@@ -170,22 +170,19 @@ function LoginPageContent() {
           </Button>
 
           {/* Kakao Login - Coming Soon */}
-          <div className="relative">
-            <Button
-              disabled={true}
-              className="w-full h-14 bg-gray-100 dark:bg-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-zinc-600 shadow-sm cursor-not-allowed"
-              variant="outline"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <KakaoIcon className="h-5 w-5 text-gray-400" />
-                <span className="font-medium">Continue with Kakao</span>
-                <span className="ml-auto text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-            </Button>
-            <div className="absolute inset-0 bg-gray-50 dark:bg-zinc-800 bg-opacity-50 rounded-lg pointer-events-none"></div>
-          </div>
+          <Button
+            disabled={true}
+            className="w-full h-14 bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-zinc-600 shadow-sm cursor-not-allowed relative"
+            variant="outline"
+          >
+            <div className="flex items-center justify-center gap-3 w-full">
+              <KakaoIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              <span className="font-medium">Continue with Kakao</span>
+              <span className="ml-auto text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full font-semibold">
+                Coming Soon
+              </span>
+            </div>
+          </Button>
 
           {/* Divider */}
           <div className="relative">
