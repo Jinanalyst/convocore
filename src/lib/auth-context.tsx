@@ -72,6 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     setLoading(true);
+    
+    // Run migration to fix old free plan limits
+    try {
+      usageService.migrateFreeUserLimits();
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
+    
     try {
       // Check wallet authentication first
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';

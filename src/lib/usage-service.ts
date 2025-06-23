@@ -34,6 +34,19 @@ class UsageService {
       const stored = localStorage.getItem(`${this.STORAGE_KEY}_${userId}`);
       if (stored) {
         const usage = JSON.parse(stored);
+        
+        // Migration: Fix old free plan limits that were set to 10 instead of 3
+        if (usage.plan === 'free' && usage.requestsLimit === 10) {
+          console.log('Migrating old free plan limit from 10 to 3');
+          usage.requestsLimit = 3;
+          // Reset usage if it exceeds new limit
+          if (usage.requestsUsed > 3) {
+            usage.requestsUsed = 0;
+            usage.resetDate = new Date().toISOString();
+          }
+          this.saveUsage(userId, usage);
+        }
+        
         // Check if we need to reset daily limit
         if (this.shouldResetUsage(usage)) {
           return this.resetDailyUsage(userId, usage.plan);
@@ -219,7 +232,45 @@ class UsageService {
     localStorage.removeItem(`${this.SUBSCRIPTION_KEY}_${userId}`);
   }
 
-  // Get all users usage (for debugging)
+  // Force migrate all users from old limits
+  migrateFreeUserLimits(): void {
+    console.log('🔄 Migrating all free user limits...');
+    
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    
+    // Find all user usage keys
+    const usageKeys = allKeys.filter(key => key.startsWith(this.STORAGE_KEY));
+    
+    usageKeys.forEach(key => {
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const usage = JSON.parse(stored);
+          
+          // Check if this is a free plan with old limit
+          if (usage.plan === 'free' && usage.requestsLimit === 10) {
+            console.log(`🔧 Migrating ${key} from 10 to 3 limit`);
+            usage.requestsLimit = 3;
+            
+            // Reset usage if it exceeds new limit
+            if (usage.requestsUsed > 3) {
+              usage.requestsUsed = 0;
+              usage.resetDate = new Date().toISOString();
+              console.log(`🔄 Reset usage count for ${key}`);
+            }
+            
+            localStorage.setItem(key, JSON.stringify(usage));
+          }
+        }
+      } catch (error) {
+        console.error(`Error migrating ${key}:`, error);
+      }
+    });
+    
+    console.log('✅ Migration complete');
+  }
+
   getAllUsageData(): { [userId: string]: UserUsage } {
     const allData: { [userId: string]: UserUsage } = {};
     

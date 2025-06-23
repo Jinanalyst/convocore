@@ -24,6 +24,13 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
   });
 
   useEffect(() => {
+    // Run migration on component mount (ensure it happens for current users)
+    try {
+      usageService.migrateFreeUserLimits();
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
+    
     // Get real usage data
     const loadUsage = () => {
       if (!user) return;
