@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Search, MessageSquare, Clock } from 'lucide-react';
+import { getRelativeTime } from '@/lib/date-utils';
 
 interface Chat {
   id: string;
@@ -40,15 +41,7 @@ export function SearchModal({ open, onOpenChange, chats, onSelectChat }: SearchM
     onOpenChange(false);
   };
 
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 48) return "Yesterday";
-    return `${Math.floor(diffInHours / 24)}d ago`;
-  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,7 +99,7 @@ export function SearchModal({ open, onOpenChange, chats, onSelectChat }: SearchM
                         </p>
                         <div className="flex items-center gap-1 mt-2 text-xs text-gray-400">
                           <Clock className="w-3 h-3" />
-                          {formatTimestamp(chat.timestamp)}
+                          {getRelativeTime(chat.timestamp)}
                         </div>
                       </div>
                     </div>

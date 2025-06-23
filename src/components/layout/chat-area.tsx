@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { notificationService } from '@/lib/notification-service';
+import { formatChatTimestamp } from '@/lib/date-utils';
 
 // Helper function to generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -400,9 +401,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     sendMessageWithOptions(transcript);
   };
 
-  const formatTimestamp = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+
 
   const getAgentIcon = (iconName: string) => {
     const iconMap: Record<string, any> = {
@@ -585,7 +584,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
                     
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        {formatTimestamp(message.timestamp)}
+                        {formatChatTimestamp(message.timestamp)}
                       </span>
                       
                       {message.role === 'assistant' && (

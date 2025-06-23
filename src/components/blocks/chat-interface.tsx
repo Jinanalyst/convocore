@@ -34,6 +34,7 @@ import { SettingsModal } from '@/components/modals/settings-modal';
 import { ShareModal } from '@/components/modals/share-modal';
 import { ModelSelector } from '@/components/ui/model-selector';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRelativeTime } from '@/lib/date-utils';
 
 // Types
 interface ChatMessage {
@@ -81,20 +82,7 @@ const generateTitle = (firstMessage: string): string => {
   return title + '...';
 };
 
-const formatTimestamp = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  
-  return date.toLocaleDateString();
-};
 
 // Sidebar Component
 const ChatSidebar: React.FC<{
@@ -226,7 +214,7 @@ const ChatSidebar: React.FC<{
                         <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
                           <span>{session.messageCount} messages</span>
                           <span>•</span>
-                          <span>{formatTimestamp(session.updatedAt)}</span>
+                          <span>{getRelativeTime(session.updatedAt)}</span>
                         </div>
                       </div>
                     )}
@@ -490,7 +478,7 @@ const MessageComponent: React.FC<{
           )}
 
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            {formatTimestamp(message.timestamp)}
+            {getRelativeTime(message.timestamp)}
           </span>
           
           {message.tokens && (
