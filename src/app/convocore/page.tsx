@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
 import { SettingsModal } from "@/components/modals/settings-modal";
+import { ShareModal } from "@/components/modals/share-modal";
 import { PWAInstall } from "@/components/ui/pwa-install";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ export default function ConvocorePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Load chats on component mount and detect mobile
   useEffect(() => {
@@ -73,21 +75,15 @@ export default function ConvocorePage() {
           const demoChats: Chat[] = [
             {
               id: `demo_${Date.now()}_1`,
-              title: "Getting Started",
+              title: "AI Assistant",
               lastMessage: "Hello! How can I help you today?",
               timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
             },
             {
               id: `demo_${Date.now()}_2`,
-              title: "Getting Started Guide",
-              lastMessage: "Let me know what you would like to explore...",
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-            },
-            {
-              id: `demo_${Date.now()}_3`,
-              title: "Code Generation Help",
+              title: "Code Generation",
               lastMessage: "I can help you write and debug code...",
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
             },
           ];
           setChats(demoChats);
@@ -136,62 +132,49 @@ export default function ConvocorePage() {
         const demoChats: Chat[] = [
           {
             id: `demo_${Date.now()}_1`,
-            title: "Getting Started",
+            title: "AI Assistant",
             lastMessage: "Hello! How can I help you today?",
             timestamp: new Date(Date.now() - 1000 * 60 * 30),
           },
           {
             id: `demo_${Date.now()}_2`,
-            title: "Getting Started Guide", 
-            lastMessage: "Let me know what you would like to explore...",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          },
-          {
-            id: `demo_${Date.now()}_3`,
-            title: "Code Generation Help",
+            title: "Code Generation",
             lastMessage: "I can help you write and debug code...",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
           },
         ];
         setChats(demoChats);
         console.log('📝 Loaded demo chats (Supabase unavailable)');
-        return;
-      }
-
-      const formattedChats: Chat[] = conversations?.map(conv => ({
-        id: conv.id,
-        title: conv.title,
-        lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
-        timestamp: new Date(conv.updated_at),
-      })) || [];
-
-      // If no conversations exist, show demo chats
-      if (formattedChats.length === 0) {
-        const demoChats: Chat[] = [
-          {
-            id: `demo_${Date.now()}_1`,
-            title: "Getting Started",
-            lastMessage: "Hello! How can I help you today?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          },
-          {
-            id: `demo_${Date.now()}_2`,
-            title: "Getting Started Guide",
-            lastMessage: "Let me know what you would like to explore...",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          },
-          {
-            id: `demo_${Date.now()}_3`,
-            title: "Code Generation Help",
-            lastMessage: "I can help you write and debug code...",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-          },
-        ];
-        setChats(demoChats);
-        console.log('📝 No Supabase conversations found, showing demo chats');
       } else {
-        setChats(formattedChats);
-        console.log('📥 Loaded', formattedChats.length, 'Supabase conversations');
+        const formattedChats: Chat[] = conversations?.map(conv => ({
+          id: conv.id,
+          title: conv.title,
+          lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
+          timestamp: new Date(conv.updated_at),
+        })) || [];
+
+        // If no conversations exist, show demo chats
+        if (formattedChats.length === 0) {
+          const demoChats: Chat[] = [
+            {
+              id: `demo_${Date.now()}_1`,
+              title: "AI Assistant",
+              lastMessage: "Hello! How can I help you today?",
+              timestamp: new Date(Date.now() - 1000 * 60 * 30),
+            },
+            {
+              id: `demo_${Date.now()}_2`,
+              title: "Code Generation",
+              lastMessage: "I can help you write and debug code...",
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+            },
+          ];
+          setChats(demoChats);
+          console.log('📝 No Supabase conversations found, showing demo chats');
+        } else {
+          setChats(formattedChats);
+          console.log('📥 Loaded', formattedChats.length, 'Supabase conversations');
+        }
       }
     } catch (error) {
       console.error('Error loading chats:', error);
@@ -199,21 +182,15 @@ export default function ConvocorePage() {
       const demoChats: Chat[] = [
         {
           id: `demo_${Date.now()}_1`,
-          title: "Getting Started",
+          title: "AI Assistant",
           lastMessage: "Hello! How can I help you today?",
           timestamp: new Date(Date.now() - 1000 * 60 * 30),
         },
         {
           id: `demo_${Date.now()}_2`,
-          title: "Getting Started Guide",
-          lastMessage: "Let me know what you would like to explore...",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        },
-        {
-          id: `demo_${Date.now()}_3`,
-          title: "Code Generation Help",
+          title: "Code Generation",
           lastMessage: "I can help you write and debug code...",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
         },
       ];
       setChats(demoChats);
@@ -270,11 +247,13 @@ export default function ConvocorePage() {
   };
 
   const handleShare = () => {
-    console.log("Sharing chat");
-    // In a real app, this would generate a shareable link or export
+    console.log("✅ Share button clicked! Opening share modal for chat:", activeChatId);
+    console.log("Current chat title:", getCurrentChatTitle());
+    setShareModalOpen(true);
   };
 
   const handleSettings = () => {
+    console.log("✅ Settings button clicked! Opening settings modal");
     setSettingsOpen(true);
   };
 
@@ -468,6 +447,8 @@ export default function ConvocorePage() {
           onSettings={handleSettings}
           onProfile={handleProfile}
           onLogout={handleLogout}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          showMobileMenu={!sidebarCollapsed}
         />
 
         {/* Chat Area */}
@@ -479,34 +460,18 @@ export default function ConvocorePage() {
         </div>
       </div>
 
-      {/* Sidebar Toggle Button - Always visible on mobile, hidden on desktop when sidebar is open */}
-      <button
-        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className={cn(
-          "fixed top-4 left-4 z-50 bg-white dark:bg-zinc-800 p-2 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 transition-opacity",
-          isMobile ? "block" : sidebarCollapsed ? "block" : "hidden"
-        )}
-        aria-label="Toggle sidebar"
-      >
-        <svg
-          className="w-6 h-6 text-gray-600 dark:text-gray-300"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
-
       {/* Settings Modal */}
       <SettingsModal 
         open={settingsOpen} 
         onOpenChange={setSettingsOpen} 
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        chatId={activeChatId || undefined}
+        chatTitle={getCurrentChatTitle()}
       />
 
       {/* PWA Install Component */}
