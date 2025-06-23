@@ -73,7 +73,7 @@ export default function ConvocorePage() {
           const demoChats: Chat[] = [
             {
               id: `demo_${Date.now()}_1`,
-              title: "Welcome to Convocore",
+              title: "Getting Started",
               lastMessage: "Hello! How can I help you today?",
               timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
             },
@@ -136,7 +136,7 @@ export default function ConvocorePage() {
         const demoChats: Chat[] = [
           {
             id: `demo_${Date.now()}_1`,
-            title: "Welcome to Convocore",
+            title: "Getting Started",
             lastMessage: "Hello! How can I help you today?",
             timestamp: new Date(Date.now() - 1000 * 60 * 30),
           },
@@ -170,7 +170,7 @@ export default function ConvocorePage() {
         const demoChats: Chat[] = [
           {
             id: `demo_${Date.now()}_1`,
-            title: "Welcome to Convocore",
+            title: "Getting Started",
             lastMessage: "Hello! How can I help you today?",
             timestamp: new Date(Date.now() - 1000 * 60 * 30),
           },
@@ -199,7 +199,7 @@ export default function ConvocorePage() {
       const demoChats: Chat[] = [
         {
           id: `demo_${Date.now()}_1`,
-          title: "Welcome to Convocore",
+          title: "Getting Started",
           lastMessage: "Hello! How can I help you today?",
           timestamp: new Date(Date.now() - 1000 * 60 * 30),
         },

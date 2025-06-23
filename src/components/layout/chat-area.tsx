@@ -440,11 +440,11 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       <div className={cn("flex flex-col h-full bg-gray-50 dark:bg-zinc-950", className)}>
         {/* Welcome Screen */}
         <div className="flex-1 flex flex-col">
-          {/* Header Section */}
-          <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-8 sm:pt-12 pb-6 sm:pb-8">
-            <ConvocoreLogo size="lg" className="justify-center mb-4 sm:mb-6" />
+          {/* Header Section - Mobile Optimized */}
+          <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-4 sm:pt-12 pb-3 sm:pb-8">
+            <ConvocoreLogo size="lg" className="justify-center mb-3 sm:mb-6" />
             
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+            <h1 className="hidden sm:block text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
               Welcome to Convocore
             </h1>
             
@@ -454,9 +454,9 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           </div>
 
           {/* Feature Cards Section - Mobile Optimized */}
-          <div className="flex-1 px-4 sm:px-6 pb-4">
+          <div className="flex-1 px-4 sm:px-6 pb-2 sm:pb-4">
             <div className="max-w-2xl mx-auto">
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 {/* Feature Card 1 */}
                 <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
                   <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -501,9 +501,9 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
           {/* Input Area */}
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div className="px-4 sm:px-6 py-3 sm:py-4">
+            <div className="px-4 sm:px-6 py-2 sm:py-4">
               {/* Chat Limit Indicator */}
-              <ChatLimitIndicator className="max-w-2xl mx-auto mb-3 sm:mb-4" />
+              <ChatLimitIndicator className="max-w-2xl mx-auto mb-2 sm:mb-4" />
               
               <AIChatInput
                 onSendMessage={(message, options) => {
