@@ -35,6 +35,8 @@ export class SpeechService {
   private recognition: ISpeechRecognition | null = null;
   private synthesis: SpeechSynthesis | null = null;
   private isSupported = false;
+  private isMobile = false;
+  private isListening = false;
 
   constructor() {
     this.initialize();
@@ -43,6 +45,10 @@ export class SpeechService {
   private initialize() {
     // Check for speech recognition support
     if (typeof window !== 'undefined') {
+      // Detect mobile devices
+      this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                     window.innerWidth <= 768;
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       
       if (SpeechRecognition) {
@@ -61,7 +67,8 @@ export class SpeechService {
   private setupRecognition() {
     if (!this.recognition) return;
 
-    this.recognition.continuous = false;
+    // Mobile-optimized settings
+    this.recognition.continuous = !this.isMobile; // On mobile, use single-shot recognition
     this.recognition.interimResults = true;
     this.recognition.lang = 'en-US';
     this.recognition.maxAlternatives = 1;
@@ -78,7 +85,20 @@ export class SpeechService {
   public async requestMicrophonePermission(): Promise<boolean> {
     try {
       if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // More explicit permission request for mobile
+        const constraints = { 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            ...(this.isMobile && {
+              sampleRate: 16000,
+              channelCount: 1
+            })
+          } 
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         // Close the stream immediately as we only needed to check permissions
         stream.getTracks().forEach(track => track.stop());
         return true;
@@ -97,31 +117,59 @@ export class SpeechService {
     onEnd?: () => void
   ): Promise<void> {
     if (!this.recognition) {
-      onError('Speech recognition not supported');
+      onError('Speech recognition not supported on this device');
       return;
     }
 
-    // Check if we're on HTTPS or localhost
+    if (this.isListening) {
+      console.log('Already listening, stopping previous session');
+      this.recognition.stop();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Enhanced security and compatibility checks
     if (typeof window !== 'undefined') {
       const isSecure = window.location.protocol === 'https:' || 
                       window.location.hostname === 'localhost' || 
                       window.location.hostname === '127.0.0.1';
       
-      if (!isSecure) {
+      if (!isSecure && !this.isMobile) {
         onError('Speech recognition requires HTTPS. Please use a secure connection.');
         return;
+      }
+
+      // Mobile devices might work on HTTP in some cases, so let's try anyway
+      if (!isSecure && this.isMobile) {
+        console.warn('Using speech recognition on non-HTTPS mobile connection - may not work');
       }
     }
 
     try {
-      // Request microphone permission first
-      const hasPermission = await this.requestMicrophonePermission();
+      // Request microphone permission first with retry
+      let hasPermission = false;
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (!hasPermission && retryCount < maxRetries) {
+        try {
+          hasPermission = await this.requestMicrophonePermission();
+          if (!hasPermission) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            }
+          }
+        } catch (error) {
+          retryCount++;
+        }
+      }
+
       if (!hasPermission) {
-        onError('Microphone permission denied. Please enable microphone access and try again.');
+        onError('Microphone permission denied. Please enable microphone access in your browser settings and refresh the page.');
         return;
       }
     } catch (permissionError) {
-      onError('Failed to access microphone. Please check your permissions.');
+      onError('Failed to access microphone. Please check your permissions and try again.');
       return;
     }
 
@@ -132,8 +180,14 @@ export class SpeechService {
       // Ignore abort errors
     }
 
+    // Mobile-specific: Add small delay before starting
+    if (this.isMobile) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
     this.recognition.onstart = () => {
       console.log('Speech recognition started');
+      this.isListening = true;
       onStart?.();
     };
 
@@ -156,24 +210,38 @@ export class SpeechService {
       if (fullTranscript.trim()) {
         onResult(fullTranscript, isFinal);
       }
+
+      // On mobile, automatically restart if we got a final result but want continuous
+      if (this.isMobile && isFinal && this.isListening) {
+        setTimeout(() => {
+          if (this.isListening && this.recognition) {
+            try {
+              this.recognition.start();
+            } catch (error) {
+              console.log('Could not restart speech recognition:', error);
+            }
+          }
+        }, 100);
+      }
     };
 
     this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
+      this.isListening = false;
       
       let userFriendlyError = '';
       switch (event.error) {
         case 'not-allowed':
-          userFriendlyError = 'Microphone access denied. Please enable microphone permissions and try again.';
+          userFriendlyError = 'Microphone access denied. Please enable microphone permissions in your browser settings and try again.';
           break;
         case 'no-speech':
-          userFriendlyError = 'No speech detected. Please try speaking again.';
+          userFriendlyError = 'No speech detected. Please speak clearly and try again.';
           break;
         case 'audio-capture':
-          userFriendlyError = 'No microphone found. Please check your microphone connection.';
+          userFriendlyError = 'No microphone found. Please check your microphone connection and try again.';
           break;
         case 'network':
-          userFriendlyError = 'Network error occurred. Please check your internet connection.';
+          userFriendlyError = 'Network error occurred. Please check your internet connection and try again.';
           break;
         case 'service-not-allowed':
           userFriendlyError = 'Speech recognition service not allowed. Please use HTTPS or enable permissions.';
@@ -185,7 +253,7 @@ export class SpeechService {
           userFriendlyError = 'Speech recognition grammar error.';
           break;
         default:
-          userFriendlyError = `Speech recognition error: ${event.error}`;
+          userFriendlyError = `Speech recognition error: ${event.error}. Please try again.`;
       }
       
       onError(userFriendlyError);
@@ -193,6 +261,7 @@ export class SpeechService {
 
     this.recognition.onend = () => {
       console.log('Speech recognition ended');
+      this.isListening = false;
       onEnd?.();
     };
 
@@ -200,11 +269,13 @@ export class SpeechService {
       this.recognition.start();
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
-      onError('Failed to start speech recognition. Please try again.');
+      this.isListening = false;
+      onError('Failed to start speech recognition. Please try again or check your microphone settings.');
     }
   }
 
   public stopListening(): void {
+    this.isListening = false;
     if (this.recognition) {
       this.recognition.stop();
     }
@@ -226,8 +297,8 @@ export class SpeechService {
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Configure voice settings
-    utterance.rate = 0.9;
+    // Configure voice settings with mobile optimizations
+    utterance.rate = this.isMobile ? 0.8 : 0.9; // Slightly slower on mobile
     utterance.pitch = 1;
     utterance.volume = 0.8;
 
@@ -270,6 +341,10 @@ export class SpeechService {
   public getAvailableVoices(): SpeechSynthesisVoice[] {
     if (!this.synthesis) return [];
     return this.synthesis.getVoices();
+  }
+
+  public isCurrentlyListening(): boolean {
+    return this.isListening;
   }
 }
 

@@ -1,273 +1,199 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Mic, MicOff, Volume2, VolumeX, Sparkles, Loader2, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { 
+  Mic, 
+  MicOff, 
+  X, 
+  Send, 
+  AlertCircle, 
+  Smartphone,
+  RefreshCw
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { speechService } from "@/lib/speech-recognition";
 
 interface VoiceModalProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onTranscriptComplete?: (transcript: string) => void;
-}
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  opacity: number;
-  velocity: { x: number; y: number };
 }
 
 export function VoiceModal({ open, onOpenChange, onTranscriptComplete }: VoiceModalProps) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [volume, setVolume] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [waveformData, setWaveformData] = useState<number[]>(Array(32).fill(0));
   const [transcript, setTranscript] = useState("");
+  const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  
+  const intervalRef = useRef<NodeJS.Timeout>();
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-
-  // Generate particles for ambient effect
+  // Mobile detection
   useEffect(() => {
-    const generateParticles = () => {
-      const newParticles: Particle[] = [];
-      for (let i = 0; i < 20; i++) {
-        newParticles.push({
-          id: i,
-          x: Math.random() * 400,
-          y: Math.random() * 400,
-          size: Math.random() * 3 + 1,
-          opacity: Math.random() * 0.3 + 0.1,
-          velocity: {
-            x: (Math.random() - 0.5) * 0.5,
-            y: (Math.random() - 0.5) * 0.5
-          }
-        });
-      }
-      setParticles(newParticles);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     };
-
-    generateParticles();
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Animate particles
+  // Check speech support
   useEffect(() => {
-    const animateParticles = () => {
-      setParticles(prev => prev.map(particle => ({
-        ...particle,
-        x: (particle.x + particle.velocity.x + 400) % 400,
-        y: (particle.y + particle.velocity.y + 400) % 400,
-        opacity: Math.max(0.1, Math.min(0.4, particle.opacity + (Math.random() - 0.5) * 0.02))
-      })));
-      animationRef.current = requestAnimationFrame(animateParticles);
-    };
-
-    if (open) {
-      animationRef.current = requestAnimationFrame(animateParticles);
-    }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+    const checkSupport = () => {
+      const speechSupported = speechService.isSpeechRecognitionSupported();
+      
+      if (!speechSupported) {
+        setIsSupported(false);
+        setError('Speech recognition is not supported in this browser. Please try using Chrome, Safari, or Edge.');
       }
     };
+
+    if (open && typeof window !== 'undefined') {
+      checkSupport();
+    }
   }, [open]);
 
-  // Timer and waveform simulation
+  // Duration timer
   useEffect(() => {
     if (isListening) {
       intervalRef.current = setInterval(() => {
         setDuration(prev => prev + 1);
-        
-        // Simulate audio waveform
-        const newWaveform = Array(32).fill(0).map(() => 
-          Math.random() * (isListening ? 100 : 20)
-        );
-        setWaveformData(newWaveform);
-        
-        // Simulate volume changes
-        const newVolume = Math.random() * 100;
-        setVolume(newVolume);
-      }, 100);
+      }, 1000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-        intervalRef.current = null;
       }
-      setWaveformData(Array(32).fill(0));
-      setVolume(0);
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-        intervalRef.current = null;
       }
     };
   }, [isListening]);
 
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-          console.log('Speech recognition started');
-          setError(null);
-        };
-
-        recognition.onresult = (event: any) => {
-          let finalTranscript = '';
-          let interimTranscript = '';
-
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcriptPart = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += transcriptPart;
-            } else {
-              interimTranscript += transcriptPart;
-            }
-          }
-
-          setTranscript(finalTranscript + interimTranscript);
-        };
-
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
-          setError(`Speech recognition error: ${event.error}`);
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          console.log('Speech recognition ended');
-          setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-      } else {
-        setError('Speech recognition not supported in this browser');
-      }
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
+  // Handle speech functions
+  const handleStop = useCallback(() => {
+    speechService.stopListening();
+    setIsListening(false);
+    setDuration(0);
   }, []);
 
-  // Initialize media recorder for audio recording
-  useEffect(() => {
-    const initMediaRecorder = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
+  const handleStart = useCallback(async () => {
+    setError(null);
+    setTranscript("");
+    setDuration(0);
+    setPermissionDenied(false);
+    setIsProcessing(false);
+    
+    try {
+      await speechService.startListening(
+        (text: string, isFinal: boolean) => {
+          setTranscript(text);
+          if (isFinal && isMobile) {
+            // On mobile, auto-stop after getting final result
+            setTimeout(() => {
+              if (text.trim()) {
+                handleSubmit(text.trim());
+              }
+            }, 500);
           }
-        };
-
-        mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-          audioChunksRef.current = [];
-          console.log('Audio recording completed:', audioBlob);
-        };
-
-        mediaRecorderRef.current = mediaRecorder;
-      } catch (err) {
-        console.error('Error accessing microphone:', err);
-        setError('Microphone access denied');
-      }
-    };
-
-    if (open) {
-      initMediaRecorder();
+        },
+        (error: string) => {
+          console.error('Speech recognition error:', error);
+          setError(error);
+          setIsListening(false);
+          
+          if (error.includes('denied') || error.includes('not-allowed')) {
+            setPermissionDenied(true);
+          }
+        },
+        () => {
+          setIsListening(true);
+          setError(null);
+        },
+        () => {
+          setIsListening(false);
+        }
+      );
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error);
+      setError('Failed to start voice recognition. Please try again.');
+      setIsListening(false);
     }
-  }, [open]);
+  }, [isMobile]);
 
-  const handleToggleListening = async () => {
-    if (!recognitionRef.current) {
-      setError('Speech recognition not available');
+  const handleSubmit = useCallback((text?: string) => {
+    const finalText = text || transcript.trim();
+    if (!finalText) {
+      setError('No speech detected. Please try again.');
       return;
     }
 
-    if (isListening) {
-      // Stop listening
-      recognitionRef.current.stop();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsListening(false);
-      
-      // Process the transcript
-      if (transcript.trim()) {
-        setIsProcessing(true);
-        setTimeout(() => {
-          setIsProcessing(false);
-          onTranscriptComplete?.(transcript.trim());
-          handleClose();
-        }, 1500);
-      }
-    } else {
-      // Start listening
-      try {
-        setTranscript("");
-        setError(null);
-        setDuration(0);
-        
-        recognitionRef.current.start();
-        if (mediaRecorderRef.current) {
-          mediaRecorderRef.current.start();
-        }
-        setIsListening(true);
-      } catch (err) {
-        console.error('Error starting speech recognition:', err);
-        setError('Failed to start speech recognition');
-      }
-    }
-  };
-
-  const handleClose = () => {
-    // Stop all recording
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
+    setIsProcessing(true);
     
-    // Reset state
-    setIsListening(false);
-    setIsProcessing(false);
-    setIsSpeaking(false);
+    setTimeout(() => {
+      onTranscriptComplete?.(finalText);
+      handleClose();
+    }, 500);
+  }, [transcript, onTranscriptComplete]);
+
+  const handleClose = useCallback(() => {
+    handleStop();
+    speechService.stopSpeaking();
     setTranscript("");
     setDuration(0);
     setError(null);
+    setIsProcessing(false);
+    setPermissionDenied(false);
+    onOpenChange(false);
+  }, [handleStop, onOpenChange]);
+
+  const handleRetry = useCallback(async () => {
+    setError(null);
+    setPermissionDenied(false);
+    setTranscript("");
+    await handleStart();
+  }, [handleStart]);
+
+  const handleToggleListening = useCallback(async () => {
+    if (!isSupported) {
+      setError('Speech recognition not supported in this browser');
+      return;
+    }
     
-    onOpenChange?.(false);
-  };
+    if (isListening) {
+      handleStop();
+    } else {
+      await handleStart();
+    }
+  }, [isSupported, isListening, handleStop, handleStart]);
+
+  // Clean up on modal close
+  useEffect(() => {
+    if (!open) {
+      speechService.stopListening();
+      setTranscript("");
+      setDuration(0);
+      setError(null);
+      setPermissionDenied(false);
+      setIsListening(false);
+      setIsProcessing(false);
+    }
+  }, [open]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -276,259 +202,171 @@ export function VoiceModal({ open, onOpenChange, onTranscriptComplete }: VoiceMo
   };
 
   const getStatusText = () => {
-    if (error) return error;
-    if (isListening) return "Listening...";
     if (isProcessing) return "Processing...";
-    if (isSpeaking) return "Speaking...";
-    return "Tap to speak";
+    if (isListening) return isMobile ? "Listening... (will auto-stop)" : "Listening... Click stop when done";
+    if (transcript) return "Ready to send";
+    return "Click to start speaking";
   };
 
   const getStatusColor = () => {
-    if (error) return "text-red-400";
-    if (isListening) return "text-blue-400";
-    if (isProcessing) return "text-yellow-400";
-    if (isSpeaking) return "text-green-400";
-    return "text-muted-foreground";
+    if (error) return "text-red-500";
+    if (isProcessing) return "text-blue-500";
+    if (isListening) return "text-green-500";
+    if (transcript) return "text-blue-500";
+    return "text-gray-500";
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-md p-0 bg-transparent border-none shadow-none">
-        <div className="relative flex flex-col items-center justify-center min-h-[600px] bg-background/95 backdrop-blur-sm rounded-2xl border border-border overflow-hidden">
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors z-20"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+      <DialogContent className={cn(
+        "sm:max-w-md mx-auto",
+        isMobile && "w-[95vw] h-[90vh] max-h-[600px] flex flex-col"
+      )}>
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center justify-between">
+            <span className="text-lg font-semibold">Voice Input</span>
+            <Button variant="ghost" size="sm" onClick={handleClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          </DialogTitle>
+        </DialogHeader>
 
-          {/* Ambient particles */}
-          <div className="absolute inset-0 overflow-hidden">
-            {particles.map(particle => (
-              <motion.div
-                key={particle.id}
-                className="absolute w-1 h-1 bg-primary/20 rounded-full"
-                style={{
-                  left: particle.x,
-                  top: particle.y,
-                  opacity: particle.opacity
-                }}
-                animate={{
-                  scale: [1, 1.5, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-            ))}
-          </div>
+        <div className={cn(
+          "flex flex-col items-center space-y-6 py-4",
+          isMobile && "flex-1 justify-center"
+        )}>
+          {/* Error Display */}
+          {error && (
+            <div className="w-full p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+                  
+                  {permissionDenied && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        To use voice input:
+                      </p>
+                      <ul className="text-xs text-red-600 dark:text-red-400 space-y-1 ml-4">
+                        <li>• Click the microphone icon in your browser's address bar</li>
+                        <li>• Select "Allow" for microphone access</li>
+                        <li>• Refresh the page if needed</li>
+                        {isMobile && <li>• Ensure you're using HTTPS or a supported browser</li>}
+                      </ul>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRetry}
+                        className="mt-2"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Background glow effects */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.div
-              className="w-96 h-96 rounded-full bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl"
-              animate={{
-                scale: isListening ? [1, 1.2, 1] : [1, 1.1, 1],
-                opacity: isListening ? [0.3, 0.6, 0.3] : [0.1, 0.2, 0.1]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-          </div>
-
-          <div className="relative z-10 flex flex-col items-center space-y-6 px-6">
-            {/* Main voice button */}
-            <motion.div
-              className="relative"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <motion.button
-                onClick={handleToggleListening}
-                className={cn(
-                  "relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300",
-                  "bg-gradient-to-br from-primary/20 to-primary/10 border-2",
-                  isListening ? "border-blue-500 shadow-lg shadow-blue-500/25" :
-                  isProcessing ? "border-yellow-500 shadow-lg shadow-yellow-500/25" :
-                  isSpeaking ? "border-green-500 shadow-lg shadow-green-500/25" :
-                  error ? "border-red-500 shadow-lg shadow-red-500/25" :
-                  "border-border hover:border-primary/50"
-                )}
-                animate={{
-                  boxShadow: isListening 
-                    ? ["0 0 0 0 rgba(59, 130, 246, 0.4)", "0 0 0 20px rgba(59, 130, 246, 0)"]
-                    : undefined
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: isListening ? Infinity : 0
-                }}
-                disabled={!!error}
-              >
-                <AnimatePresence mode="wait">
+          {!error && (
+            <>
+              {/* Microphone Button */}
+              <div className="relative">
+                <motion.button
+                  onClick={handleToggleListening}
+                  disabled={!isSupported || isProcessing}
+                  className={cn(
+                    "relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+                    isMobile && "w-24 h-24 touch-manipulation",
+                    isListening
+                      ? "bg-red-500 hover:bg-red-600 text-white"
+                      : "bg-blue-500 hover:bg-blue-600 text-white"
+                  )}
+                  whileHover={{ scale: isSupported && !isProcessing ? 1.05 : 1 }}
+                  whileTap={{ scale: isSupported && !isProcessing ? 0.95 : 1 }}
+                >
                   {isProcessing ? (
                     <motion.div
-                      key="processing"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
-                    </motion.div>
-                  ) : isSpeaking ? (
-                    <motion.div
-                      key="speaking"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <Volume2 className="w-8 h-8 text-green-500" />
-                    </motion.div>
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-8 h-8 border-2 border-white border-t-transparent rounded-full"
+                    />
                   ) : isListening ? (
-                    <motion.div
-                      key="listening"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <Mic className="w-8 h-8 text-blue-500" />
-                    </motion.div>
+                    <MicOff className={isMobile ? "w-8 h-8" : "w-6 h-6"} />
                   ) : (
-                    <motion.div
-                      key="idle"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <Mic className="w-8 h-8 text-muted-foreground" />
-                    </motion.div>
+                    <Mic className={isMobile ? "w-8 h-8" : "w-6 h-6"} />
                   )}
-                </AnimatePresence>
-              </motion.button>
+                </motion.button>
 
-              {/* Pulse rings */}
-              <AnimatePresence>
+                {/* Recording indicator */}
                 {isListening && (
-                  <>
-                    <motion.div
-                      className="absolute inset-0 rounded-full border-2 border-blue-500/30"
-                      initial={{ scale: 1, opacity: 0.6 }}
-                      animate={{ scale: 1.5, opacity: 0 }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: "easeOut"
-                      }}
-                    />
-                    <motion.div
-                      className="absolute inset-0 rounded-full border-2 border-blue-500/20"
-                      initial={{ scale: 1, opacity: 0.4 }}
-                      animate={{ scale: 2, opacity: 0 }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: "easeOut",
-                        delay: 0.5
-                      }}
-                    />
-                  </>
+                  <motion.div
+                    className="absolute -inset-2 rounded-full border-2 border-red-500"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
                 )}
-              </AnimatePresence>
-            </motion.div>
+              </div>
 
-            {/* Waveform visualizer */}
-            <div className="flex items-center justify-center space-x-1 h-12">
-              {waveformData.map((height, index) => (
-                <motion.div
-                  key={index}
-                  className={cn(
-                    "w-1 rounded-full transition-colors duration-300",
-                    isListening ? "bg-blue-500" :
-                    isProcessing ? "bg-yellow-500" :
-                    isSpeaking ? "bg-green-500" :
-                    "bg-muted"
-                  )}
-                  animate={{
-                    height: `${Math.max(4, height * 0.4)}px`,
-                    opacity: isListening || isSpeaking ? 1 : 0.3
-                  }}
-                  transition={{
-                    duration: 0.1,
-                    ease: "easeOut"
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Status and timer */}
-            <div className="text-center space-y-2">
-              <motion.p
-                className={cn("text-base font-medium transition-colors", getStatusColor())}
-                animate={{ opacity: [1, 0.7, 1] }}
-                transition={{
-                  duration: 2,
-                  repeat: isListening || isProcessing || isSpeaking ? Infinity : 0
-                }}
-              >
-                {getStatusText()}
-              </motion.p>
-              
-              <p className="text-sm text-muted-foreground font-mono">
-                {formatTime(duration)}
-              </p>
-
-              {volume > 0 && (
-                <motion.div
-                  className="flex items-center justify-center space-x-2"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <VolumeX className="w-3 h-3 text-muted-foreground" />
-                  <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-blue-500 rounded-full"
-                      animate={{ width: `${volume}%` }}
-                      transition={{ duration: 0.1 }}
-                    />
-                  </div>
-                  <Volume2 className="w-3 h-3 text-muted-foreground" />
-                </motion.div>
-              )}
-            </div>
-
-            {/* Transcript display */}
-            {transcript && (
-              <motion.div
-                className="max-w-sm p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg border"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <p className="text-sm text-gray-900 dark:text-white text-center">
-                  "{transcript}"
+              {/* Status and Timer */}
+              <div className="text-center space-y-2">
+                <p className={cn("text-sm font-medium", getStatusColor())}>
+                  {getStatusText()}
                 </p>
-              </motion.div>
-            )}
+                
+                {(isListening || duration > 0) && (
+                  <div className="text-2xl font-mono text-gray-900 dark:text-white">
+                    {formatTime(duration)}
+                  </div>
+                )}
+              </div>
 
-            {/* AI indicator */}
-            <motion.div
-              className="flex items-center space-x-2 text-xs text-muted-foreground"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>AI Voice Assistant</span>
-            </motion.div>
-          </div>
+              {/* Transcript Display */}
+              {transcript && (
+                <div className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {transcript}
+                  </p>
+                </div>
+              )}
+
+              {/* Mobile-specific tips */}
+              {isMobile && !isListening && !transcript && (
+                <div className="text-center space-y-2">
+                  <Smartphone className="w-8 h-8 text-gray-400 mx-auto" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Tap the microphone and speak clearly
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Recognition will stop automatically when you finish speaking
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {transcript && !isListening && !isProcessing && (
+                <div className="flex gap-3 w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => setTranscript("")}
+                    className="flex-1"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={() => handleSubmit()}
+                    disabled={!transcript.trim()}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

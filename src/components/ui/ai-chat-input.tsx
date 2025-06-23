@@ -67,6 +67,7 @@ const AIChatInput = ({
   const [thinkActive, setThinkActive] = useState(false);
   const [deepSearchActive, setDeepSearchActive] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
   
   // Mention functionality
   const [showMentions, setShowMentions] = useState(false);
@@ -79,6 +80,18 @@ const AIChatInput = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mentionMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Filter mention items based on query
   const filterMentionItems = useCallback((type: 'model' | 'agent', query: string) => {
@@ -388,15 +401,34 @@ const AIChatInput = ({
         </AnimatePresence>
 
         <div className="flex flex-col items-stretch w-full h-full dark:bg-zinc-800 rounded-[32px]">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".txt,.md,.pdf,.doc,.docx,.json,.csv,.png,.jpg,.jpeg,.gif,.webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                onAttachFile?.(file);
+              }
+            }}
+          />
+          
           <div className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-full bg-white dark:bg-zinc-800 max-w-3xl w-full">
             <button
-              className="p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50 shrink-0"
+              className={`
+                p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 
+                transition disabled:opacity-50 shrink-0 touch-manipulation
+                ${isMobile ? 'min-h-[44px] min-w-[44px]' : ''}
+              `}
               title="Attach file"
               type="button"
               tabIndex={-1}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                onAttachFile?.();
+                fileInputRef.current?.click();
               }}
               disabled={disabled}
             >
@@ -451,11 +483,16 @@ const AIChatInput = ({
             </div>
 
             <button
-              className="p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition disabled:opacity-50 shrink-0"
+              className={`
+                p-2 sm:p-3 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 
+                transition disabled:opacity-50 shrink-0 touch-manipulation
+                ${isMobile ? 'min-h-[44px] min-w-[44px]' : ''}
+              `}
               title="Voice input"
               type="button"
               tabIndex={-1}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onVoiceInput?.();
               }}
