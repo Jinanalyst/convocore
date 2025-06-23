@@ -13,6 +13,7 @@ import { aiService } from '@/lib/ai-service';
 import { CONVO_AGENTS, getAgentByTag, formatMessageWithAgent } from '@/lib/model-agents';
 import { memoryService } from '@/lib/memory-service';
 import { usageService } from '@/lib/usage-service';
+import { chainScopeService } from '@/lib/chainscope-service';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
@@ -218,7 +219,76 @@ export async function POST(request: NextRequest) {
       systemPrompt += webSearchInstructions;
     }
     
-    // Check for any agent mentions in the message
+    // Check for ChainScope requests first (since it needs special handling)
+    if (userContent.toLowerCase().includes('@chainscope')) {
+      console.log('🔗 ChainScope request detected');
+      
+      try {
+        const chainScopeResponse = await chainScopeService.processChainScopeMessage(userContent);
+        
+        if (chainScopeResponse.success) {
+          // Save AI response to memory if user is authenticated
+          if (userId !== 'anonymous') {
+            try {
+              await memoryService.saveMessage(userId, 'assistant', chainScopeResponse.analysis);
+            } catch (error) {
+              console.error('Failed to save ChainScope response:', error);
+            }
+          }
+          
+          // Increment usage count after successful ChainScope response
+          if (userId !== 'anonymous') {
+            try {
+              const result = usageService.incrementUsage(userId);
+              console.log('📊 ChainScope usage incremented:', {
+                userId,
+                success: result.success,
+                used: result.usage.requestsUsed,
+                limit: result.usage.requestsLimit,
+                plan: result.usage.plan
+              });
+            } catch (usageError) {
+              console.error('Failed to increment ChainScope usage:', usageError);
+            }
+          }
+          
+          return NextResponse.json({ 
+            response: chainScopeResponse.analysis,
+            content: chainScopeResponse.analysis,
+            model: 'chainscope-claude-3-sonnet',
+            chatId: chatId || `chat_${Date.now()}`,
+            agentUsed: {
+              name: 'ChainScope',
+              tag: '@chainscope',
+              displayName: 'Chain Scope',
+              capabilities: ['crypto analysis', 'on-chain data interpretation']
+            },
+            apiStatus,
+            features: {
+              thinkMode: think,
+              webSearchMode: webSearchRequested,
+              chainScopeMode: true
+            },
+            metadata: chainScopeResponse.metadata
+          });
+        } else {
+          return NextResponse.json({
+            error: 'ChainScope analysis failed',
+            details: chainScopeResponse.error,
+            suggestion: 'Please check your query format. Use "@chainscope analyze $TOKEN" or "@chainscope onchain [data]"'
+          }, { status: 400 });
+        }
+      } catch (error) {
+        console.error('ChainScope error:', error);
+        return NextResponse.json({
+          error: 'ChainScope service error',
+          details: error instanceof Error ? error.message : 'Unknown ChainScope error',
+          suggestion: 'Please try again or check if the Anthropic API key is configured properly'
+        }, { status: 500 });
+      }
+    }
+    
+    // Check for any other agent mentions in the message
     for (const agent of CONVO_AGENTS) {
       if (userContent.toLowerCase().includes(agent.tag.toLowerCase())) {
         detectedAgent = agent;
@@ -252,13 +322,14 @@ Focus on providing actionable, detailed solutions that match your capabilities. 
 Available specialized agents that users can invoke with @ mentions:
 ${CONVO_AGENTS.map(agent => `- ${agent.tag}: ${agent.description}`).join('\n')}
 
-If a user wants to use a specialized agent, they can mention it with @ in their message (e.g., "@codegen help me build a React component").
+If a user wants to use a specialized agent, they can mention it with @ in their message (e.g., "@codegen help me build a React component", "@chainscope analyze $ETH").
 
 When responding:
 1. Be helpful and accurate
 2. Provide clear explanations
 3. Include relevant examples when appropriate
-4. Suggest specialized agents if the user's request would benefit from their expertise`;
+4. Suggest specialized agents if the user's request would benefit from their expertise
+5. For crypto-related questions, suggest using @chainscope for detailed analysis`;
       
       systemPrompt = baseSystemPrompt + systemPrompt;
     }

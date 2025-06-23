@@ -35,6 +35,7 @@ const AI_AGENTS = [
   { tag: "@analyst", name: "Data Analyst", icon: "📊", description: "Analyze data patterns" },
   { tag: "@consultant", name: "Strategy Advisor", icon: "💼", description: "Business strategy guidance" },
   { tag: "@calculator", name: "Math Helper", icon: "🔢", description: "Mathematical calculations" },
+  { tag: "@chainscope", name: "Chain Scope", icon: "📈", description: "Analyze crypto tokens and blockchain data" },
 ];
 
 interface MentionItem {
@@ -131,7 +132,8 @@ const AIChatInput = ({
       else if (query.startsWith('code') || query.startsWith('debug') || query.startsWith('ui') || 
                query.startsWith('image') || query.startsWith('write') || query.startsWith('analys') ||
                query.startsWith('consul') || query.startsWith('calc') || query.startsWith('seo') ||
-               query.startsWith('deploy') || query.startsWith('chat') || query.startsWith('db')) {
+               query.startsWith('deploy') || query.startsWith('chat') || query.startsWith('db') ||
+               query.startsWith('chain') || query.startsWith('crypto') || query.startsWith('block')) {
         mentionType = 'agent';
       }
       else {
