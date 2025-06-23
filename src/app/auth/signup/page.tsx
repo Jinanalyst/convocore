@@ -20,6 +20,14 @@ function SignupPageContent() {
   const redirectTo = searchParams.get('redirectTo') || '/convocore';
   const supabase = createClientComponentClient();
 
+  // KakaoTalk icon component
+  const KakaoIcon = ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#FFE500"/>
+      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#3C1E1E"/>
+    </svg>
+  );
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -98,6 +106,46 @@ function SignupPageContent() {
     } catch (err) {
       console.error('Google signup exception:', err);
       setError('An unexpected error occurred with Google signup. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKakaoSignup = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Check if Supabase is properly configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        setError('Authentication service is not configured. Please contact support.');
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+        },
+      });
+
+      if (error) {
+        console.error('Kakao signup error:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Kakao authentication failed. Please try again or use a different account.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email address before signing in.');
+        } else if (error.message.includes('configuration')) {
+          setError('Kakao authentication is not properly configured. Please contact support.');
+        } else {
+          setError(`Kakao signup failed: ${error.message}`);
+        }
+      }
+    } catch (err) {
+      console.error('Kakao signup exception:', err);
+      setError('An unexpected error occurred with Kakao signup. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -273,6 +321,17 @@ function SignupPageContent() {
                 />
               </svg>
               Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleKakaoSignup}
+              disabled={loading}
+              variant="outline"
+              className="w-full bg-transparent border-gray-700 text-white hover:bg-gray-900"
+            >
+              <KakaoIcon className="w-5 h-5 mr-2" />
+              Continue with Kakao
             </Button>
           </div>
         </form>

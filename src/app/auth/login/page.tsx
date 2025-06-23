@@ -12,12 +12,20 @@ import { Chrome, Wallet, ArrowRight, AlertCircle } from 'lucide-react';
 function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loginType, setLoginType] = useState<'google' | 'wallet' | null>(null);
+  const [loginType, setLoginType] = useState<'google' | 'kakao' | 'wallet' | null>(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/convocore';
-  const { signInWithGoogle, signInWithWallet } = useAuth();
+  const { signInWithGoogle, signInWithKakao, signInWithWallet } = useAuth();
+
+  // KakaoTalk icon component
+  const KakaoIcon = ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#FFE500"/>
+      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#3C1E1E"/>
+    </svg>
+  );
 
   // Check for auth callback errors
   useEffect(() => {
@@ -67,6 +75,29 @@ function LoginPageContent() {
         setError('Google authentication is not enabled. Please use wallet login instead.');
       } else {
         setError(`Google login failed: ${err.message}`);
+      }
+      
+      setLoading(false);
+      setLoginType(null);
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    setLoading(true);
+    setError(null);
+    setLoginType('kakao');
+
+    try {
+      await signInWithKakao();
+      // Don't redirect here - let the auth state change handler do it
+      // The OAuth flow will handle the redirect through the callback
+    } catch (err: any) {
+      console.error('Kakao login error:', err);
+      
+      if (err.message.includes('not configured') || err.message.includes('not enabled')) {
+        setError('Kakao authentication is not enabled. Please contact support.');
+      } else {
+        setError(`Kakao login failed: ${err.message}`);
       }
       
       setLoading(false);
@@ -131,6 +162,24 @@ function LoginPageContent() {
                 <Chrome className="h-5 w-5 text-[#4285f4]" />
               )}
               <span className="font-medium">Continue with Google</span>
+              <ArrowRight className="h-4 w-4 ml-auto" />
+            </div>
+          </Button>
+
+          {/* Kakao Login */}
+          <Button
+            onClick={handleKakaoLogin}
+            disabled={loading}
+            className="w-full h-14 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-600 shadow-sm"
+            variant="outline"
+          >
+            <div className="flex items-center justify-center gap-3">
+              {loading && loginType === 'kakao' ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 dark:border-white"></div>
+              ) : (
+                <KakaoIcon className="h-5 w-5 text-[#3b5998]" />
+              )}
+              <span className="font-medium">Continue with Kakao</span>
               <ArrowRight className="h-4 w-4 ml-auto" />
             </div>
           </Button>

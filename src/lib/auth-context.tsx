@@ -20,6 +20,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithKakao: () => Promise<void>;
   signInWithWallet: (walletAddress: string, walletType: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -168,6 +169,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithKakao = async () => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      throw new Error('Kakao authentication is not configured');
+    }
+
+    // Store the intended redirect location
+    const redirectTo = '/convocore';
+    localStorage.setItem('auth_redirect_to', redirectTo);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+      },
+    });
+
+    if (error) {
+      localStorage.removeItem('auth_redirect_to');
+      throw error;
+    }
+  };
+
   const signInWithWallet = async (walletAddress: string, walletType: string) => {
     try {
       // Store wallet info
@@ -239,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     signInWithGoogle,
+    signInWithKakao,
     signInWithWallet,
     signOut,
     refreshUser,
