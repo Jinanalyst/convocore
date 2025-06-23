@@ -26,7 +26,9 @@ import {
   Crown,
   Zap,
   Star,
-  Copy
+  Copy,
+  MessageCircle,
+  Volume2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BillingModal } from "@/components/modals/billing-modal";
@@ -703,7 +705,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       : 'Not Supported'}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                   {typeof window !== 'undefined' && 'Notification' in window 
                     ? Notification.permission === 'granted'
                       ? 'You can receive browser notifications when the app is closed.'
@@ -717,138 +719,159 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   size="sm" 
                   variant="outline" 
                   onClick={testNotification}
-                  className="mt-2"
+                  className="w-full sm:w-auto"
                 >
                   <Bell className="w-3 h-3 mr-1" />
                   Test Notification
                 </Button>
               </div>
 
-              {/* Notification Categories */}
-              <div className="space-y-4 sm:space-y-5">
-                {/* Push Notifications */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Push Notifications</h4>
-                  
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+              {/* Notification Categories with Collapsible Sections */}
+              <div className="space-y-3">
+                {/* Master Toggle for Push Notifications */}
+                <div className="p-4 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                  <label className="flex items-center justify-between cursor-pointer">
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Enable Push Notifications</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Receive browser notifications when the app is closed</p>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white block">Enable All Push Notifications</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Master toggle for all notification types</p>
                     </div>
                     <input 
                       type="checkbox" 
                       checked={settings.notifications.push}
                       onChange={(e) => handleNotificationToggle('push', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Notification Sounds</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Play sound when receiving notifications</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.sound}
-                      onChange={(e) => handleNotificationToggle('sound', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
+                      className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
                     />
                   </label>
                 </div>
 
                 {/* Chat Notifications */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Chat Notifications</h4>
-                  
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Chat Completed</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify when AI has finished responding</p>
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Chat Notifications</span>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.chatComplete}
-                      onChange={(e) => handleNotificationToggle('chatComplete', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">New Messages</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify about new chat messages</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.newMessage}
-                      onChange={(e) => handleNotificationToggle('newMessage', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-                </div>
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">Chat Completed</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Notify when AI finishes responding</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.chatComplete}
+                        onChange={(e) => handleNotificationToggle('chatComplete', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">New Messages</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Notify about new chat messages</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.newMessage}
+                        onChange={(e) => handleNotificationToggle('newMessage', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                  </div>
+                </details>
 
                 {/* System Notifications */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">System Notifications</h4>
-                  
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Usage Alerts</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Notify when approaching usage limits</p>
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Settings className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">System Notifications</span>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.usageAlerts}
-                      onChange={(e) => handleNotificationToggle('usageAlerts', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">Usage Alerts</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Warn when approaching limits</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.usageAlerts}
+                        onChange={(e) => handleNotificationToggle('usageAlerts', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">Security Alerts</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Important security notifications</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.securityAlerts}
+                        onChange={(e) => handleNotificationToggle('securityAlerts', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">System Updates</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">New features and updates</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.systemUpdates}
+                        onChange={(e) => handleNotificationToggle('systemUpdates', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                  </div>
+                </details>
 
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Security Alerts</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Important security notifications and login alerts</p>
+                {/* Audio & Preferences */}
+                <details className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Volume2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Audio & Preferences</span>
                     </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.securityAlerts}
-                      onChange={(e) => handleNotificationToggle('securityAlerts', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">System Updates</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">New features and system updates</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.systemUpdates}
-                      onChange={(e) => handleNotificationToggle('systemUpdates', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-                </div>
-
-                {/* Marketing Notifications */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Marketing & Promotions</h4>
-                  
-                  <label className="flex items-start sm:items-center justify-between gap-3 sm:gap-0 p-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block">Marketing Emails</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Promotional offers and product updates</p>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={settings.notifications.marketingEmails}
-                      onChange={(e) => handleNotificationToggle('marketingEmails', e.target.checked)}
-                      className="rounded border-gray-300 dark:border-zinc-600 shrink-0 mt-1 sm:mt-0 h-4 w-4" 
-                    />
-                  </label>
-                </div>
+                    <svg className="w-4 h-4 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-zinc-700 pt-3">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">Notification Sounds</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Play sound with notifications</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.sound}
+                        onChange={(e) => handleNotificationToggle('sound', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-white block">Marketing Emails</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Promotional offers and updates</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.marketingEmails}
+                        onChange={(e) => handleNotificationToggle('marketingEmails', e.target.checked)}
+                        className="ml-3 h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                      />
+                    </label>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
@@ -1014,7 +1037,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[95vh] max-h-[900px] p-0 sm:h-[85vh]">
+      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] p-0 sm:h-[85vh]">
         <div className="flex flex-col sm:flex-row h-full">
           {/* Mobile Header with Tab Selector */}
           <div className="sm:hidden border-b border-gray-200 dark:border-zinc-700 p-4 flex-shrink-0">
