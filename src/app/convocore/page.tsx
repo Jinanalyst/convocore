@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
 import { SettingsModal } from "@/components/modals/settings-modal";
+import { PWAInstall } from "@/components/ui/pwa-install";
 import { cn } from "@/lib/utils";
 
 interface Chat {
@@ -292,6 +293,9 @@ export default function ConvocorePage() {
         open={settingsOpen} 
         onOpenChange={setSettingsOpen} 
       />
+
+      {/* PWA Install Component */}
+      <PWAInstall />
     </div>
   );
 } 

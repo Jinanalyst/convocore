@@ -1,0 +1,10 @@
+{
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://convocore.site"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_APP_URL": "https://convocore.site"
+    }
+  }
+} 

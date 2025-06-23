@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { motion } from "framer-motion";
 import { useRouter } from 'next/navigation';
 import { AuroraBackground } from "@/components/ui/aurora-background";
+import { PWAInstall } from "@/components/ui/pwa-install";
 import { useState, useEffect } from 'react';
 
 // Note: Since this is a client component, metadata should be in layout.tsx
@@ -121,40 +122,8 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* PWA Install Prompt for Mobile */}
-          {isMobile && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
-              className="fixed bottom-4 left-4 right-4 z-50 pwa-install-prompt"
-            >
-              <div className="bg-white/90 dark:bg-black/90 backdrop-blur-sm rounded-lg p-3 border border-gray-200 dark:border-gray-700 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-bold">C</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      Install Convocore App
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      Get faster access and offline features
-                    </div>
-                  </div>
-                  <button 
-                    className="text-blue-500 text-sm font-medium px-3 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                    onClick={() => {
-                      // PWA install logic would go here
-                      document.querySelector('.pwa-install-prompt')?.classList.add('hidden');
-                    }}
-                  >
-                    Install
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          {/* PWA Install Component */}
+          <PWAInstall />
         </motion.div>
       </AuroraBackground>
     </>
