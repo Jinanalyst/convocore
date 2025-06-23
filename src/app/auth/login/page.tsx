@@ -8,11 +8,13 @@ import { ConvocoreLogo } from '@/components/ui/convocore-logo';
 import { WalletConnector } from '@/components/ui/wallet-connector';
 import { useAuth } from '@/lib/auth-context';
 import { Chrome, Wallet, ArrowRight, AlertCircle } from 'lucide-react';
+import { AuthFallback } from '@/components/ui/auth-fallback';
 
 function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginType, setLoginType] = useState<'google' | 'kakao' | 'wallet' | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,8 +96,9 @@ function LoginPageContent() {
     } catch (err: any) {
       console.error('Kakao login error:', err);
       
-      if (err.message.includes('not configured') || err.message.includes('not enabled')) {
-        setError('Kakao authentication is not enabled. Please contact support.');
+      if (err.message.includes('not configured') || err.message.includes('not enabled') || err.message.includes('KOE205')) {
+        setError(err.message);
+        setShowFallback(true);
       } else {
         setError(`Kakao login failed: ${err.message}`);
       }
@@ -197,7 +200,7 @@ function LoginPageContent() {
           </div>
 
           {/* Wallet Connection */}
-          <div className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4 bg-white dark:bg-zinc-800">
+          <div className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4 bg-white dark:bg-zinc-800" data-wallet-connector>
             <div className="flex items-center gap-3 mb-3">
               <Wallet className="h-5 w-5 text-purple-500" />
               <span className="font-medium text-gray-900 dark:text-white">Connect Wallet</span>
@@ -227,6 +230,26 @@ function LoginPageContent() {
           </p>
         </div>
       </div>
+
+      {/* Kakao Auth Fallback Modal */}
+      {showFallback && (
+        <AuthFallback
+          error={error || 'Kakao authentication failed'}
+          onGoogleLogin={() => {
+            setShowFallback(false);
+            handleGoogleLogin();
+          }}
+          onWalletLogin={() => {
+            setShowFallback(false);
+            // Scroll to wallet section
+            document.querySelector('[data-wallet-connector]')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          onDismiss={() => {
+            setShowFallback(false);
+            setError(null);
+          }}
+        />
+      )}
     </div>
   );
 }

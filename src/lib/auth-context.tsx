@@ -179,21 +179,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithKakao = async () => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      throw new Error('Kakao authentication is not configured');
+      throw new Error('Kakao authentication is not configured. Please contact support or try Google login.');
     }
 
     // Store the intended redirect location
     const redirectTo = '/convocore';
     localStorage.setItem('auth_redirect_to', redirectTo);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'kakao',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+        },
+      });
 
-    if (error) {
+      if (error) {
+        localStorage.removeItem('auth_redirect_to');
+        
+        // Enhanced error handling for Kakao-specific issues
+        if (error.message.includes('KOE205') || error.message.includes('provider_not_found')) {
+          throw new Error('Kakao authentication is not enabled. Please use Google login or wallet connection instead.');
+        } else if (error.message.includes('configuration')) {
+          throw new Error('Kakao authentication is not properly configured. Please contact support.');
+        } else {
+          throw new Error(`Kakao login failed: ${error.message}. Please try Google login instead.`);
+        }
+      }
+    } catch (error: any) {
       localStorage.removeItem('auth_redirect_to');
       throw error;
     }
