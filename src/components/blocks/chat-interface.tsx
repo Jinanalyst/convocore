@@ -37,24 +37,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getRelativeTime } from '@/lib/date-utils';
 
 // Types
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
-  tokens?: number;
-  model?: string;
-}
-
-interface ChatSession {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
-  model: string;
-  messageCount: number;
-}
+import { chatStorageService, type ChatMessage, type ChatSession } from "@/lib/chat-storage-service";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -514,32 +497,36 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   const vh = useViewportHeight();
   const isKeyboardOpen = useKeyboardOpen();
 
-  // Load sessions from localStorage on mount
+  // Load sessions using the chat storage service
   useEffect(() => {
-    const savedSessions = localStorage.getItem('convocore-chat-sessions');
-    if (savedSessions) {
+    const loadSessions = async () => {
       try {
-        const parsed = JSON.parse(savedSessions).map((session: any) => ({
-          ...session,
-          createdAt: new Date(session.createdAt),
-          updatedAt: new Date(session.updatedAt),
-          messages: session.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }));
-        setSessions(parsed);
+        const loadedSessions = await chatStorageService.loadChatSessions();
+        setSessions(loadedSessions);
       } catch (error) {
         console.error('Failed to load sessions:', error);
       }
-    }
+    };
+
+    loadSessions();
   }, []);
 
-  // Save sessions to localStorage whenever sessions change
+  // Save sessions using the chat storage service whenever sessions change
   useEffect(() => {
-    if (sessions.length > 0) {
-      localStorage.setItem('convocore-chat-sessions', JSON.stringify(sessions));
-    }
+    const saveSessions = async () => {
+      if (sessions.length > 0) {
+        // Save each session to the storage service
+        for (const session of sessions) {
+          try {
+            await chatStorageService.saveChatSession(session);
+          } catch (error) {
+            console.error('Failed to save session:', session.id, error);
+          }
+        }
+      }
+    };
+
+    saveSessions();
   }, [sessions]);
 
   // Auto-scroll to bottom
@@ -589,22 +576,32 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
     setSidebarOpen(false);
   }, []);
 
-  const deleteSession = useCallback((sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(null);
+  const deleteSession = useCallback(async (sessionId: string) => {
+    try {
+      await chatStorageService.deleteChatSession(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error);
     }
   }, [currentSession]);
 
-  const renameSession = useCallback((sessionId: string, newTitle: string) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, title: newTitle }
-        : session
-    ));
-    
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(prev => prev ? { ...prev, title: newTitle } : null);
+  const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
+    try {
+      await chatStorageService.updateSessionTitle(sessionId, newTitle);
+      setSessions(prev => prev.map(session => 
+        session.id === sessionId 
+          ? { ...session, title: newTitle, updatedAt: new Date() }
+          : session
+      ));
+      
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? { ...prev, title: newTitle, updatedAt: new Date() } : null);
+      }
+    } catch (error) {
+      console.error('Failed to rename session:', error);
     }
   }, [currentSession]);
 
