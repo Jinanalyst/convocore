@@ -53,8 +53,29 @@ export default function ConvocorePage() {
           const parsedChats = JSON.parse(savedChats);
           setChats(parsedChats);
         } else {
-          // Start with empty chat list for new wallet users
-          setChats([]);
+          // Start with demo chats for new wallet users to show functionality
+          const demoChats: Chat[] = [
+            {
+              id: `demo_${Date.now()}_1`,
+              title: "Welcome to Convocore",
+              lastMessage: "Hello! How can I help you today?",
+              timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+            },
+            {
+              id: `demo_${Date.now()}_2`,
+              title: "Getting Started Guide",
+              lastMessage: "Let me know what you would like to explore...",
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+            },
+            {
+              id: `demo_${Date.now()}_3`,
+              title: "Code Generation Help",
+              lastMessage: "I can help you write and debug code...",
+              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+            },
+          ];
+          setChats(demoChats);
+          localStorage.setItem('wallet_chats', JSON.stringify(demoChats));
         }
         console.log('Loaded chats for wallet user');
         return;
@@ -80,6 +101,28 @@ export default function ConvocorePage() {
 
       if (error) {
         console.error('Error loading chats:', error);
+        // Fallback to demo chats for unauthenticated users
+        const demoChats: Chat[] = [
+          {
+            id: `demo_${Date.now()}_1`,
+            title: "Welcome to Convocore",
+            lastMessage: "Hello! How can I help you today?",
+            timestamp: new Date(Date.now() - 1000 * 60 * 30),
+          },
+          {
+            id: `demo_${Date.now()}_2`,
+            title: "Getting Started Guide", 
+            lastMessage: "Let me know what you would like to explore...",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+          },
+          {
+            id: `demo_${Date.now()}_3`,
+            title: "Code Generation Help",
+            lastMessage: "I can help you write and debug code...",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+          },
+        ];
+        setChats(demoChats);
         return;
       }
 
@@ -90,11 +133,56 @@ export default function ConvocorePage() {
         timestamp: new Date(conv.updated_at),
       })) || [];
 
-      setChats(formattedChats);
+      // If no conversations exist, show demo chats
+      if (formattedChats.length === 0) {
+        const demoChats: Chat[] = [
+          {
+            id: `demo_${Date.now()}_1`,
+            title: "Welcome to Convocore",
+            lastMessage: "Hello! How can I help you today?",
+            timestamp: new Date(Date.now() - 1000 * 60 * 30),
+          },
+          {
+            id: `demo_${Date.now()}_2`,
+            title: "Getting Started Guide",
+            lastMessage: "Let me know what you would like to explore...",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+          },
+          {
+            id: `demo_${Date.now()}_3`,
+            title: "Code Generation Help",
+            lastMessage: "I can help you write and debug code...",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+          },
+        ];
+        setChats(demoChats);
+      } else {
+        setChats(formattedChats);
+      }
     } catch (error) {
       console.error('Error loading chats:', error);
-      // Fallback to empty chats
-      setChats([]);
+      // Fallback to demo chats
+      const demoChats: Chat[] = [
+        {
+          id: `demo_${Date.now()}_1`,
+          title: "Welcome to Convocore",
+          lastMessage: "Hello! How can I help you today?",
+          timestamp: new Date(Date.now() - 1000 * 60 * 30),
+        },
+        {
+          id: `demo_${Date.now()}_2`,
+          title: "Getting Started Guide",
+          lastMessage: "Let me know what you would like to explore...",
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        },
+        {
+          id: `demo_${Date.now()}_3`,
+          title: "Code Generation Help",
+          lastMessage: "I can help you write and debug code...",
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+        },
+      ];
+      setChats(demoChats);
     }
   };
 
