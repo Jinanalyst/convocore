@@ -64,7 +64,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       temperature: 0.7,
       maxTokens: 2048,
       streamResponse: true,
-      convoArtApiKey: '9475df54-f35e-4f20-ae0c-95e99c6c54f3'
+      convoArtApiKey: '9475df54-f35e-4f20-ae0c-95e99c6c54f3',
+      convoQApiKey: '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'
     },
     privacy: {
       dataCollection: true,
@@ -638,6 +639,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <option value="claude-3-sonnet-20240229">✨ Convocore Nova</option>
                     <option value="deepseek/deepseek-r1:free">🤏 ConvoMini</option>
                     <option value="convoart">🎨 ConvoArt (Image Generation)</option>
+                    <option value="convoq">⚡ ConvoQ (Ultra-Fast Responses)</option>
                   </select>
                 </div>
                 
@@ -770,13 +772,47 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           Get your API key from <a href="https://deepai.org/api" target="_blank" rel="noopener noreferrer" className="text-purple-600 dark:text-purple-400 hover:underline">deepai.org/api</a>
                         </p>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+                                         </div>
+                   </div>
+                 </div>
+
+                 {/* ConvoQ API Key Setting */}
+                 <div className="space-y-3">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                       ConvoQ API Key
+                     </label>
+                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                       Your Groq API key for ConvoQ ultra-fast responses
+                     </p>
+                   </div>
+                   
+                   <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg border border-gray-200 dark:border-zinc-700">
+                     <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center shrink-0">
+                         <span className="text-white font-bold text-sm">⚡</span>
+                       </div>
+                       <div className="flex-1">
+                         <input
+                           type="password"
+                           value={settings.aiModel.convoQApiKey}
+                           onChange={(e) => updateSettings({
+                             aiModel: { ...settings.aiModel, convoQApiKey: e.target.value }
+                           })}
+                           placeholder="Enter your Groq API key"
+                           className="w-full px-3 py-2 bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 transition-colors"
+                         />
+                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                           Get your API key from <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-yellow-600 dark:text-yellow-400 hover:underline">console.groq.com</a>
+                         </p>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+         );
 
       case 'appearance':
         return (

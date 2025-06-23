@@ -47,6 +47,12 @@ const models = [
     description: "Advanced text-to-image generation powered by DeepAI technology",
     provider: "Convocore",
   },
+  {
+    id: "convoq",
+    name: "ConvoQ",
+    description: "Ultra-fast responses powered by Groq's lightning-fast inference",
+    provider: "Convocore",
+  },
 ];
 
 interface ModelSelectorProps {

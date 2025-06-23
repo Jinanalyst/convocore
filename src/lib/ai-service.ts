@@ -1,9 +1,10 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
+import { convoQService } from './convoq-service';
 
 // AI Service Configuration
 export interface AIServiceConfig {
-  provider: 'openai' | 'anthropic' | 'openrouter';
+  provider: 'openai' | 'anthropic' | 'openrouter' | 'groq';
   model: string;
   temperature?: number;
   maxTokens?: number;
@@ -87,6 +88,13 @@ export const AI_MODELS = {
     maxTokens: 4096,
     contextLength: 32000,
   },
+  'convoq': {
+    provider: 'groq' as const,
+    name: 'ConvoQ',
+    description: 'Ultra-fast responses powered by Groq\'s lightning-fast inference',
+    maxTokens: 8192,
+    contextLength: 8192,
+  },
 } as const;
 
 // Initialize OpenAI client
@@ -104,6 +112,8 @@ const openrouter = process.env.OPENROUTER_API_KEY ? new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY,
 }) : null;
+
+// Groq client is handled through the ConvoQ service
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -135,6 +145,8 @@ export async function sendChatMessage(
       return await sendAnthropicMessage(messages, model, temperature, maxTokens);
     } else if (provider === 'openrouter') {
       return await sendOpenRouterMessage(messages, model, temperature, maxTokens);
+    } else if (provider === 'groq') {
+      return await sendGroqMessage(messages, model, temperature, maxTokens);
     } else {
       throw new Error(`Unsupported AI provider: ${provider}`);
     }
@@ -321,17 +333,87 @@ async function sendOpenRouterMessage(
   }
 }
 
+async function sendGroqMessage(
+  messages: ChatMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number
+): Promise<ChatResponse> {
+  console.log(`🔄 Calling Groq API (ConvoQ) with model: ${model}`);
+
+  try {
+    // Get user settings for API key
+    const savedSettings = localStorage.getItem('convocore-settings');
+    let apiKey = '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'; // Default API key
+    
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        if (settings.aiModel?.convoQApiKey) {
+          apiKey = settings.aiModel.convoQApiKey;
+        }
+      } catch (error) {
+        console.warn('Failed to parse settings for ConvoQ API key:', error);
+      }
+    }
+
+    const response = await convoQService.generateResponse({
+      messages: messages.map(msg => ({
+        role: msg.role as 'system' | 'user' | 'assistant',
+        content: msg.content,
+      })),
+      model: 'llama3-8b-8192', // Default Groq model
+      temperature,
+      max_tokens: maxTokens,
+      apiKey,
+    });
+
+    const choice = response.choices[0];
+    if (!choice?.message?.content) {
+      throw new Error('No response content from ConvoQ API');
+    }
+
+    console.log('✅ ConvoQ response received successfully');
+
+    return {
+      content: choice.message.content,
+      model: 'convoq',
+      usage: response.usage ? {
+        promptTokens: response.usage.prompt_tokens,
+        completionTokens: response.usage.completion_tokens,
+        totalTokens: response.usage.total_tokens,
+      } : undefined,
+    };
+  } catch (error) {
+    console.error('🚨 ConvoQ API Error:', error);
+    
+    if (error instanceof Error) {
+      // Handle specific Groq errors
+      if (error.message.includes('401')) {
+        throw new Error('Invalid Groq API key. Please check your ConvoQ API key in settings.');
+      } else if (error.message.includes('429')) {
+        throw new Error('Groq rate limit exceeded. Please try again later.');
+      } else {
+        throw new Error(`ConvoQ API error: ${error.message}`);
+      }
+    } else {
+      throw new Error('Unknown ConvoQ API error');
+    }
+  }
+}
+
 // Utility function to get model configuration
 export async function getModelConfig(modelId: string): Promise<(typeof AI_MODELS)[keyof typeof AI_MODELS] | null> {
   return AI_MODELS[modelId as keyof typeof AI_MODELS] || null;
 }
 
 // Utility function to validate API keys
-export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: boolean; openrouter: boolean }> {
+export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: boolean; openrouter: boolean; groq: boolean }> {
   return {
     openai: !!process.env.OPENAI_API_KEY,
     anthropic: !!process.env.ANTHROPIC_API_KEY,
     openrouter: !!process.env.OPENROUTER_API_KEY,
+    groq: !!process.env.GROQ_API_KEY,
   };
 }
 
@@ -343,6 +425,7 @@ export const aiService = {
       openaiKey: !!process.env.OPENAI_API_KEY,
       anthropicKey: !!process.env.ANTHROPIC_API_KEY,
       openrouterKey: !!process.env.OPENROUTER_API_KEY,
+      groqKey: !!process.env.GROQ_API_KEY,
       model: model
     });
 
@@ -370,6 +453,25 @@ export const aiService = {
 
     if (modelConfig.provider === 'openrouter' && !process.env.OPENROUTER_API_KEY) {
       throw new Error('OpenRouter API key not configured. Please add OPENROUTER_API_KEY to your .env.local file.');
+    }
+
+    if (modelConfig.provider === 'groq') {
+      // Check if user has configured ConvoQ API key in settings
+      const savedSettings = localStorage.getItem('convocore-settings');
+      let hasGroqKey = !!process.env.GROQ_API_KEY;
+      
+      if (savedSettings) {
+        try {
+          const settings = JSON.parse(savedSettings);
+          hasGroqKey = hasGroqKey || !!settings.aiModel?.convoQApiKey;
+        } catch (error) {
+          console.warn('Failed to check ConvoQ API key in settings:', error);
+        }
+      }
+      
+      if (!hasGroqKey) {
+        throw new Error('ConvoQ API key not configured. Please add your Groq API key in settings.');
+      }
     }
 
     const config: AIServiceConfig = {
