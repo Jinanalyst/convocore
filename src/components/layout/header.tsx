@@ -89,14 +89,14 @@ export function Header({
   };
 
   const handleNativeShare = async () => {
-    // Check if we have a chat to share
-    if (!currentChatId || !currentChatTitle) {
-      console.log('No chat to share');
-      return;
-    }
+    // Always allow sharing - create a default share if no chat exists
+    const chatId = currentChatId || 'demo-chat';
+    const chatTitle = currentChatTitle || 'ConvoCore AI Chat';
+    
+    console.log('🔗 Share button clicked:', { chatId, chatTitle });
 
     try {
-      const success = await shareService.shareChat(currentChatId, currentChatTitle);
+      const success = await shareService.shareChat(chatId, chatTitle);
       
       // If sharing failed and we should show the modal as fallback
       if (!success) {
@@ -105,8 +105,17 @@ export function Header({
       }
     } catch (error) {
       console.error('Share error:', error);
-      // Fallback to modal
-      onShare?.();
+      // Fallback to modal or direct clipboard copy
+      try {
+        await shareService.shareUrl(
+          window.location.href, 
+          'ConvoCore AI Chat', 
+          'Check out ConvoCore for AI conversations'
+        );
+      } catch (fallbackError) {
+        console.error('Fallback share failed:', fallbackError);
+        onShare?.();
+      }
     }
   };
 
@@ -171,16 +180,15 @@ export function Header({
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-1">
-          {/* Share Button - Always show on mobile */}
+          {/* Share Button - Enhanced for mobile */}
           <Button
             variant="ghost"
             size="icon"
             onClick={handleNativeShare}
-            className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 touch-feedback h-10 w-10"
+            className="text-gray-900 dark:text-gray-100 hover:text-gray-950 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-200 border border-gray-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm shadow-sm hover:shadow-md h-10 w-10 shrink-0"
             aria-label="Share chat"
-            disabled={!currentChatId}
           >
-            <Share2 className="h-4 w-4" />
+            <Share2 className="h-5 w-5 stroke-2" />
           </Button>
 
           {/* Settings Button */}
@@ -275,9 +283,8 @@ export function Header({
             variant="ghost"
             size="icon"
             onClick={handleNativeShare}
-            className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 h-9 w-9"
+            className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-200 h-9 w-9"
             aria-label="Share chat"
-            disabled={!currentChatId}
           >
             <Share2 className="h-4 w-4" />
           </Button>
