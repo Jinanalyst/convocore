@@ -313,8 +313,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
     
     // Auto-save certain settings immediately
-    if (updates.theme || updates.language) {
+    if (updates.theme || updates.language || updates.aiModel) {
       saveSettings(newSettings);
+      console.log('🔄 Auto-saved settings:', updates);
     }
   };
 

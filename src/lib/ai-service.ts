@@ -10,6 +10,46 @@ export interface AIServiceConfig {
   stream?: boolean;
 }
 
+// User Settings Interface (matching settings modal)
+interface UserSettings {
+  aiModel: {
+    defaultModel: string;
+    temperature: number;
+    maxTokens: number;
+    streamResponse: boolean;
+  };
+}
+
+// Function to load user settings from localStorage
+function loadUserSettings(): UserSettings {
+  try {
+    const savedSettings = localStorage.getItem('convocore-settings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      return {
+        aiModel: {
+          defaultModel: parsed.aiModel?.defaultModel || 'gpt-4o',
+          temperature: parsed.aiModel?.temperature ?? 0.7,
+          maxTokens: parsed.aiModel?.maxTokens || 2048,
+          streamResponse: parsed.aiModel?.streamResponse ?? true
+        }
+      };
+    }
+  } catch (error) {
+    console.warn('Failed to load user settings:', error);
+  }
+  
+  // Return defaults if loading fails
+  return {
+    aiModel: {
+      defaultModel: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 2048,
+      streamResponse: true
+    }
+  };
+}
+
 // Convocore model configurations
 export const AI_MODELS = {
   'gpt-4o': {
@@ -243,6 +283,14 @@ export const aiService = {
       model: model
     });
 
+    // Load user settings for temperature and maxTokens
+    const userSettings = loadUserSettings();
+    console.log('⚙️ Using user settings:', {
+      temperature: userSettings.aiModel.temperature,
+      maxTokens: userSettings.aiModel.maxTokens,
+      streamResponse: userSettings.aiModel.streamResponse
+    });
+
     const modelConfig = await getModelConfig(model);
     if (!modelConfig) {
       throw new Error(`Unsupported model: ${model}`);
@@ -260,32 +308,20 @@ export const aiService = {
     const config: AIServiceConfig = {
       provider: modelConfig.provider,
       model: model,
-      temperature: 0.7,
-      maxTokens: modelConfig.maxTokens,
-      stream: false
+      temperature: userSettings.aiModel.temperature, // Use user's temperature setting
+      maxTokens: Math.min(userSettings.aiModel.maxTokens, modelConfig.maxTokens), // Respect model limits
+      stream: userSettings.aiModel.streamResponse
     };
 
     console.log(`🚀 Using ${config.provider} with model ${config.model}`);
+    console.log('🎛️ AI Parameters:', {
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      stream: config.stream
+    });
 
-    try {
-      const response = await sendChatMessage(messages, config);
-      console.log('✅ Response generated successfully');
-      return response.content;
-    } catch (error) {
-      console.error('❌ AI Service Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      // Provide helpful error messages
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        throw new Error(`Invalid API key for ${config.provider}. Please check your ${config.provider === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY'}.`);
-      } else if (errorMessage.includes('429') || errorMessage.includes('quota')) {
-        throw new Error(`API quota exceeded for ${config.provider}. Please check your usage limits or upgrade your plan.`);
-      } else if (errorMessage.includes('404') || errorMessage.includes('model')) {
-        throw new Error(`Model ${model} not available. Please try a different model.`);
-      } else {
-        throw new Error(`${config.provider} API error: ${errorMessage}`);
-      }
-    }
+    const response = await sendChatMessage(messages, config);
+    return response.content;
   },
 
   async getAvailableModels() {
