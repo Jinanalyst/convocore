@@ -67,12 +67,19 @@ const pricingPlans = [
   }
 ];
 
-const supportedNetworks = [
+interface NetworkInfo {
+  name: string;
+  icon: string;
+  symbol: string;
+  comingSoon?: boolean;
+}
+
+const supportedNetworks: NetworkInfo[] = [
   { name: "TRON", icon: "🔗", symbol: "TRX" },
   { name: "Ethereum", icon: "⟠", symbol: "ETH" },
   { name: "BNB Chain", icon: "🟡", symbol: "BNB" },
   { name: "Polygon", icon: "🟣", symbol: "MATIC" },
-  { name: "Solana", icon: "🌅", symbol: "SOL", comingSoon: true }
+  { name: "Solana", icon: "🌅", symbol: "SOL" }
 ];
 
 export function PricingSection() {
