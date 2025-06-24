@@ -9,6 +9,8 @@ import { ShareModal } from "@/components/modals/share-modal";
 import { PWAInstall } from "@/components/ui/pwa-install";
 import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { usageService } from "@/lib/usage-service";
 
 interface Chat {
   id: string;
@@ -18,6 +20,7 @@ interface Chat {
 }
 
 export default function ConvocorePage() {
+  const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -303,6 +306,10 @@ export default function ConvocorePage() {
 
   const handleNewChat = async (initialMessage?: string) => {
     try {
+      // Increment usage count for new conversation
+      const userId = user?.id ?? 'local';
+      usageService.incrementUsage(userId);
+      
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
@@ -361,9 +368,8 @@ export default function ConvocorePage() {
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+      if (!supabaseUser) {
         console.error('User not authenticated');
         // Fallback to local storage for unauthenticated users
         const newChatId = `local_chat_${Date.now()}`;
@@ -389,7 +395,7 @@ export default function ConvocorePage() {
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
-          user_id: user.id,
+          user_id: supabaseUser.id,
           title: initialMessage ? 
             (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
             `New Chat ${new Date().toLocaleDateString()}`,

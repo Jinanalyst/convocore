@@ -1,58 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Get user ID from headers or session
-    // const userId = request.headers.get('x-user-id') || 'demo-user';
-    
-    // In a real app, this would fetch from database
-    // For now, return demo data that matches the frontend
-    const usage = {
-      aiRequests: 1247,
-      apiCalls: 523,
-      tokensUsed: 45230,
-      storageUsed: 2.4,
-      monthlyLimit: {
-        aiRequests: 3,
-        apiCalls: 3,
-        tokensUsed: 100000,
-        storageUsed: 10
-      }
-    };
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
 
-    return NextResponse.json({ usage });
-  } catch (error) {
-    console.error('Error fetching usage data:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch usage data' },
-      { status: 500 }
-    );
+    if (!user) {
+      const cookieStore = await cookies();
+      const deviceId = cookieStore.get('device_id')?.value;
+      if (deviceId) {
+        const localUsage = await getLocalUsage(deviceId, supabase);
+        return NextResponse.json(localUsage);
+      }
+      return NextResponse.json({ used: 0, limit: 3 });
+    }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('api_requests_used, api_requests_limit')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user usage:', error.message);
+      return NextResponse.json({ used: 0, limit: 3 });
+    }
+
+    return NextResponse.json({ used: data.api_requests_used, limit: data.api_requests_limit });
+
+  } catch (err) {
+    console.error('API GET Usage Error:', err);
+    return NextResponse.json({ used: 0, limit: 3 }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { type, increment = 1 } = await request.json();
-    const userId = request.headers.get('x-user-id') || 'demo-user';
-    
-    // Validate type
-    if (!['aiRequests', 'apiCalls', 'tokensUsed'].includes(type)) {
-      return NextResponse.json(
-        { error: 'Invalid usage type' },
-        { status: 400 }
-      );
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      const cookieStore = await cookies();
+      const deviceId = cookieStore.get('device_id')?.value;
+      if (deviceId) {
+        await incrementLocalUsage(deviceId, supabase);
+      }
+      return NextResponse.json({ ok: true });
     }
 
-    // In a real app, this would update the database
-    // For now, just return success
-    console.log(`Updated ${type} for user ${userId} by ${increment}`);
+    const { error } = await supabase.rpc('increment_api_usage', { user_id: user.id });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error updating usage:', error);
-    return NextResponse.json(
-      { error: 'Failed to update usage' },
-      { status: 500 }
-    );
+    if (error) {
+      console.error('Error incrementing usage:', error.message);
+      return NextResponse.json({ ok: false, error: 'Failed to increment usage' }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+
+  } catch (err) {
+    console.error('API POST Usage Error:', err);
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
+}
+
+// Helper functions for local device usage tracking
+async function getLocalUsage(deviceId: string, supabase: any) {
+  // This is a simplified example. In a real app, you'd store this in a separate table.
+  // For now, we simulate it. This part needs a proper table for anonymous user usage.
+  console.warn(`Local usage tracking not fully implemented for device: ${deviceId}`);
+  return { used: 0, limit: 3 };
+}
+
+async function incrementLocalUsage(deviceId: string, supabase: any) {
+  // This is a simplified example. In a real app, you'd store this in a separate table.
+  console.warn(`Local usage increment not fully implemented for device: ${deviceId}`);
 } 
