@@ -55,7 +55,7 @@ interface Message {
 interface ChatAreaProps {
   className?: string;
   chatId?: string;
-  onSendMessage?: (message: string, model: string, includeWebSearch?: boolean) => void;
+  onSendMessage?: (message: string, model: string, includeWebSearch?: boolean) => Promise<string | undefined>;
 }
 
 export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
@@ -176,9 +176,14 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     setIsTyping(true);
 
     try {
-      // Save user message
-      if (chatId) {
-        await saveMessage(chatId, content.trim(), 'user');
+      // Determine target chat id; if absent, request parent to create one
+      let targetChatId = chatId;
+      if (!targetChatId && onSendMessage) {
+        targetChatId = await onSendMessage(content.trim(), model, includeWebSearch);
+        // We won't have react re-render with new prop immediately, so just use this id locally.
+      } else {
+        // Notify parent as usual (no need to await)
+        onSendMessage?.(content.trim(), model, includeWebSearch);
       }
 
       // Detect agent from message content
@@ -197,7 +202,7 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
             timestamp: m.timestamp
           })),
           model,
-          chatId,
+          chatId: targetChatId,
           includeWebSearch: includeWebSearch || options?.deepSearch,
           deepSearch: options?.deepSearch,
           think: options?.think,
@@ -232,19 +237,16 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       }
 
       // Save assistant message
-      if (chatId) {
-        await saveMessage(chatId, assistantMessage.content, 'assistant');
+      if (targetChatId) {
+        await saveMessage(targetChatId, assistantMessage.content, 'assistant');
       }
 
-      // Call external callback if provided
-      onSendMessage?.(content, model, includeWebSearch);
-
       // Notify chat completion with proper parameters
-      const chatTitle = chatId || 'New Chat';
+      const chatTitle = targetChatId || 'New Chat';
       notificationService.notifyChatComplete(
         chatTitle,
         assistantMessage.content,
-        chatId
+        targetChatId
       );
 
       // Increment usage for free plan indicator

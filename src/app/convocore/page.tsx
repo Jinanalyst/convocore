@@ -210,7 +210,7 @@ export default function ConvocorePage() {
     }
   };
 
-  const handleSendMessage = (message: string, model: string, includeWebSearch?: boolean) => {
+  const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean): Promise<string | undefined> => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
     
     // Update the current chat's last message and timestamp
@@ -241,9 +241,12 @@ export default function ConvocorePage() {
         localStorage.setItem('local_chats', JSON.stringify(updatedChats));
       }
     } else {
-      // If no active chat, create a new one with this message
-      handleNewChat(message);
+      // If no active chat, create a new chat and return its id
+      const newId = await handleNewChat(message);
+      return newId;
     }
+
+    return activeChatId;
   };
 
   const handleShare = () => {
