@@ -632,3 +632,57 @@ select {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Sidebar transition styles */
+.sidebar-transition {
+  transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.sidebar-collapsed {
+  width: 4rem; /* 64px */
+}
+
+.sidebar-expanded {
+  width: 16rem; /* 256px */
+}
+
+.sidebar-mobile {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebar-mobile.open {
+  transform: translateX(0);
+}
+
+/* Content area adjustment */
+.content-with-sidebar {
+  transition: margin-left 0.3s ease-in-out;
+}
+
+.content-sidebar-collapsed {
+  margin-left: 4rem;
+}
+
+.content-sidebar-expanded {
+  margin-left: 16rem;
+}
+
+/* Mobile overlay */
+.mobile-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  backdrop-filter: blur(2px);
+}
+
+/* Ensure smooth transitions for all sidebar elements */
+.sidebar * {
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}

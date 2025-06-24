@@ -415,16 +415,18 @@ export default function ConvocorePage() {
         "transition-all duration-300 z-50",
         isMobile 
           ? cn(
-              "fixed left-0 top-0 h-full w-80 transform",
-              sidebarCollapsed ? "-translate-x-full" : "translate-x-0"
+              "fixed left-0 top-0 h-full transform",
+              sidebarCollapsed ? "-translate-x-full" : "translate-x-0 w-80"
             )
           : cn(
               "flex-shrink-0",
-              sidebarCollapsed ? "w-0" : "w-80"
+              sidebarCollapsed ? "w-16" : "w-80"
             )
       )}>
         <Sidebar
           className="h-full"
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           onNewChat={handleNewChat}
           onSelectChat={(chatId) => {
             handleSelectChat(chatId);

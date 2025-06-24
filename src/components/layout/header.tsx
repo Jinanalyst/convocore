@@ -24,7 +24,11 @@ import {
   ArrowUp,
   Menu,
   X,
-  Zap
+  Zap,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/lib/mobile-utils";
@@ -44,7 +48,10 @@ interface HeaderProps {
   onProfile?: () => void;
   onLogout?: () => void;
   onToggleSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
   showMobileMenu?: boolean;
+  isSidebarCollapsed?: boolean;
+  isRightSidebarCollapsed?: boolean;
   currentChatTitle?: string;
   currentChatId?: string;
 }
@@ -56,7 +63,10 @@ export function Header({
   onProfile, 
   onLogout,
   onToggleSidebar,
+  onToggleRightSidebar,
   showMobileMenu = false,
+  isSidebarCollapsed = false,
+  isRightSidebarCollapsed = true,
   currentChatTitle,
   currentChatId
 }: HeaderProps) {
@@ -255,8 +265,9 @@ export function Header({
 
       {/* Desktop Layout */}
       <div className="hidden md:flex items-center justify-between w-full">
-        {/* Left Section - Chat Title */}
+        {/* Left Section - Chat Title only (no sidebar controls) */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Chat Title */}
           {currentChatTitle && (
             <h1 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white truncate max-w-md lg:max-w-lg xl:max-w-xl">
               {currentChatTitle}

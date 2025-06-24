@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatSidebarTimestamp } from "@/lib/date-utils";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface Chat {
   id: string;
@@ -39,6 +40,15 @@ interface Chat {
   lastMessage: string;
   timestamp: Date;
   isActive?: boolean;
+}
+
+interface LibraryItem {
+  id: string;
+  title: string;
+  type: 'prompt' | 'template' | 'conversation';
+  description: string;
+  content?: string;
+  createdAt: Date | string | number;
 }
 
 interface SidebarProps {
@@ -51,23 +61,6 @@ interface SidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   chats?: Chat[];
-}
-
-interface LibraryItem {
-  id: string;
-  title: string;
-  type: "prompt" | "conversation" | "template";
-  description: string;
-  content?: string;
-  createdAt: Date;
-}
-
-interface ModelInfo {
-  name: string;
-  description: string;
-  capabilities: string[];
-  contextLength: number;
-  pricing: string;
 }
 
 export function Sidebar({ 
@@ -108,6 +101,7 @@ export function Sidebar({
           title: "Creative Writing Prompt",
           type: "prompt",
           description: "Generate creative writing ideas",
+          content: "Create a creative writing prompt about {{topic}}",
           createdAt: new Date(),
         },
         {
@@ -115,6 +109,7 @@ export function Sidebar({
           title: "Code Review Template",
           type: "template",
           description: "Structured code review format",
+          content: "Review the following code:\n\n```{{code}}```\n\nProvide feedback on:",
           createdAt: new Date(),
         },
       ];
@@ -161,274 +156,242 @@ export function Sidebar({
     chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper for rendering icon buttons with tooltips in collapsed mode
+  const renderIconButton = (icon: React.ReactNode, label: string, onClick: () => void, key: string) => (
+    <Tooltip content={label} key={key}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClick}
+        className="w-12 h-12 flex items-center justify-center mx-auto my-2"
+        aria-label={label}
+      >
+        {icon}
+      </Button>
+    </Tooltip>
+  );
+
+  // Desktop/collapsible sidebar classes
+  const sidebarWidth = isCollapsed ? 'md:w-[60px]' : 'md:w-[280px]';
+  const sidebarBase = 'hidden md:flex flex-col h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 shadow-sm transition-all duration-300 ease-in-out';
+
   return (
-    <div className={cn("flex flex-col h-full bg-white dark:bg-zinc-900", className)}>
-      {/* Header */}
+    <>
       <div className={cn(
-        "flex items-center justify-between p-3 border-b border-gray-200 dark:border-zinc-700 flex-shrink-0",
-        isCollapsed && "justify-center px-2"
+        sidebarBase,
+        sidebarWidth,
+        className
       )}>
-        {!isCollapsed ? (
-          <ConvocoreLogo />
-        ) : (
-          <ConvocoreLogo size="sm" showText={false} />
-        )}
-        
-        {/* Mobile Close Button or Desktop Collapse Toggle */}
-        {onToggleCollapse && (
+        {/* Header: Logo + Toggle (clean, single row, no duplicate text) */}
+        <div className="flex items-center p-4 border-b border-gray-100 dark:border-zinc-800 gap-2">
+          <ConvocoreLogo showText={!isCollapsed} size={isCollapsed ? 'sm' : 'md'} />
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggleCollapse}
-            className={cn(
-              "shrink-0",
-              isCollapsed && !isMobile && "absolute top-3 right-2"
-            )}
+            className="ml-1"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isMobile ? (
-              <X className="w-4 h-4" />
-            ) : isCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
+            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </Button>
-        )}
-      </div>
+        </div>
 
-      {/* New Chat Button */}
-      <div className={cn("p-3 flex-shrink-0", isCollapsed && "px-2")}>
-        <Button
-          onClick={handleNewChat}
-          className={cn(
-            "w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors",
-            isCollapsed ? "px-0 justify-center" : "justify-start gap-2"
-          )}
-        >
-          <Plus className="w-4 h-4" />
-          {!isCollapsed && t('chat.newConversation')}
-        </Button>
-      </div>
+        {/* Main Content: flex-1 vertical layout */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* New Chat Button */}
+          <div className={cn(
+            isCollapsed ? "flex flex-col items-center w-full mt-2" : "p-4 flex-shrink-0"
+          )}>
+            {isCollapsed ? (
+              <Tooltip content="New Conversation">
+                <Button
+                  onClick={handleNewChat}
+                  className="bg-black dark:bg-white text-white dark:text-black rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-2 shadow-md"
+                  aria-label="New Conversation"
+                >
+                  <Plus className="w-5 h-5" />
+                </Button>
+              </Tooltip>
+            ) : (
+              <Button
+                onClick={handleNewChat}
+                className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-200 justify-start gap-2 h-12 rounded-xl shadow-md text-base font-semibold"
+              >
+                <Plus className="w-5 h-5" />
+                New Conversation
+              </Button>
+            )}
+          </div>
 
-      {/* Action Buttons */}
-      <div className="flex-shrink-0">
-        {!isCollapsed ? (
-          <div className="px-3 pb-3">
-            <div className="grid grid-cols-2 gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSearch}
-                className="text-xs justify-start"
-              >
-                <Search className="w-3 h-3 mr-1" />
-                Search
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLibrary}
-                className="text-xs justify-start"
-              >
-                <Archive className="w-3 h-3 mr-1" />
-                Library
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleModelInfo}
-                className="text-xs justify-start"
-              >
-                <HelpCircle className="w-3 h-3 mr-1" />
-                Models
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSettings}
-                className="text-xs justify-start"
-              >
-                <Settings className="w-3 h-3 mr-1" />
-                Settings
-              </Button>
-            </div>
+          {/* Action Buttons */}
+          <div className={cn(
+            isCollapsed ? "flex flex-col items-center w-full" : "px-4 pb-4"
+          )}>
+            {isCollapsed ? (
+              <>
+                {renderIconButton(<Settings className="w-5 h-5" />, "Settings", handleSettings, "settings")}
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleSearch}
+                  className="text-base justify-start h-12 rounded-xl"
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Search
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleLibrary}
+                  className="text-base justify-start h-12 rounded-xl"
+                >
+                  <Archive className="w-5 h-5 mr-2" />
+                  Library
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={handleModelInfo}
+                  className="text-base justify-start h-12 rounded-xl"
+                >
+                  <HelpCircle className="w-5 h-5 mr-2" />
+                  Models
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={handleSettings}
+                  className="text-base justify-start h-12 rounded-xl"
+                >
+                  <Settings className="w-5 h-5 mr-2" />
+                  Settings
+                </Button>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="px-2 pb-3 grid grid-cols-2 gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSearch}
-              className="w-full h-6"
-              title="Search"
-            >
-              <Search className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLibrary}
-              className="w-full h-6"
-              title="Library"
-            >
-              <Archive className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleModelInfo}
-              className="w-full h-6"
-              title="Models"
-            >
-              <HelpCircle className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSettings}
-              className="w-full h-6"
-              title="Settings"
-            >
-              <Settings className="w-3 h-3" />
-            </Button>
-          </div>
-        )}
-      </div>
 
-      {/* Recent Chats */}
-      <div className="flex-1 min-h-0 flex flex-col">
-        {/* Section Header */}
-        {!isCollapsed && (
-          <div className="px-3 pb-2 flex-shrink-0">
-            <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Recent Chats
-            </h3>
-          </div>
-        )}
-        
-        {/* Chat List Container */}
-        <div className={cn(
-          "flex-1 min-h-0 overflow-hidden",
-          isCollapsed ? "mx-2 mb-2" : "mx-3 mb-3"
-        )}>
-          <div className="h-full bg-gray-50/80 dark:bg-zinc-800/80 rounded-xl border border-gray-300 dark:border-zinc-600 shadow-sm overflow-hidden">
-            <div className="h-full overflow-y-auto p-2">
-              {isLoading ? (
-                <div className="space-y-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={cn(
-                        "animate-pulse bg-gray-200 dark:bg-zinc-600 rounded-lg",
-                        isCollapsed ? "h-8 w-8 mx-auto" : "h-12"
-                      )} 
-                    />
-                  ))}
-                </div>
-              ) : filteredChats.length === 0 ? (
-                !isCollapsed && (
-                  <div className="text-center py-6 px-2">
-                    <MessageSquare className="w-8 h-8 text-gray-300 dark:text-zinc-500 mx-auto mb-2" />
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">No chats yet</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start a conversation</p>
-                  </div>
-                )
-              ) : (
-                <div className="space-y-1">
-                  {filteredChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className={cn(
-                        "group relative rounded-lg transition-all duration-200 border",
-                        chat.id === activeChatId
-                          ? "bg-blue-50 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600"
-                          : "bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-gray-200 dark:border-zinc-600 hover:border-gray-400 dark:hover:border-zinc-500"
-                      )}
-                      onMouseEnter={() => setHoveredChatId(chat.id)}
-                      onMouseLeave={() => setHoveredChatId(null)}
-                    >
+          {/* Recent Chats */}
+          <div className={cn(
+            'flex-1 w-full flex flex-col min-h-0',
+            isCollapsed ? 'items-center' : ''
+          )}>
+            {!isCollapsed && (
+              <div className="px-4 pb-2 flex-shrink-0">
+                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Recent Chats
+                </h3>
+              </div>
+            )}
+            <div className={cn(
+              'flex-1 min-h-0 overflow-hidden w-full',
+              isCollapsed ? 'items-center' : ''
+            )}>
+              <div className="h-full bg-gray-50/80 dark:bg-zinc-800/80 rounded-2xl border border-gray-300 dark:border-zinc-600 shadow-sm overflow-y-auto w-full flex flex-col">
+                {isLoading ? (
+                  <div className="space-y-2 w-full p-2">
+                    {[1, 2, 3].map((i) => (
                       <div
-                        onClick={() => handleChatSelect(chat.id)}
+                        key={i}
                         className={cn(
-                          "w-full text-left transition-all duration-200 cursor-pointer",
-                          isCollapsed ? "p-2 flex justify-center" : "p-3"
+                          'animate-pulse bg-gray-200 dark:bg-zinc-600 rounded-lg',
+                          isCollapsed ? 'h-8 w-8 mx-auto' : 'h-12'
                         )}
-                        title={isCollapsed ? chat.title : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : filteredChats.length === 0 ? (
+                  !isCollapsed && (
+                    <div className="text-center py-6">
+                      <MessageSquare className="w-8 h-8 text-gray-300 dark:text-zinc-600 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No chats yet</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start a new conversation</p>
+                    </div>
+                  )
+                ) : (
+                  <div className={cn('space-y-1 w-full p-2', isCollapsed ? 'flex flex-col items-center' : '')}>
+                    {filteredChats.map((chat) => (
+                      <div
+                        key={chat.id}
+                        className={cn(
+                          'group relative rounded-lg transition-all duration-300 border',
+                          chat.id === activeChatId
+                            ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600'
+                            : 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border-gray-200 dark:border-zinc-600 hover:border-gray-400 dark:hover:border-zinc-500',
+                          isCollapsed ? 'w-10 h-10 flex items-center justify-center mx-auto' : ''
+                        )}
+                        onMouseEnter={() => setHoveredChatId(chat.id)}
+                        onMouseLeave={() => setHoveredChatId(null)}
                       >
-                        {isCollapsed ? (
-                          <MessageSquare className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                        ) : (
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {chat.title}
-                              </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                                {chat.lastMessage}
-                              </p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                {formatSidebarTimestamp(chat.timestamp)}
-                              </p>
-                            </div>
-                            
-                            {hoveredChatId === chat.id && (
-                              <div className="flex items-center gap-1 ml-2">
-                                <button
-                                  onClick={(e) => handleChatAction(e, "edit", chat.id)}
-                                  className="p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Edit chat"
-                                >
-                                  <Edit3 className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleChatAction(e, "delete", chat.id)}
-                                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Delete chat"
-                                >
-                                  <Trash2 className="w-3 h-3 text-red-500 dark:text-red-400" />
-                                </button>
+                        <div
+                          onClick={() => handleChatSelect(chat.id)}
+                          className={cn(
+                            'w-full text-left transition-all duration-300 cursor-pointer',
+                            isCollapsed ? 'flex items-center justify-center h-10' : 'p-3'
+                          )}
+                          title={isCollapsed ? chat.title : undefined}
+                        >
+                          {isCollapsed ? (
+                            <Tooltip content={chat.title}>
+                              <MessageSquare className="w-5 h-5 text-gray-600 dark:text-gray-400 mx-auto" />
+                            </Tooltip>
+                          ) : (
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">{chat.title}</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{chat.lastMessage}</p>
                               </div>
-                            )}
+                              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 shrink-0">
+                                {formatSidebarTimestamp(chat.timestamp)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {!isCollapsed && hoveredChatId === chat.id && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white dark:bg-zinc-900 py-1 px-1 rounded-md shadow-sm">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => handleChatAction(e, 'delete', chat.id)}
+                              className="h-6 w-6 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modals */}
-      <SearchModal 
-        open={showSearchModal} 
-        onOpenChange={setShowSearchModal}
-        chats={chats}
-        onSelectChat={handleChatSelect}
-      />
-      <LibraryModal 
-        open={showLibraryModal} 
-        onOpenChange={setShowLibraryModal}
-        items={libraryItems}
-        onUseItem={(item) => {
-          const normalizedItem: LibraryItem = {
-            ...item,
-            createdAt: item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt)
-          };
-          onUseLibraryItem?.(normalizedItem);
-          setShowLibraryModal(false);
-        }}
-      />
-      <ModelInfoModal 
-        open={showModelModal} 
-        onOpenChange={setShowModelModal}
-      />
-      <SettingsModal 
-        open={showSettingsModal} 
-        onOpenChange={setShowSettingsModal}
-      />
-    </div>
+        {/* Modals */}
+        <SearchModal
+          open={showSearchModal}
+          onOpenChange={setShowSearchModal}
+          chats={chats}
+          onSelectChat={onSelectChat}
+        />
+        <LibraryModal
+          open={showLibraryModal}
+          onOpenChange={setShowLibraryModal}
+          items={libraryItems}
+          onUseItem={onUseLibraryItem}
+        />
+        <ModelInfoModal
+          open={showModelModal}
+          onOpenChange={setShowModelModal}
+        />
+        <SettingsModal
+          open={showSettingsModal}
+          onOpenChange={setShowSettingsModal}
+        />
+      </div>
+    </>
   );
 }

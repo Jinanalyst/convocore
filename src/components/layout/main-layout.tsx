@@ -5,26 +5,44 @@ import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { ChatArea } from "@/components/layout/chat-area";
 import { ResizablePanel } from "@/components/ui/resizable-panel";
+import { FloatingActionButton, ChatFocusMode } from "@/components/ui/floating-action-button";
 import { cn } from "@/lib/utils";
 import { chatStorageService, type Chat } from "@/lib/chat-storage-service";
 import { chatMigrationService } from "@/lib/chat-migration-service";
 
 export function MainLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(true);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(280);
   const [chats, setChats] = useState<Chat[]>([]);
   const [showMigrationPrompt, setShowMigrationPrompt] = useState(false);
   const [migrationInfo, setMigrationInfo] = useState<{ sessionCount: number; messageCount: number }>({ sessionCount: 0, messageCount: 0 });
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
-  // Mobile detection
+  // Mobile detection and responsive sidebar behavior
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      if (mobile) {
         setIsSidebarCollapsed(true);
+        setIsRightSidebarCollapsed(true);
+      } else {
+        // On desktop, remember user's preference from localStorage
+        const savedLeftSidebar = localStorage.getItem('sidebar-collapsed');
+        const savedRightSidebar = localStorage.getItem('right-sidebar-collapsed');
+        
+        if (savedLeftSidebar !== null) {
+          setIsSidebarCollapsed(savedLeftSidebar === 'true');
+        }
+        if (savedRightSidebar !== null) {
+          setIsRightSidebarCollapsed(savedRightSidebar === 'true');
+        }
       }
     };
 
@@ -119,7 +137,17 @@ export function MainLayout() {
     if (isMobile) {
       setShowMobileSidebar(!showMobileSidebar);
     } else {
-      setIsSidebarCollapsed(!isSidebarCollapsed);
+      const newState = !isSidebarCollapsed;
+      setIsSidebarCollapsed(newState);
+      localStorage.setItem('sidebar-collapsed', newState.toString());
+    }
+  };
+
+  const handleToggleRightSidebar = () => {
+    if (!isMobile) {
+      const newState = !isRightSidebarCollapsed;
+      setIsRightSidebarCollapsed(newState);
+      localStorage.setItem('right-sidebar-collapsed', newState.toString());
     }
   };
 
@@ -152,80 +180,51 @@ export function MainLayout() {
 
   return (
     <div className="h-screen flex bg-background overflow-hidden relative">
-      {/* Desktop Resizable Sidebar */}
-      {!isMobile && !isSidebarCollapsed && (
-        <ResizablePanel
-          direction="horizontal"
-          initialSize={320}
-          minSize={240}
-          maxSize={600}
-          onResize={handleSidebarResize}
-          className="border-r border-border bg-card h-full"
-        >
-          <div className="h-full flex flex-col">
-            <Sidebar
-              activeChatId={activeChatId || undefined}
-              isCollapsed={false}
-              onNewChat={handleNewChat}
-              onSelectChat={handleSelectChat}
-              onDeleteChat={handleDeleteChat}
-              onToggleCollapse={handleToggleSidebar}
-              chats={chats}
-              className="h-full"
-            />
-          </div>
-        </ResizablePanel>
-      )}
-
-      {/* Desktop Collapsed Sidebar */}
-      {!isMobile && isSidebarCollapsed && (
-        <div className="w-16 border-r border-border bg-card flex-shrink-0 h-full">
-          <Sidebar
-            activeChatId={activeChatId || undefined}
-            isCollapsed={true}
-            onNewChat={handleNewChat}
-            onSelectChat={handleSelectChat}
-            onDeleteChat={handleDeleteChat}
-            onToggleCollapse={handleToggleSidebar}
-            chats={chats}
-            className="h-full"
-          />
-        </div>
-      )}
-
-      {/* Mobile Sidebar Overlay */}
+      {/* Sidebar (single, toggleable) */}
+      <div className={cn(
+        "sidebar-transition",
+        isMobile 
+          ? "sidebar-mobile"
+          : "relative",
+        isMobile && showMobileSidebar ? "open" : "",
+        !isMobile && isSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
+      )}>
+        <Sidebar
+          activeChatId={activeChatId || undefined}
+          isCollapsed={isMobile ? false : isSidebarCollapsed}
+          onNewChat={handleNewChat}
+          onSelectChat={handleSelectChat}
+          onDeleteChat={handleDeleteChat}
+          onToggleCollapse={handleToggleSidebar}
+          chats={chats}
+          className="h-full"
+        />
+      </div>
+      
+      {/* Mobile Overlay */}
       {isMobile && showMobileSidebar && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-in fade-in-0 duration-300"
-            onClick={() => setShowMobileSidebar(false)}
-          />
-          {/* Sidebar */}
-          <div className="fixed left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-card border-r border-border z-50 animate-in slide-in-from-left-full duration-300 ease-out">
-            <Sidebar
-              activeChatId={activeChatId || undefined}
-              isCollapsed={false}
-              onNewChat={handleNewChat}
-              onSelectChat={handleSelectChat}
-              onDeleteChat={handleDeleteChat}
-              onToggleCollapse={handleToggleSidebar}
-              chats={chats}
-              className="h-full"
-            />
-          </div>
-        </>
+        <div 
+          className="mobile-sidebar-overlay md:hidden"
+          onClick={() => setShowMobileSidebar(false)}
+        />
       )}
       
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-w-0 h-full">
+      <div className={cn(
+        "flex flex-col flex-1 min-w-0 h-full content-with-sidebar",
+        !isMobile && isSidebarCollapsed ? "content-sidebar-collapsed" : "content-sidebar-expanded"
+      )}>
         {/* Header */}
         <Header 
           className="flex-shrink-0"
           onToggleSidebar={handleToggleSidebar}
+          onToggleRightSidebar={handleToggleRightSidebar}
           showMobileMenu={showMobileSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
+          isRightSidebarCollapsed={isRightSidebarCollapsed}
+          currentChatId={activeChatId || undefined}
+          currentChatTitle={activeChatId ? `Chat ${activeChatId.slice(0, 8)}` : undefined}
         />
-        
         {/* Chat Area - Resizable */}
         <div className="flex-1 overflow-hidden min-h-0">
           <ChatArea

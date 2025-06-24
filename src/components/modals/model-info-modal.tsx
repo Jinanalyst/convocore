@@ -20,7 +20,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Omni",
       provider: "Convocore",
-      description: t('model.omni.description'),
+      description: t('model.omni.description') || "Advanced AI model with comprehensive capabilities",
       features: ["Text & Image Processing", "Code Generation", "Advanced Reasoning", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -30,7 +30,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Alpha",
       provider: "Convocore",
-      description: t('model.alpha.description'),
+      description: t('model.alpha.description') || "Superior reasoning and creative capabilities",
       features: ["Superior Reasoning", "Creative Writing", "Code Analysis", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Medium",
@@ -40,7 +40,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Turbo",
       provider: "Convocore",
-      description: t('model.turbo.description'),
+      description: t('model.turbo.description') || "Balanced performance for code and text",
       features: ["Balanced Performance", "Code & Text", "JSON Mode", "128K Context"],
       contextLength: "128,000 tokens",
       speed: "Fast",
@@ -50,7 +50,7 @@ export function ModelInfoModal({ open, onOpenChange }: ModelInfoModalProps) {
     {
       name: "Convocore Nova",
       provider: "Convocore",
-      description: t('model.nova.description'),
+      description: t('model.nova.description') || "Efficient processing with balanced capabilities",
       features: ["Balanced Capabilities", "Efficient Processing", "Code & Writing", "200K Context"],
       contextLength: "200,000 tokens",
       speed: "Fast",

@@ -81,6 +81,15 @@ export function LibraryModal({ open, onOpenChange, items = [], onUseItem }: Libr
     setLibraryItems(mergedItems);
   }, [items]);
 
+  // Reset search and filters when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery("");
+      setSelectedCategory('all');
+      setExpandedItems(new Set());
+    }
+  }, [open]);
+
   const filteredItems = libraryItems.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.type === selectedCategory;
     const matchesSearch = searchQuery === "" || 

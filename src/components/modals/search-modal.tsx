@@ -20,7 +20,7 @@ interface SearchModalProps {
   onSelectChat?: (chatId: string) => void;
 }
 
-export function SearchModal({ open, onOpenChange, chats, onSelectChat }: SearchModalProps) {
+export function SearchModal({ open, onOpenChange, chats = [], onSelectChat }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Chat[]>([]);
 
@@ -41,7 +41,13 @@ export function SearchModal({ open, onOpenChange, chats, onSelectChat }: SearchM
     onOpenChange(false);
   };
 
-
+  // Reset search when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery("");
+      setSearchResults([]);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
