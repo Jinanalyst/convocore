@@ -452,11 +452,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
                   <Badge variant="outline" className="text-xs">
                     {network.symbol}
                   </Badge>
-                  {network.id === 'solana' && (
-                    <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
-                      Coming Soon
-                    </Badge>
-                  )}
+                  {/* Solana no longer marked as Coming Soon */}
                 </div>
               </div>
             </div>
@@ -530,42 +526,28 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
       {/* Payment Button */}
       {selectedNetwork && (selectedNetwork.type === 'paypal' || connectedWallet) && (
         <div className="space-y-4">
-          {selectedNetwork.id === 'solana' ? (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                <div>
-                  <h4 className="font-medium text-yellow-900 dark:text-yellow-100">Coming Soon</h4>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Solana payments will be available soon. Please use another network for now.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <Button
-              onClick={initiatePayment}
-              disabled={isProcessing}
-              className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
-            >
-              {isProcessing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Processing Payment...
-                </>
-              ) : selectedNetwork.type === 'paypal' ? (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Pay ${planPrice} USD with PayPal
-                </>
-              ) : (
-                <>
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Pay {planPrice} USDT
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={initiatePayment}
+            disabled={isProcessing}
+            className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
+          >
+            {isProcessing ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Processing Payment...
+              </>
+            ) : selectedNetwork.type === 'paypal' ? (
+              <>
+                <CreditCard className="w-4 h-4 mr-2" />
+                Pay ${planPrice} USD with PayPal
+              </>
+            ) : (
+              <>
+                <DollarSign className="w-4 h-4 mr-2" />
+                Pay {planPrice} USDT
+              </>
+            )}
+          </Button>
         </div>
       )}
 
