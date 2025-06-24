@@ -5,6 +5,8 @@ import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
 import { Button } from "@/components/ui/button";
 import { VoiceModal } from "@/components/modals/voice-modal";
+import { EnhancedChatMessage } from "@/components/ui/enhanced-chat-message";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { usageService } from "@/lib/usage-service";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from '@/lib/language-context';
@@ -546,105 +548,43 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         ) : (
           <>
             {messages.map((message) => (
-              <div key={message.id} className="message-container">
-                {/* Message bubble implementation stays the same */}
-                <div className={cn(
-                  "flex items-start gap-3",
-                  message.role === 'user' ? "justify-end" : "justify-start"
-                )}>
-                  {message.role === 'assistant' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      {message.agent ? (
-                        getAgentIcon(message.agent.icon)
-                      ) : (
-                        <Bot className="w-4 h-4 text-primary" />
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className={cn(
-                    "max-w-[80%] rounded-lg px-4 py-3 space-y-2",
-                    message.role === 'user' 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted"
-                  )}>
-                    {message.agent && message.role === 'assistant' && (
-                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                        {getAgentIcon(message.agent.icon)}
-                        <span>{message.agent.displayName}</span>
-                      </div>
-                    )}
-                    
-                    <div className="whitespace-pre-wrap text-sm">
-                      {message.role === 'assistant' 
-                        ? formatAIResponseToParagraphs(message.content)
-                        : message.content
-                      }
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {formatChatTimestamp(message.timestamp)}
-                      </span>
-                      
-                      {message.role === 'assistant' && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopyMessage(message.content)}
-                          >
-                            <Copy className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleRegenerateResponse(message.id)}
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleTextToSpeech(message.content)}
-                          >
-                            {isSpeaking ? (
-                              <VolumeX className="w-3 h-3" />
-                            ) : (
-                              <Volume2 className="w-3 h-3" />
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {message.role === 'user' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                      <User className="w-4 h-4 text-primary-foreground" />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <EnhancedChatMessage
+                key={message.id}
+                id={message.id}
+                content={message.content}
+                role={message.role}
+                timestamp={message.timestamp}
+                agent={message.agent}
+                isTyping={message.isTyping}
+                streamingSpeed={25}
+                onCopy={() => handleCopyMessage(message.content)}
+                                 onShare={() => {
+                   notificationService.notifySuccess('Shared!', 'Message shared to clipboard');
+                 }}
+                 onRegenerate={() => handleRegenerateResponse(message.id)}
+                 onFeedback={(type) => {
+                   if (type === 'up') {
+                     notificationService.notifySuccess('Feedback Received', 'Thank you for your positive feedback!');
+                   } else {
+                     notificationService.notifyInfo('Feedback Received', 'Thank you for your feedback!');
+                   }
+                 }}
+              />
             ))}
             
-            {/* Typing indicator */}
+            {/* Enhanced Typing indicator */}
             {isTyping && (
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-primary animate-pulse" />
-                </div>
-                <div className="bg-muted rounded-lg px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                  </div>
-                </div>
-              </div>
+              <TypingIndicator
+                isVisible={true}
+                message={`${currentAgent?.displayName || 'AI'} is thinking...`}
+                avatar={
+                  currentAgent ? (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                      {currentAgent.tag.slice(1, 3).toUpperCase()}
+                    </div>
+                  ) : undefined
+                }
+              />
             )}
           </>
         )}

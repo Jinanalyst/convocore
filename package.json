@@ -24,7 +24,7 @@
     "framer-motion": "^12.18.1",
     "lucide-react": "^0.522.0",
     "motion": "^12.18.1",
-    "nanoid": "^5.0.9",
+    "nanoid": "^5.1.5",
     "next": "15.3.4",
     "next-auth": "^4.24.11",
     "node-fetch": "^3.3.2",
