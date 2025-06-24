@@ -87,11 +87,15 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       setIsLoading(true);
       console.log('🔄 Loading messages for conversation:', conversationId);
 
-      // Check if user is using wallet authentication
+      // Check if user is using wallet authentication or local/demo chat
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      
-      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_')) {
-        // For wallet users or demo chats, load from localStorage
+      const isLocalChat = walletConnected
+        || conversationId.startsWith('wallet_chat_')
+        || conversationId.startsWith('demo_')
+        || conversationId.startsWith('local_chat_');
+
+      if (isLocalChat) {
+        // For wallet users or demo/local chats, load from localStorage
         const savedMessages = localStorage.getItem(`chat_messages_${conversationId}`);
         if (savedMessages) {
           const parsedMessages = JSON.parse(savedMessages);
