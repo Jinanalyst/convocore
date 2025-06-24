@@ -7,6 +7,7 @@ import { ChatArea } from "@/components/layout/chat-area";
 import { SettingsModal } from "@/components/modals/settings-modal";
 import { ShareModal } from "@/components/modals/share-modal";
 import { PWAInstall } from "@/components/ui/pwa-install";
+import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
 
 interface Chat {
@@ -508,6 +509,9 @@ export default function ConvocorePage() {
 
       {/* PWA Install Component */}
       <PWAInstall />
+
+      {/* Voice Assistant microphone */}
+      <VoiceAssistant />
     </div>
   );
 } 

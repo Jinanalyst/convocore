@@ -8,6 +8,21 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // CORS for assistant API
+  if (request.nextUrl.pathname.startsWith('/api/assistant')) {
+    // Handle preflight
+    if (request.method === 'OPTIONS') {
+      const res = new NextResponse(null, { status: 204 });
+      res.headers.set('Access-Control-Allow-Origin', '*');
+      res.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+      res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+      return res;
+    }
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  }
+
   // Skip middleware if Supabase is not configured (development mode)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return response;
