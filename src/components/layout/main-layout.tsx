@@ -103,8 +103,32 @@ export function MainLayout() {
     };
   }, []);
 
-  const handleNewChat = () => {
-    setActiveChatId(null);
+  const handleNewChat = async () => {
+    try {
+      const newId = `chat_${Date.now()}`;
+      const newTitle = `New Chat ${new Date().toLocaleDateString()}`;
+
+      const newSession = {
+        id: newId,
+        title: newTitle,
+        messages: [] as import('@/lib/chat-storage-service').ChatMessage[],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        model: 'gpt-4o',
+        messageCount: 0,
+      } as import('@/lib/chat-storage-service').ChatSession;
+
+      await chatStorageService.saveChatSession(newSession);
+
+      setActiveChatId(newId);
+
+      // Reload chats to include the new one
+      const sessions = await chatStorageService.loadChatSessions();
+      setChats(chatStorageService.sessionsToChats(sessions));
+    } catch (error) {
+      console.error('Failed to create new chat:', error);
+    }
+
     // Close mobile sidebar when creating new chat
     if (isMobile) {
       setShowMobileSidebar(false);
