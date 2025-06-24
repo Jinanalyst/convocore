@@ -89,8 +89,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       // Check if user is using wallet authentication
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
-      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_')) {
-        // For wallet users or demo chats, load from localStorage
+      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_') || conversationId.startsWith('local_chat_')) {
+        // For wallet users, demo chats, or local chats, load from localStorage
         const savedMessages = localStorage.getItem(`chat_messages_${conversationId}`);
         if (savedMessages) {
           const parsedMessages = JSON.parse(savedMessages);
@@ -169,6 +169,22 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       role: 'user',
       timestamp: new Date()
     };
+
+    // Free plan usage tracking (per message)
+    const userId = user?.id ?? 'local';
+    if (!usageService.canMakeRequest(userId)) {
+      // Notify user and abort send if limit reached
+      notificationService.notifyError(
+        language === 'ko' ? '일일 사용 한도 초과' : 'Daily Limit Reached',
+        language === 'ko'
+          ? '무료 요금제의 일일 채팅 한도를 모두 사용하셨습니다. 프로 요금제로 업그레이드하여 무제한으로 사용해 보세요.'
+          : 'You have used all of your free daily chats. Upgrade to Pro for unlimited usage.'
+      );
+      return;
+    }
+
+    // Increment local/client usage count
+    usageService.incrementUsage(userId);
 
     // Add user message immediately
     setMessages(prev => [...prev, newMessage]);
@@ -267,8 +283,8 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       // Check if user is using wallet authentication
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
-      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_')) {
-        // For wallet users or demo chats, save to localStorage
+      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_') || conversationId.startsWith('local_chat_')) {
+        // For wallet users, demo chats, or local chats, save to localStorage
         const messageToSave = {
           id: generateId(),
           content,

@@ -114,6 +114,11 @@ class UsageService {
     // Trigger events for UI updates
     this.triggerUsageUpdate();
 
+    // fire and forget to server
+    if (typeof window !== 'undefined') {
+      fetch('/api/user/usage', { method: 'POST' }).catch(() => {});
+    }
+
     return {
       success: true,
       usage: updatedUsage,
@@ -370,6 +375,24 @@ class UsageService {
       console.warn('Supabase subscription upsert failed', err);
     }
     return updatedSubscription;
+  }
+
+  async fetchServerUsage(userId: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const res = await fetch('/api/user/usage');
+      if (!res.ok) return;
+      const json = await res.json();
+      const local = this.getUserUsage(userId);
+      if (json.used !== undefined && json.limit !== undefined) {
+        const merged: UserUsage = {
+          ...local,
+          requestsUsed: json.used,
+          requestsLimit: json.limit,
+        };
+        this.saveUsage(userId, merged);
+      }
+    } catch {}
   }
 }
 

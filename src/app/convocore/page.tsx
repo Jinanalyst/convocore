@@ -10,7 +10,6 @@ import { PWAInstall } from "@/components/ui/pwa-install";
 import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import { usageService } from "@/lib/usage-service";
 
 interface Chat {
   id: string;
@@ -306,9 +305,7 @@ export default function ConvocorePage() {
 
   const handleNewChat = async (initialMessage?: string) => {
     try {
-      // Increment usage count for new conversation
-      const userId = user?.id ?? 'local';
-      usageService.incrementUsage(userId);
+      // Note: Usage is now tracked per message instead of per conversation
       
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       

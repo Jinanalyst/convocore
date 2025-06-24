@@ -8,6 +8,8 @@ import { AIAgent, ChatMessage, ConversationContext, ToolResult, AgentCapability 
 import { advancedAIAgent } from '@/lib/advanced-ai-agent';
 import { formatAIResponseToParagraphs } from '@/lib/utils';
 import { nanoid } from 'nanoid';
+import { usageService } from '@/lib/usage-service';
+import { notificationService } from '@/lib/notification-service';
 import { 
   BotIcon, 
   UserIcon, 
@@ -79,6 +81,16 @@ export default function AdvancedChatInterface({
 
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || !currentAgent || isProcessing) return;
+
+    // Usage tracking for free plan (per message)
+    if (!usageService.canMakeRequest(userId)) {
+      notificationService.notifyError(
+        'Daily Limit Reached',
+        'You have used all of your free daily chats. Upgrade to Pro for unlimited usage.'
+      );
+      return;
+    }
+    usageService.incrementUsage(userId);
 
     const userMessage: ChatMessage = {
       id: nanoid(),
