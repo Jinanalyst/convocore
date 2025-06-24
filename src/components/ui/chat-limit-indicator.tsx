@@ -31,15 +31,14 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
       console.error('Migration error:', error);
     }
     
-    // Get real usage data
+    // Get real usage data (use 'local' for unauthenticated)
     const loadUsage = () => {
-      if (!user) return;
-      
+      const userId = user?.id ?? 'local';
       try {
-        const userUsage = usageService.getUserUsage(user.id);
-        const subscription = usageService.getUserSubscription(user.id);
+        const userUsage = usageService.getUserUsage(userId);
+        const subscription = usageService.getUserSubscription(userId);
         
-        console.log('🔄 Loading usage for user:', user.id, {
+        console.log('🔄 Loading usage for user:', userId, {
           used: userUsage.requestsUsed,
           limit: userUsage.requestsLimit,
           plan: subscription.tier
