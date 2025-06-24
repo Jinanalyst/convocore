@@ -31,7 +31,8 @@ import {
   Trash2
 } from "lucide-react";
 import { cn, formatAIResponseToParagraphs } from "@/lib/utils";
-import { detectAgentFromMessage, formatMessageWithAgent, ConvoAgent } from "@/lib/model-agents";
+import { ConvoAgent } from "@/lib/model-agents";
+import { detectAgentFromMessage, formatMessageWithAgent } from "@/lib/intelligent-agent-router";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { notificationService } from '@/lib/notification-service';
 import { formatChatTimestamp } from '@/lib/date-utils';
