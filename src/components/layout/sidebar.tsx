@@ -173,7 +173,7 @@ export function Sidebar({
 
   // Desktop/collapsible sidebar classes
   const sidebarWidth = isCollapsed ? 'md:w-[60px]' : 'md:w-[280px]';
-  const sidebarBase = 'hidden md:flex flex-col h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 shadow-sm transition-all duration-300 ease-in-out';
+  const sidebarBase = 'flex flex-col h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 shadow-sm transition-all duration-300 ease-in-out';
 
   return (
     <>
@@ -189,7 +189,7 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             onClick={onToggleCollapse}
-            className="ml-1"
+            className="ml-1 hidden md:inline-flex"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -237,36 +237,36 @@ export function Sidebar({
                   variant="outline"
                   size="lg"
                   onClick={handleSearch}
-                  className="text-base justify-start h-12 rounded-xl"
+                  className="w-full flex items-center gap-2 text-base justify-start h-12 rounded-xl"
                 >
-                  <Search className="w-5 h-5 mr-2" />
+                  <Search className="w-5 h-5" />
                   Search
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   onClick={handleLibrary}
-                  className="text-base justify-start h-12 rounded-xl"
+                  className="w-full flex items-center gap-2 text-base justify-start h-12 rounded-xl"
                 >
-                  <Archive className="w-5 h-5 mr-2" />
+                  <Archive className="w-5 h-5" />
                   Library
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="lg"
                   onClick={handleModelInfo}
-                  className="text-base justify-start h-12 rounded-xl"
+                  className="w-full flex items-center gap-2 text-base justify-start h-12 rounded-xl"
                 >
-                  <HelpCircle className="w-5 h-5 mr-2" />
+                  <HelpCircle className="w-5 h-5" />
                   Models
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="lg"
                   onClick={handleSettings}
-                  className="text-base justify-start h-12 rounded-xl"
+                  className="w-full flex items-center gap-2 text-base justify-start h-12 rounded-xl"
                 >
-                  <Settings className="w-5 h-5 mr-2" />
+                  <Settings className="w-5 h-5" />
                   Settings
                 </Button>
               </div>
