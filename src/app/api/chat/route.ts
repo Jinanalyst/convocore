@@ -119,29 +119,22 @@ export async function POST(request: NextRequest) {
 
     // Check usage limits for authenticated users
     if (userId !== 'anonymous') {
-      const canMakeRequest = usageService.canMakeRequest(userId);
-      
-      if (!canMakeRequest) {
-        const userUsage = usageService.getUserUsage(userId);
-        const subscription = usageService.getUserSubscription(userId);
-        
-        console.log('🚫 Usage limit exceeded for user:', userId, {
-          used: userUsage.requestsUsed,
-          limit: userUsage.requestsLimit,
-          plan: subscription.tier
-        });
-        
+      // Server-side limit check via Postgres function
+      const supabaseRate = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: canChat, error: rateErr } = await supabaseRate
+        .rpc('check_api_rate_limit', { user_id: userId });
+
+      if (rateErr) {
+        console.error('Rate-limit RPC error:', rateErr);
+      }
+
+      if (!canChat) {
         return NextResponse.json({
           error: 'Usage limit exceeded',
-          details: subscription.tier === 'free' 
-            ? `Daily limit of ${userUsage.requestsLimit} chats reached. Upgrade to Pro for unlimited chats.`
-            : `Monthly limit of ${userUsage.requestsLimit} chats reached.`,
-          usage: {
-            used: userUsage.requestsUsed,
-            limit: userUsage.requestsLimit,
-            plan: subscription.tier,
-            resetDate: userUsage.resetDate
-          },
+          details: 'Daily limit of 3 chats reached. Upgrade to Pro for unlimited chats.',
           upgradeUrl: '/pricing'
         }, { status: 429 });
       }
@@ -239,18 +232,11 @@ export async function POST(request: NextRequest) {
           
           // Increment usage count after successful ChainScope response
           if (userId !== 'anonymous') {
-            try {
-              const result = usageService.incrementUsage(userId);
-              console.log('📊 ChainScope usage incremented:', {
-                userId,
-                success: result.success,
-                used: result.usage.requestsUsed,
-                limit: result.usage.requestsLimit,
-                plan: result.usage.plan
-              });
-            } catch (usageError) {
-              console.error('Failed to increment ChainScope usage:', usageError);
-            }
+            await createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            ).rpc('increment_api_usage', { user_id: userId });
+            console.log('📊 ChainScope usage incremented in DB');
           }
           
           return NextResponse.json({ 
@@ -368,24 +354,11 @@ When responding:
       
       // Increment usage count after successful AI response
       if (userId !== 'anonymous') {
-        try {
-          const result = usageService.incrementUsage(userId);
-          console.log('📊 Usage incremented:', {
-            userId,
-            success: result.success,
-            used: result.usage.requestsUsed,
-            limit: result.usage.requestsLimit,
-            plan: result.usage.plan
-          });
-          
-          // Trigger storage event for UI updates
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('usage_updated', Date.now().toString());
-            window.dispatchEvent(new StorageEvent('storage', { key: 'usage_updated' }));
-          }
-        } catch (usageError) {
-          console.error('Failed to increment usage:', usageError);
-        }
+        await createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        ).rpc('increment_api_usage', { user_id: userId });
+        console.log('📊 Usage incremented in DB');
       }
     } catch (aiError) {
       console.error('🚨 AI Service Error:', aiError);

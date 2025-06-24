@@ -286,6 +286,19 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         // Save back to localStorage
         localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
         console.log('✅ Message saved to localStorage');
+
+        // Send to backend for wallet conversations
+        if (conversationId && !conversationId.startsWith('demo_')) {
+          try {
+            await fetch('/api/wallet/messages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ conversationId, role, content })
+            });
+          } catch (err) {
+            console.warn('Failed to sync wallet message to backend:', err);
+          }
+        }
         
         // Also update the chat list with the latest message
         const walletChats = localStorage.getItem('wallet_chats');

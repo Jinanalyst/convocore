@@ -407,4 +407,40 @@ BEGIN
         updated_at = NOW()
     WHERE id = p_user_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Wallet Conversations table (for users authenticated via wallet only)
+CREATE TABLE IF NOT EXISTS public.wallet_conversations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    title TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Wallet Messages table
+CREATE TABLE IF NOT EXISTS public.wallet_messages (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    wallet_conversation_id UUID REFERENCES public.wallet_conversations(id) ON DELETE CASCADE NOT NULL,
+    role TEXT CHECK (role IN ('user', 'assistant')) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_wallet_conversations_wallet_address ON public.wallet_conversations(wallet_address);
+CREATE INDEX IF NOT EXISTS idx_wallet_conversations_created_at ON public.wallet_conversations(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wallet_messages_conversation_id ON public.wallet_messages(wallet_conversation_id);
+CREATE INDEX IF NOT EXISTS idx_wallet_messages_created_at ON public.wallet_messages(created_at);
+
+-- Enable RLS but allow wallet services to access via service role key
+ALTER TABLE public.wallet_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_messages ENABLE ROW LEVEL SECURITY;
+
+-- Simple policies to allow service role access; client access will be via server routes
+CREATE POLICY "Anonymous cannot access wallet_conversations" ON public.wallet_conversations
+    FOR ALL USING (false);
+CREATE POLICY "Anonymous cannot access wallet_messages" ON public.wallet_messages
+    FOR ALL USING (false);
+
+-- End of wallet tables 

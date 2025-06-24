@@ -302,17 +302,40 @@ export class MultiNetworkPaymentService {
       throw new Error('Solana wallet not available');
     }
 
+    const { Connection, PublicKey, Transaction } = await import("@solana/web3.js");
+    const { getAssociatedTokenAddress, createTransferInstruction } = await import("@solana/spl-token");
+
+    const connection = new Connection(network.rpcUrl, "confirmed");
+
+    const payer = new PublicKey(userAddress);
+    const recipient = new PublicKey(network.recipientAddress);
+    const usdtMint = new PublicKey(network.usdtContractAddress!);
+
+    // Derive associated token accounts
+    const senderAta = await getAssociatedTokenAddress(usdtMint, payer);
+    const recipientAta = await getAssociatedTokenAddress(usdtMint, recipient);
+
+    // Amount in smallest units (USDT has 6 decimals)
+    const amount = BigInt(payment.amount * 1_000_000);
+
+    const transferIx = createTransferInstruction(
+      senderAta,
+      recipientAta,
+      payer,
+      amount
+    );
+
+    const transaction = new Transaction().add(transferIx);
+    transaction.feePayer = payer;
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
     const solana = (window as any).solana;
-    
-    // This is a simplified implementation
-    // In a real implementation, you would use @solana/web3.js and @solana/spl-token
-    console.log('Solana payment processing would be implemented here');
-    console.log('Payment amount:', payment.amount, 'USDT');
-    console.log('Recipient:', network.recipientAddress);
-    
-    // For now, return a mock transaction hash
-    // In production, implement actual Solana USDT transfer
-    throw new Error('Solana payments not yet implemented - coming soon!');
+    const signed = await solana.signAndSendTransaction(transaction);
+
+    // Wait for confirmation
+    await connection.confirmTransaction(signed.signature, "confirmed");
+
+    return signed.signature as string;
   }
 
   // Switch EVM network

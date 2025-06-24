@@ -51,44 +51,31 @@ export default function ConvocorePage() {
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
-        // For wallet users, load chats from localStorage
-        const savedChats = localStorage.getItem('wallet_chats');
-        if (savedChats) {
-          const parsedChats = JSON.parse(savedChats);
-          // Filter out demo chats if there are real chats
-          const realChats = parsedChats.filter((chat: Chat) => 
-            !chat.id.startsWith('demo_') && chat.lastMessage !== 'Hello! How can I help you today?'
-          );
-          
-          if (realChats.length > 0) {
-            setChats(realChats);
-            console.log('📥 Loaded', realChats.length, 'real wallet chats');
-            return;
-          } else {
-            // Only show demo chats if no real chats exist
-            setChats(parsedChats);
-            console.log('📝 Loaded demo chats for wallet user');
+        // For wallet users, fetch from backend API
+        try {
+          const res = await fetch('/api/wallet/conversations');
+          if (res.ok) {
+            const json = await res.json();
+            const fetchedChats: Chat[] = json.conversations.map((conv: any) => ({
+              id: conv.id,
+              title: conv.title,
+              lastMessage: 'Start a new conversation...',
+              timestamp: new Date(conv.updated_at)
+            }));
+            setChats(fetchedChats);
+            console.log('📥 Loaded', fetchedChats.length, 'wallet conversations from backend');
+            // Cache locally for offline use
+            localStorage.setItem('wallet_chats', JSON.stringify(fetchedChats));
             return;
           }
-        } else {
-          // Start with demo chats for new wallet users to show functionality
-          const demoChats: Chat[] = [
-            {
-              id: `demo_${Date.now()}_1`,
-              title: "AI Assistant",
-              lastMessage: "Hello! How can I help you today?",
-              timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-            },
-            {
-              id: `demo_${Date.now()}_2`,
-              title: "Code Generation",
-              lastMessage: "I can help you write and debug code...",
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-            },
-          ];
-          setChats(demoChats);
-          localStorage.setItem('wallet_chats', JSON.stringify(demoChats));
-          console.log('🆕 Created demo chats for new wallet user');
+        } catch(err) {
+          console.warn('Failed to fetch wallet conversations, falling back to localStorage');
+        }
+
+        // Fallback to localStorage demo or stored data
+        const savedChats = localStorage.getItem('wallet_chats');
+        if (savedChats) {
+          setChats(JSON.parse(savedChats));
         }
         return;
       }
@@ -216,6 +203,9 @@ export default function ConvocorePage() {
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
     if (walletConnected) {
       localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+    } else {
+      // Persist deletion for local users
+      localStorage.setItem('local_chats', JSON.stringify(updatedChats));
     }
   };
 
@@ -235,10 +225,12 @@ export default function ConvocorePage() {
       );
       setChats(updatedChats);
       
-      // Update localStorage for wallet users
+      // Update localStorage for wallet or local users
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       if (walletConnected) {
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+      } else {
+        localStorage.setItem('local_chats', JSON.stringify(updatedChats));
       }
     } else {
       // If no active chat, create a new one with this message
@@ -313,7 +305,41 @@ export default function ConvocorePage() {
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
-        // For wallet users, create chat locally
+        // For wallet users, create chat via backend API
+        try {
+          const title = initialMessage ? 
+            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
+            `New Chat ${new Date().toLocaleDateString()}`;
+          const res = await fetch('/api/wallet/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            const newConv = json.conversation;
+            const newChatId = newConv.id;
+            const newChat: Chat = {
+              id: newChatId,
+              title: newConv.title,
+              lastMessage: initialMessage || 'Start a new conversation...',
+              timestamp: new Date(newConv.created_at),
+            };
+
+            const updatedChats = [newChat, ...chats];
+            setChats(updatedChats);
+            setActiveChatId(newChatId);
+            // Cache locally
+            localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+            console.log('✅ Created new wallet chat via backend:', newChatId);
+            return newChatId;
+          }
+        } catch(err) {
+          console.error('Failed to create wallet conversation via backend, falling back to local');
+        }
+
+        // Fallback to local only
         const newChatId = `wallet_chat_${Date.now()}`;
         const newChat: Chat = {
           id: newChatId,
@@ -323,14 +349,10 @@ export default function ConvocorePage() {
           lastMessage: initialMessage || 'Start a new conversation...',
           timestamp: new Date(),
         };
-
         const updatedChats = [newChat, ...chats];
         setChats(updatedChats);
         setActiveChatId(newChatId);
-        
-        // Save to localStorage
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-        console.log('✅ Created new chat for wallet user:', newChatId);
         return newChatId;
       }
 
@@ -392,6 +414,9 @@ export default function ConvocorePage() {
       setChats(updatedChats);
       setActiveChatId(newConversation.id);
       console.log('✅ Created new Supabase chat:', newConversation.id);
+      
+      // Also persist locally so the chat appears in recent chats even if Supabase is unavailable later
+      localStorage.setItem('local_chats', JSON.stringify(updatedChats));
       return newConversation.id;
     } catch (error) {
       console.error('Error creating new chat:', error);
