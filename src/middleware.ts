@@ -77,6 +77,21 @@ export async function middleware(request: NextRequest) {
   // Get user session
   const { data: { user }, error } = await supabase.auth.getUser();
 
+  // Ensure guests have a device_id cookie so we can track usage server-side
+  if (!user) {
+    const existingDeviceId = request.cookies.get('device_id')?.value;
+    if (!existingDeviceId) {
+      const newId = crypto.randomUUID();
+      response.cookies.set({
+        name: 'device_id',
+        value: newId,
+        httpOnly: false,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+      });
+    }
+  }
+
   // Check for wallet authentication in cookies
   const walletConnected = request.cookies.get('wallet_connected')?.value === 'true';
   const walletAddress = request.cookies.get('wallet_address')?.value;

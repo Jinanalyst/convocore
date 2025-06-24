@@ -49,6 +49,11 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
           limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1, // -1 means unlimited for paid plans
           plan: subscription.tier
         });
+
+        // Sync with server only for authenticated users
+        if (user?.id) {
+          usageService.fetchServerUsage(userId).catch(() => {});
+        }
       } catch (error) {
         console.error('Error loading usage:', error);
       }
