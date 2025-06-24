@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     // This allows deployment while maintaining development type checking
     ignoreBuildErrors: true,
   },
+  webpack(config) {
+    // Silence "Critical dependency: the request of a dependency is an expression" warnings
+    // (e.g., from @supabase/realtime-js)
+    config.module.exprContextCritical = false;
+    return config;
+  },
 };
 
 export default nextConfig;
