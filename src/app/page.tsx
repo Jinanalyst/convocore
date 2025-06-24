@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { PWAInstall } from "@/components/ui/pwa-install";
 import { useState, useEffect } from 'react';
+import { Hero } from "@/components/ui/hero";
+import { SplashScreen } from "@/components/ui/splash-screen";
 
 // Note: Since this is a client component, metadata should be in layout.tsx
 // This is just for reference - the actual metadata is in layout.tsx
@@ -13,6 +15,7 @@ import { useState, useEffect } from 'react';
 export default function Home() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -25,12 +28,30 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    // Show splash screen for PWA or first-time visitors
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  (window.navigator as any).standalone === true;
+    
+    const isFirstVisit = !localStorage.getItem('convocore-visited');
+    
+    if (isPWA || isFirstVisit) {
+      setShowSplash(true);
+      localStorage.setItem('convocore-visited', 'true');
+    }
+  }, []);
+
   const handleStartChatting = () => {
     router.push('/auth/login');
   };
 
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
   return (
     <>
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       {/* Hidden SEO content for search engines */}
       <div className="sr-only">
         <h1>Convocore - AI Meets Web3</h1>
@@ -126,6 +147,7 @@ export default function Home() {
           <PWAInstall />
         </motion.div>
       </AuroraBackground>
+      <Hero />
     </>
   );
 }
