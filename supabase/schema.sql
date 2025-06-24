@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create custom types
 CREATE TYPE subscription_tier AS ENUM ('free', 'pro', 'premium');
-CREATE TYPE subscription_status AS ENUM ('active', 'inactive', 'cancelled');
+CREATE TYPE subscription_status AS ENUM ('active', 'inactive', 'cancelled', 'expired');
 CREATE TYPE payment_status AS ENUM ('pending', 'confirmed', 'failed');
 CREATE TYPE message_role AS ENUM ('user', 'assistant', 'system');
 
@@ -18,8 +18,11 @@ CREATE TABLE public.users (
     avatar_url TEXT,
     subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'premium')),
     subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'cancelled', 'expired')),
+    subscription_expires_at TIMESTAMPTZ NULL,
+    subscription_auto_renew BOOLEAN DEFAULT FALSE,
     api_requests_used INTEGER DEFAULT 0,
-    api_requests_limit INTEGER DEFAULT 10,
+    api_requests_limit INTEGER DEFAULT 3,
+    api_requests_reset_at TIMESTAMPTZ DEFAULT (CURRENT_DATE + INTERVAL '1 day'),
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
     last_login TIMESTAMPTZ
@@ -257,10 +260,149 @@ BEGIN
         subscription_tier = p_subscription_tier,
         subscription_status = 'active',
         subscription_expires_at = expires_at,
+        subscription_auto_renew = TRUE,
         api_requests_limit = CASE 
             WHEN p_subscription_tier = 'pro' THEN 999999
             WHEN p_subscription_tier = 'premium' THEN 999999
             ELSE 3
+        END,
+        api_requests_reset_at = CURRENT_DATE + INTERVAL '1 day',
+        updated_at = NOW()
+    WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check and expire subscriptions
+CREATE OR REPLACE FUNCTION public.check_expired_subscriptions()
+RETURNS void AS $$
+BEGIN
+    -- Expire subscriptions that have passed their expiration date
+    UPDATE public.users 
+    SET 
+        subscription_tier = 'free',
+        subscription_status = 'expired',
+        subscription_expires_at = NULL,
+        subscription_auto_renew = FALSE,
+        api_requests_limit = 3,
+        api_requests_reset_at = CURRENT_DATE + INTERVAL '1 day',
+        updated_at = NOW()
+    WHERE 
+        subscription_expires_at IS NOT NULL 
+        AND subscription_expires_at < NOW()
+        AND subscription_tier IN ('pro', 'premium')
+        AND subscription_status = 'active';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user subscription status
+CREATE OR REPLACE FUNCTION public.get_user_subscription(p_user_id UUID)
+RETURNS TABLE(
+    tier TEXT,
+    status TEXT,
+    expires_at TIMESTAMPTZ,
+    auto_renew BOOLEAN,
+    requests_used INTEGER,
+    requests_limit INTEGER,
+    reset_at TIMESTAMPTZ,
+    days_remaining INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.subscription_tier,
+        u.subscription_status,
+        u.subscription_expires_at,
+        u.subscription_auto_renew,
+        u.api_requests_used,
+        u.api_requests_limit,
+        u.api_requests_reset_at,
+        CASE 
+            WHEN u.subscription_expires_at IS NULL THEN NULL
+            ELSE EXTRACT(DAY FROM (u.subscription_expires_at - NOW()))::INTEGER
+        END
+    FROM public.users u
+    WHERE u.id = p_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to reset API usage based on plan
+CREATE OR REPLACE FUNCTION public.reset_api_usage()
+RETURNS void AS $$
+BEGIN
+    -- Reset daily usage for free users
+    UPDATE public.users 
+    SET 
+        api_requests_used = 0,
+        api_requests_reset_at = CURRENT_DATE + INTERVAL '1 day',
+        updated_at = NOW()
+    WHERE 
+        subscription_tier = 'free' 
+        AND api_requests_reset_at < NOW();
+        
+    -- Reset monthly usage for pro/premium users (monthly cycle)
+    UPDATE public.users 
+    SET 
+        api_requests_used = 0,
+        api_requests_reset_at = date_trunc('month', NOW() + INTERVAL '1 month'),
+        updated_at = NOW()
+    WHERE 
+        subscription_tier IN ('pro', 'premium')
+        AND api_requests_reset_at < NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to upgrade subscription
+CREATE OR REPLACE FUNCTION public.upgrade_subscription(
+    p_user_id UUID,
+    p_new_tier subscription_tier,
+    p_transaction_hash TEXT DEFAULT NULL
+)
+RETURNS void AS $$
+DECLARE
+    expires_at TIMESTAMPTZ;
+BEGIN
+    -- Calculate expiration date (30 days from now)
+    expires_at := NOW() + INTERVAL '30 days';
+    
+    -- Insert payment record if transaction hash provided
+    IF p_transaction_hash IS NOT NULL THEN
+        INSERT INTO public.payments (
+            user_id, 
+            transaction_hash, 
+            amount, 
+            subscription_tier, 
+            status, 
+            created_at
+        ) VALUES (
+            p_user_id, 
+            p_transaction_hash, 
+            CASE 
+                WHEN p_new_tier = 'pro' THEN 20.00
+                WHEN p_new_tier = 'premium' THEN 40.00
+                ELSE 0.00
+            END,
+            p_new_tier, 
+            'confirmed', 
+            NOW()
+        );
+    END IF;
+    
+    -- Update user subscription
+    UPDATE public.users 
+    SET 
+        subscription_tier = p_new_tier,
+        subscription_status = 'active',
+        subscription_expires_at = expires_at,
+        subscription_auto_renew = TRUE,
+        api_requests_limit = CASE 
+            WHEN p_new_tier = 'pro' THEN 999999
+            WHEN p_new_tier = 'premium' THEN 999999
+            ELSE 3
+        END,
+        api_requests_used = 0, -- Reset usage on upgrade
+        api_requests_reset_at = CASE
+            WHEN p_new_tier = 'free' THEN CURRENT_DATE + INTERVAL '1 day'
+            ELSE date_trunc('month', NOW() + INTERVAL '1 month')
         END,
         updated_at = NOW()
     WHERE id = p_user_id;

@@ -1,60 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TronPaymentService, detectPlanFromAmount } from '@/lib/blockchain';
-
-const tronPaymentService = TronPaymentService.getInstance();
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID from headers or session
-    // const userId = request.headers.get('x-user-id') || 'demo-user';
-    const walletAddress = request.headers.get('x-wallet-address');
+    const supabase = createServerComponentClient({ cookies });
     
-    // In a real app, this would fetch from TRON blockchain API
-    // For now, return demo blockchain payment data
-    const payments = [
-      {
-        id: '1',
-        date: '2024-12-15T10:30:00Z',
-        amount: 50,
-        currency: 'USDT',
-        plan: 'Pro Plan',
-        status: 'completed' as const,
-        txHash: '0x742d35cc6cd3e9c4e7c1c8e8e5f9a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8',
-        blockNumber: 45123456,
-        fromAddress: walletAddress || 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ',
-        toAddress: 'TRX9a5u6FQvkLvdB2cNm8Hp3kJ4sT7eW9x'
-      },
-      {
-        id: '2',
-        date: '2024-11-15T14:22:00Z',
-        amount: 50,
-        currency: 'USDT',
-        plan: 'Pro Plan',
-        status: 'completed' as const,
-        txHash: '0x8f3e2d1c9b8a7f6e5d4c3b2a1f9e8d7c6b5a4f3e2d1c9b8a7f6e5d4c3b2a1f',
-        blockNumber: 44987321,
-        fromAddress: walletAddress || 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ',
-        toAddress: 'TRX9a5u6FQvkLvdB2cNm8Hp3kJ4sT7eW9x'
-      },
-      {
-        id: '3',
-        date: '2024-10-15T09:15:00Z',
-        amount: 20,
-        currency: 'USDT',
-        plan: 'Basic Plan',
-        status: 'completed' as const,
-        txHash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a',
-        blockNumber: 44756789,
-        fromAddress: walletAddress || 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ',
-        toAddress: 'TRX9a5u6FQvkLvdB2cNm8Hp3kJ4sT7eW9x'
-      }
-    ];
+    // Get authenticated user
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    if (authError || !session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    return NextResponse.json({ payments });
+    // Get user's payment history
+    const { data: payments, error: paymentsError } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError);
+      return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 });
+    }
+
+    // Get user's current subscription status
+    const { data: subscription, error: subError } = await supabase
+      .rpc('get_user_subscription', { p_user_id: session.user.id });
+
+    if (subError) {
+      console.error('Error fetching subscription:', subError);
+    }
+
+    return NextResponse.json({ 
+      payments: payments || [],
+      subscription: subscription?.[0] || null
+    });
   } catch (error) {
-    console.error('Error fetching payment history:', error);
+    console.error('Error in payments GET:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch payment history' },
+      { error: 'Failed to fetch payment data' },
       { status: 500 }
     );
   }
@@ -62,94 +48,165 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { txHash, amount, currency, plan } = await request.json();
-    // const userId = request.headers.get('x-user-id') || 'demo-user';
-    const walletAddress = request.headers.get('x-wallet-address');
+    const supabase = createServerComponentClient({ cookies });
+    
+    // Get authenticated user
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    if (authError || !session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { txHash, plan, amount, network } = await request.json();
     
     // Validate required fields
-    if (!txHash || !amount || !currency || !plan) {
+    if (!txHash || !plan || !amount) {
       return NextResponse.json(
         { error: 'Missing required payment data' },
         { status: 400 }
       );
     }
 
-    // In a real app, this would:
-    // 1. Verify the transaction on TRON blockchain
-    // 2. Update user subscription
-    // 3. Store payment record in database
+    // Validate plan and amount
+    const validPlans = { pro: 20, premium: 40 };
+    if (!validPlans[plan as keyof typeof validPlans] || validPlans[plan as keyof typeof validPlans] !== amount) {
+      return NextResponse.json(
+        { error: 'Invalid plan or amount' },
+        { status: 400 }
+      );
+    }
+
+    // Check if transaction already exists
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('transaction_hash', txHash)
+      .single();
+
+    if (existingPayment) {
+      return NextResponse.json(
+        { error: 'Transaction already processed' },
+        { status: 409 }
+      );
+    }
+
+    // For demo purposes, we'll simulate payment verification
+    // In production, you would verify the transaction on the blockchain
+    const verified = await simulatePaymentVerification(txHash, amount, network);
     
-    console.log(`New payment recorded: ${amount} ${currency} for ${plan} - TX: ${txHash}`);
+    if (!verified) {
+      return NextResponse.json(
+        { error: 'Payment verification failed' },
+        { status: 400 }
+      );
+    }
 
-    const newPayment = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      amount,
-      currency,
-      plan,
-      status: 'pending' as const,
-      txHash,
-      blockNumber: undefined,
-      fromAddress: walletAddress || 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ',
-      toAddress: 'TRX9a5u6FQvkLvdB2cNm8Hp3kJ4sT7eW9x'
-    };
+    // Process the subscription upgrade
+    const { error: upgradeError } = await supabase
+      .rpc('upgrade_subscription', {
+        p_user_id: session.user.id,
+        p_new_tier: plan,
+        p_transaction_hash: txHash
+      });
 
-    return NextResponse.json({ payment: newPayment });
+    if (upgradeError) {
+      console.error('Error upgrading subscription:', upgradeError);
+      return NextResponse.json(
+        { error: 'Failed to process subscription upgrade' },
+        { status: 500 }
+      );
+    }
+
+    // Get updated subscription info
+    const { data: updatedSubscription } = await supabase
+      .rpc('get_user_subscription', { p_user_id: session.user.id });
+
+    return NextResponse.json({ 
+      success: true,
+      message: `Successfully upgraded to ${plan} plan!`,
+      subscription: updatedSubscription?.[0] || null,
+      payment: {
+        id: txHash,
+        plan,
+        amount,
+        status: 'confirmed',
+        created_at: new Date().toISOString()
+      }
+    });
+
   } catch (error) {
-    console.error('Error recording payment:', error);
+    console.error('Error processing payment:', error);
     return NextResponse.json(
-      { error: 'Failed to record payment' },
+      { error: 'Failed to process payment' },
       { status: 500 }
     );
   }
 }
 
-// New endpoint to verify and auto-detect payment plans
+// Simulate payment verification - replace with real blockchain verification
+async function simulatePaymentVerification(
+  txHash: string, 
+  amount: number, 
+  network: string
+): Promise<boolean> {
+  // For demo purposes, we'll just check if the transaction hash looks valid
+  if (!txHash || txHash.length < 10) {
+    return false;
+  }
+
+  // Simulate network verification delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // In production, implement real verification:
+  // - For TRON: Check transaction on TronGrid API
+  // - For Ethereum: Check transaction on Etherscan/Infura
+  // - For other networks: Use appropriate blockchain APIs
+  
+  console.log(`Simulating verification for ${network} transaction: ${txHash} (${amount} USDT)`);
+  
+  // For demo, we'll accept transactions that don't start with "invalid"
+  return !txHash.toLowerCase().startsWith('invalid');
+}
+
+// New endpoint to check subscription status and expire if needed
 export async function PUT(request: NextRequest) {
   try {
-    const { txHash } = await request.json();
-    const userId = request.headers.get('x-user-id') || 'demo-user';
+    const supabase = createServerComponentClient({ cookies });
     
-    if (!txHash) {
-      return NextResponse.json(
-        { error: 'Transaction hash is required' },
-        { status: 400 }
-      );
+    // Get authenticated user
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    if (authError || !session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify the transaction and detect plan automatically
-    const verification = await tronPaymentService.verifyAndProcessIncomingPayment(txHash);
+    // Check and expire subscriptions
+    const { error: expireError } = await supabase.rpc('check_expired_subscriptions');
     
-    if (verification.success && verification.plan && verification.amount) {
-      // Create payment record with auto-detected plan
-      const payment = await tronPaymentService.createPayment(userId, verification.plan);
-      payment.transactionHash = txHash;
-      payment.status = 'confirmed';
-      
-      return NextResponse.json({
-        success: true,
-        payment: {
-          id: Date.now().toString(),
-          date: new Date().toISOString(),
-          amount: verification.amount,
-          currency: 'USDT',
-          plan: verification.plan === 'pro' ? 'Pro Plan' : 'Premium Plan',
-          status: 'confirmed',
-          txHash,
-          detectedPlan: verification.plan,
-          autoDetected: true
-        }
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: verification.error || 'Payment verification failed'
-      });
+    if (expireError) {
+      console.error('Error checking expired subscriptions:', expireError);
     }
+
+    // Reset API usage if needed
+    const { error: resetError } = await supabase.rpc('reset_api_usage');
+    
+    if (resetError) {
+      console.error('Error resetting API usage:', resetError);
+    }
+
+    // Get updated subscription info
+    const { data: subscription } = await supabase
+      .rpc('get_user_subscription', { p_user_id: session.user.id });
+
+    return NextResponse.json({ 
+      success: true,
+      subscription: subscription?.[0] || null
+    });
+
   } catch (error) {
-    console.error('Error verifying payment:', error);
+    console.error('Error updating subscription:', error);
     return NextResponse.json(
-      { error: 'Failed to verify payment' },
+      { error: 'Failed to update subscription' },
       { status: 500 }
     );
   }
