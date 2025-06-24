@@ -152,7 +152,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
       if (result.success) {
         // Update subscription when payment is successful
         if (user?.id) {
-          usageService.updateSubscription(user.id, selectedPlanType);
+          await usageService.updateSubscriptionAsync(user.id, selectedPlanType);
         }
         setCurrentView('success');
         loadPaymentHistory();

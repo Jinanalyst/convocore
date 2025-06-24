@@ -1,5 +1,7 @@
 "use client";
 
+import { createClientComponentClient } from './supabase';
+
 export interface UserUsage {
   userId: string;
   plan: 'free' | 'pro' | 'premium';
@@ -309,6 +311,65 @@ class UsageService {
     } catch (error) {
       console.error('Error triggering usage update:', error);
     }
+  }
+
+  // Get subscription info
+  async getUserSubscriptionAsync(userId: string): Promise<SubscriptionInfo> {
+    // First check localStorage
+    const stored = localStorage.getItem(`${this.SUBSCRIPTION_KEY}_${userId}`);
+    if (stored) return JSON.parse(stored);
+
+    // Fallback to Supabase table if configured
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        const supabase = createClientComponentClient();
+        const { data, error } = await supabase.from('subscriptions').select('*').eq('user_id', userId).single();
+        if (error) throw error;
+        if (data) {
+          const sub: SubscriptionInfo = {
+            tier: data.tier as any,
+            status: data.status as any,
+            startDate: data.start_date,
+            endDate: data.end_date || undefined,
+            autoRenew: data.auto_renew
+          };
+          // cache locally
+          localStorage.setItem(`${this.SUBSCRIPTION_KEY}_${userId}`, JSON.stringify(sub));
+          return sub;
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase subscription fetch failed', err);
+    }
+    // Default free subscription
+    return {
+      tier: 'free',
+      status: 'active',
+      startDate: new Date().toISOString(),
+      autoRenew: false,
+    };
+  }
+
+  // Update subscription (when user upgrades/downgrades)
+  async updateSubscriptionAsync(userId: string, newTier: 'free' | 'pro' | 'premium'): Promise<SubscriptionInfo> {
+    const updatedSubscription = this.updateSubscription(userId, newTier);
+
+    // Persist to Supabase
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        const supabase = createClientComponentClient();
+        await supabase.from('subscriptions').upsert({
+          user_id: userId,
+          tier: newTier,
+          status: 'active',
+          start_date: new Date().toISOString(),
+          auto_renew: true,
+        });
+      }
+    } catch (err) {
+      console.warn('Supabase subscription upsert failed', err);
+    }
+    return updatedSubscription;
   }
 }
 
