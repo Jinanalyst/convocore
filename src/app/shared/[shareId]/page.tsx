@@ -204,38 +204,47 @@ export default function SharedChatPage() {
         </motion.div>
 
         {/* Messages */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {chat.messages.map((message, index) => (
             <motion.div
               key={message.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-6 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {/* Avatar */}
               {message.role === 'assistant' && (
-                <div className="flex-shrink-0 w-8 h-8 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                  <Bot className="w-5 h-5 text-white" />
                 </div>
               )}
 
               {/* Message Content */}
-              <div className={`max-w-2xl ${message.role === 'user' ? 'order-1' : ''}`}>
+              <div className={`max-w-3xl ${message.role === 'user' ? 'order-1' : ''}`}>
                 <div
-                  className={`p-4 rounded-lg ${
+                  className={`p-6 rounded-2xl shadow-sm ${
                     message.role === 'user'
-                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                      ? 'bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-100 dark:to-white text-white dark:text-gray-900'
                       : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700'
                   }`}
                 >
                   <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <p className="whitespace-pre-wrap">
-                  {message.role === 'assistant' 
-                    ? formatAIResponseToParagraphs(message.content)
-                    : message.content
-                  }
-                </p>
+                    {message.role === 'assistant' ? (
+                      <div 
+                        className="whitespace-pre-line leading-relaxed text-gray-800 dark:text-gray-200"
+                        dangerouslySetInnerHTML={{
+                          __html: formatAIResponseToParagraphs(message.content)
+                            .split('\n\n')
+                            .map(paragraph => `<p class="mb-4 last:mb-0 text-base leading-7">${paragraph}</p>`)
+                            .join('')
+                        }}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap leading-relaxed mb-0 text-base">
+                        {message.content}
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -248,8 +257,8 @@ export default function SharedChatPage() {
 
               {/* User Avatar */}
               {message.role === 'user' && (
-                <div className="flex-shrink-0 w-8 h-8 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center order-2">
-                  <User className="w-4 h-4 text-white dark:text-gray-900" />
+                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-900 dark:from-gray-200 dark:to-white rounded-full flex items-center justify-center order-2 shadow-sm">
+                  <User className="w-5 h-5 text-white dark:text-gray-900" />
                 </div>
               )}
             </motion.div>

@@ -8,47 +8,113 @@ export function cn(...inputs: ClassValue[]) {
 export function formatAIResponseToParagraphs(text: string): string {
   if (!text || typeof text !== 'string') return text;
 
-  // Remove excessive whitespace and normalize the text
-  const normalizedText = text.trim().replace(/\s+/g, ' ');
+  // Normalize line endings and trim
+  let normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   
-  // Split text into sentences using multiple sentence ending patterns
-  const sentences = normalizedText.split(/(?<=[.!?])\s+(?=[A-Z가-힣])/);
-  
-  if (sentences.length <= 2) {
-    // For short responses with 2 or fewer sentences, keep as one paragraph
-    return normalizedText;
-  }
-  
-  const paragraphs: string[] = [];
+  // Handle different types of content
+  const lines = normalizedText.split('\n');
+  const formattedLines: string[] = [];
   let currentParagraph: string[] = [];
-  
-  for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i].trim();
-    if (!sentence) continue;
+  let inCodeBlock = false;
+  let inList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
     
-    currentParagraph.push(sentence);
+    // Handle code blocks
+    if (trimmedLine.startsWith('```')) {
+      // Finish current paragraph before code block
+      if (currentParagraph.length > 0) {
+        formattedLines.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      inCodeBlock = !inCodeBlock;
+      formattedLines.push(line);
+      continue;
+    }
     
-    // Create paragraph breaks based on logical groupings:
-    // 1. Every 2-3 sentences for better readability
-    // 2. When encountering transition words or phrases
-    // 3. When reaching certain sentence count thresholds
-    const shouldBreak = 
-      currentParagraph.length >= 3 || // Max 3 sentences per paragraph
-      (currentParagraph.length >= 2 && i === sentences.length - 1) || // Last sentences
-      (currentParagraph.length >= 2 && sentences[i + 1] && isTransitionSentence(sentences[i + 1]));
+    // If we're in a code block, preserve formatting
+    if (inCodeBlock) {
+      formattedLines.push(line);
+      continue;
+    }
     
-    if (shouldBreak) {
-      paragraphs.push(currentParagraph.join(' '));
+    // Handle empty lines - they indicate paragraph breaks
+    if (trimmedLine === '') {
+      if (currentParagraph.length > 0) {
+        formattedLines.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      // Add empty line for spacing only if not already added
+      if (formattedLines.length > 0 && formattedLines[formattedLines.length - 1] !== '') {
+        formattedLines.push('');
+      }
+      inList = false;
+      continue;
+    }
+    
+    // Handle lists (bullet points, numbered lists, etc.)
+    const isListItem = /^(\s*[-*+•]\s+|\s*\d+\.\s+|\s*[a-zA-Z]\.\s+|\*\*[^*]+\*\*:?\s*)/.test(trimmedLine);
+    
+    if (isListItem) {
+      // Finish current paragraph before starting list
+      if (currentParagraph.length > 0 && !inList) {
+        formattedLines.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      formattedLines.push(trimmedLine);
+      inList = true;
+      continue;
+    }
+    
+    // Handle headers (lines starting with # or **text**)
+    const isHeader = /^#+\s+/.test(trimmedLine) || /^\*\*[^*]+\*\*:?\s*$/.test(trimmedLine);
+    
+    if (isHeader) {
+      // Finish current paragraph before header
+      if (currentParagraph.length > 0) {
+        formattedLines.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      formattedLines.push(trimmedLine);
+      inList = false;
+      continue;
+    }
+    
+    // Regular text - check if it should start a new paragraph
+    const shouldStartNewParagraph = 
+      inList || // Always start new paragraph after lists
+      (currentParagraph.length === 0) || // First line of paragraph
+      isTransitionSentence(trimmedLine) || // Transition words
+      (currentParagraph.length >= 3); // Max sentences per paragraph
+    
+    if (shouldStartNewParagraph && currentParagraph.length > 0) {
+      formattedLines.push(currentParagraph.join(' '));
       currentParagraph = [];
     }
+    
+    currentParagraph.push(trimmedLine);
+    inList = false;
   }
   
-  // Add any remaining sentences
+  // Add any remaining paragraph
   if (currentParagraph.length > 0) {
-    paragraphs.push(currentParagraph.join(' '));
+    formattedLines.push(currentParagraph.join(' '));
   }
   
-  return paragraphs.join('\n\n');
+  // Clean up extra empty lines
+  return formattedLines
+    .reduce((acc: string[], line, index) => {
+      // Remove multiple consecutive empty lines
+      if (line === '' && acc[acc.length - 1] === '') {
+        return acc;
+      }
+      acc.push(line);
+      return acc;
+    }, [])
+    .join('\n')
+    .trim();
 }
 
 function isTransitionSentence(sentence: string): boolean {
