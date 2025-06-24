@@ -1,11 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
-  <!-- Hexagonal C Logo -->
-  <g transform="translate(10, 10)">
-    <!-- Outer hexagon -->
-    <path d="M30 10 L50 20 L50 40 L30 50 L10 40 L10 20 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="2"/>
-    
-    <!-- Inner C shape -->
-    <path d="M25 20 Q20 15 20 25 Q20 35 25 30 L25 35 Q15 40 15 25 Q15 10 25 15 L25 20 Z" fill="white"/>
-    <path d="M35 20 Q40 15 40 25 Q40 35 35 30 L35 35 Q45 40 45 25 Q45 10 35 15 L35 20 Z" fill="white"/>
-  </g>
+  <!-- Modern circular background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="cGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f8fafc"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer circle with gradient -->
+  <circle cx="40" cy="40" r="36" fill="url(#bgGradient)" stroke="none"/>
+  
+  <!-- Modern geometric C -->
+  <path d="M32 20 
+           C45 20 55 30 55 40 
+           C55 50 45 60 32 60
+           L32 52
+           C40 52 47 45 47 40
+           C47 35 40 28 32 28
+           L32 20 Z" 
+        fill="url(#cGradient)" 
+        stroke="none"/>
+  
+  <!-- Inner accent dot -->
+  <circle cx="52" cy="40" r="3" fill="url(#cGradient)" opacity="0.8"/>
 </svg> 

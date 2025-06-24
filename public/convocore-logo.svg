@@ -1,16 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" fill="none">
-  <!-- Hexagonal C Logo -->
-  <g transform="translate(10, 10)">
-    <!-- Outer hexagon -->
-    <path d="M40 15 L60 25 L60 45 L40 55 L20 45 L20 25 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="2"/>
-    
-    <!-- Inner C shape -->
-    <path d="M35 25 Q30 20 30 30 Q30 40 35 35 L35 40 Q25 45 25 30 Q25 15 35 20 L35 25 Z" fill="white"/>
-    <path d="M45 25 Q50 20 50 30 Q50 40 45 35 L45 40 Q55 45 55 30 Q55 15 45 20 L45 25 Z" fill="white"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 100" fill="none">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="cGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#475569"/>
+    </linearGradient>
+  </defs>
   
-  <!-- Convocore Text -->
-  <text x="90" y="45" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="32" font-weight="600" fill="#1a1a1a">
-    Convocore
-  </text>
+  <!-- Logo circle -->
+  <circle cx="50" cy="50" r="42" fill="url(#bgGradient)"/>
+  
+  <!-- Modern C design -->
+  <path d="M35 25 
+           C52 25 65 38 65 50 
+           C65 62 52 75 35 75
+           L35 65
+           C46 65 55 56 55 50
+           C55 44 46 35 35 35
+           L35 25 Z" 
+        fill="url(#cGradient)"/>
+  
+  <!-- Accent dot -->
+  <circle cx="62" cy="50" r="4" fill="url(#cGradient)" opacity="0.9"/>
+  
+  <!-- Modern typography -->
+  <text x="110" y="38" 
+        font-family="'Inter', -apple-system, system-ui, sans-serif" 
+        font-size="28" 
+        font-weight="700" 
+        letter-spacing="-0.5px"
+        fill="url(#textGradient)">Convocore</text>
+  
+  <!-- Subtle tagline -->
+  <text x="112" y="58" 
+        font-family="'Inter', -apple-system, system-ui, sans-serif" 
+        font-size="12" 
+        font-weight="400" 
+        letter-spacing="0.5px"
+        fill="#64748b"
+        opacity="0.8">AI CONVERSATIONS</text>
 </svg> 
