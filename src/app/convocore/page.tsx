@@ -215,15 +215,22 @@ export default function ConvocorePage() {
     
     // Update the current chat's last message and timestamp
     if (activeChatId) {
-      const updatedChats = chats.map(chat => 
-        chat.id === activeChatId 
-          ? { 
-              ...chat, 
-              lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-              timestamp: new Date()
-            }
-          : chat
-      );
+      const updatedChats = chats.map(chat => {
+        if (chat.id !== activeChatId) return chat;
+
+        // Determine new title: keep existing if user already set one; otherwise use first 30 chars
+        const defaultTitlePattern = /^New Chat/;
+        const newTitle = defaultTitlePattern.test(chat.title)
+          ? (message.length > 30 ? message.substring(0, 30) + '...' : message)
+          : chat.title;
+
+        return {
+          ...chat,
+          title: newTitle,
+          lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+          timestamp: new Date()
+        };
+      });
       setChats(updatedChats);
       
       // Update localStorage for wallet or local users

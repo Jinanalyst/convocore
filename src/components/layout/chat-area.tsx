@@ -247,6 +247,18 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         chatId
       );
 
+      // Increment usage for free plan indicator
+      try {
+        if (user?.id) {
+          const result = usageService.incrementUsage(user.id);
+          if (!result.success && result.limitExceeded) {
+            console.warn('Free plan limit reached');
+          }
+        }
+      } catch (err) {
+        console.error('Usage increment failed:', err);
+      }
+
     } catch (error) {
       console.error('Error sending message:', error);
       
