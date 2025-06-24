@@ -38,6 +38,7 @@ import { detectAgentFromMessage, formatMessageWithAgent } from "@/lib/intelligen
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { notificationService } from '@/lib/notification-service';
 import { formatChatTimestamp } from '@/lib/date-utils';
+import { speechService } from "@/lib/speech-recognition";
 
 // Helper function to generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -220,6 +221,15 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
 
       // Add assistant message
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Speak the assistant's reply aloud if supported
+      try {
+        if (speechService.isSpeechSynthesisSupported()) {
+          speechService.speak(assistantMessage.content);
+        }
+      } catch (e) {
+        console.warn('Speech synthesis failed:', e);
+      }
 
       // Save assistant message
       if (chatId) {

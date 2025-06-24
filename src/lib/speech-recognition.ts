@@ -70,7 +70,10 @@ export class SpeechService {
     // Mobile-optimized settings
     this.recognition.continuous = !this.isMobile; // On mobile, use single-shot recognition
     this.recognition.interimResults = true;
-    this.recognition.lang = 'en-US';
+    // Set recognition language to the browser's preferred locale for automatic international language support
+    const browserLang = (typeof navigator !== 'undefined' && (navigator.language || (navigator.languages && navigator.languages[0]))) || 'en-US';
+    this.recognition.lang = browserLang;
+    
     this.recognition.maxAlternatives = 1;
   }
 
@@ -278,6 +281,16 @@ export class SpeechService {
     this.isListening = false;
     if (this.recognition) {
       this.recognition.stop();
+    }
+  }
+
+  /**
+   * Dynamically update the recognition language.
+   * @param lang BCP-47 language tag, e.g., "ko-KR", "es-ES".
+   */
+  public setLanguage(lang: string): void {
+    if (this.recognition) {
+      this.recognition.lang = lang;
     }
   }
 

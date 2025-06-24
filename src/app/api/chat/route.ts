@@ -128,10 +128,10 @@ export async function POST(request: NextRequest) {
         .rpc('check_api_rate_limit', { user_id: userId });
 
       if (rateErr) {
-        console.error('Rate-limit RPC error:', rateErr);
+        console.warn('Rate-limit check skipped – RPC not found or errored:', rateErr?.message || rateErr);
       }
 
-      if (!canChat) {
+      if (canChat === false) {
         return NextResponse.json({
           error: 'Usage limit exceeded',
           details: 'Daily limit of 3 chats reached. Upgrade to Pro for unlimited chats.',

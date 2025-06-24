@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Mic, 
   MicOff, 
-  X, 
   Send, 
   AlertCircle, 
   Smartphone,
@@ -223,12 +222,7 @@ export function VoiceModal({ open, onOpenChange, onTranscriptComplete }: VoiceMo
         isMobile && "w-[95vw] h-[90vh] max-h-[600px] flex flex-col"
       )}>
         <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center justify-between">
-            <span className="text-lg font-semibold">Voice Input</span>
-            <Button variant="ghost" size="sm" onClick={handleClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </DialogTitle>
+          <DialogTitle className="text-lg font-semibold">Voice Input</DialogTitle>
         </DialogHeader>
 
         <div className={cn(
@@ -303,7 +297,7 @@ export function VoiceModal({ open, onOpenChange, onTranscriptComplete }: VoiceMo
                 {/* Recording indicator */}
                 {isListening && (
                   <motion.div
-                    className="absolute -inset-2 rounded-full border-2 border-red-500"
+                    className="pointer-events-none absolute -inset-2 rounded-full border-2 border-red-500"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   />

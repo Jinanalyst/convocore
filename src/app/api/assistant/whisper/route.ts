@@ -5,7 +5,7 @@ export const runtime = "nodejs"; // ensure Node runtime for buffer/file ops
 
 export async function POST(req: Request) {
   try {
-    const { audio } = await req.json(); // base64 string
+    const { audio, language } = await req.json(); // base64 string and optional language code
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     const transcription = await openai.audio.transcriptions.create({
       file: await OpenAI.toFile(buffer, "speech.webm"),
       model: "whisper-1",
+      ...(language && { language }),
     });
 
     return NextResponse.json({ text: transcription.text });

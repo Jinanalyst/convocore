@@ -23,8 +23,17 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
   }
 
-  // Skip middleware if Supabase is not configured (development mode)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonEnv = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If env vars are missing OR URL is obviously invalid, skip Supabase auth logic.
+  const urlIsValid = !!supabaseUrlEnv && /^https?:\/\//.test(supabaseUrlEnv);
+
+  if (!urlIsValid || !supabaseAnonEnv) {
+    // Log once for debugging in dev (won't run at edge runtime for prod)
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Supabase middleware disabled: invalid or missing NEXT_PUBLIC_SUPABASE_URL');
+    }
     return response;
   }
 

@@ -127,11 +127,13 @@ export function VoiceAssistant() {
         onClick={toggleRecording}
         disabled={processing}
         className={cn(
-          "h-14 w-14 rounded-full flex items-center justify-center shadow-lg transition-all",
+          "h-20 w-20 md:h-14 md:w-14 rounded-full flex items-center justify-center shadow-lg transition-all focus:outline-none active:scale-95",
           recording ? "bg-red-500 text-white" : "bg-blue-500 text-white hover:bg-blue-600",
-          processing && "opacity-60 cursor-not-allowed"
+          processing && "opacity-60 cursor-not-allowed",
+          "before:content-[''] before:absolute before:inset-0 before:-m-2 before:rounded-full before:bg-transparent"
         )}
         title={tooltip || (recording ? "Stop recording" : "Start voice assistant")}
+        style={{ touchAction: 'manipulation' }}
       >
         {processing ? (
           <Loader2 className="h-6 w-6 animate-spin" />

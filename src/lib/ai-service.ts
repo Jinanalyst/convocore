@@ -24,7 +24,7 @@ interface UserSettings {
 // Function to load user settings from localStorage
 function loadUserSettings(): UserSettings {
   try {
-    const savedSettings = localStorage.getItem('convocore-settings');
+    const savedSettings = typeof localStorage === 'undefined' ? null : localStorage.getItem('convocore-settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
       return {
@@ -343,7 +343,7 @@ async function sendGroqMessage(
 
   try {
     // Get user settings for API key
-    const savedSettings = localStorage.getItem('convocore-settings');
+    const savedSettings = typeof localStorage === 'undefined' ? null : localStorage.getItem('convocore-settings');
     let apiKey = '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'; // Default API key
     
     if (savedSettings) {
@@ -457,7 +457,7 @@ export const aiService = {
 
     if (modelConfig.provider === 'groq') {
       // Check if user has configured ConvoQ API key in settings
-      const savedSettings = localStorage.getItem('convocore-settings');
+      const savedSettings = typeof localStorage === 'undefined' ? null : localStorage.getItem('convocore-settings');
       let hasGroqKey = !!process.env.GROQ_API_KEY;
       
       if (savedSettings) {
