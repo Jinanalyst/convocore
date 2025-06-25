@@ -106,7 +106,9 @@ export async function middleware(request: NextRequest) {
   // Allow either Supabase user OR wallet authentication
   if (isProtectedRoute && !user && !walletConnected) {
     const redirectUrl = new URL('/auth/login', request.url);
-    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
+    // Preserve full path with query parameters (e.g., /convocore?chatId=xyz)
+    const fullPath = request.nextUrl.pathname + request.nextUrl.search;
+    redirectUrl.searchParams.set('redirectTo', fullPath);
     return NextResponse.redirect(redirectUrl);
   }
 
