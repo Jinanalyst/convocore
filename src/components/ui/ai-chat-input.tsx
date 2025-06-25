@@ -437,7 +437,7 @@ const AIChatInput = ({
                 onKeyDown={handleKeyPress}
                 onFocus={() => setIsActive(true)}
                 placeholder={showPlaceholder ? PLACEHOLDERS[placeholderIndex] : "Ask me anything..."}
-                className="w-full h-12 pl-12 pr-32 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+                className="w-full h-12 pl-4 pr-24 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
                 disabled={disabled}
               />
               <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
@@ -447,12 +447,12 @@ const AIChatInput = ({
                       key={placeholderIndex}
                       className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base"
                       style={{
-                        paddingLeft: '3rem',
+                        paddingLeft: '1rem',
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         zIndex: 0,
-                        maxWidth: "calc(100% - 11rem)",
+                        maxWidth: "calc(100% - 8rem)",
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}

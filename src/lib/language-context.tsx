@@ -51,10 +51,12 @@ const translations = {
     'chat.attach': 'Attach File',
     'chat.newConversation': 'New Conversation',
     'chat.recentChats': 'Recent Chats',
+    'chat_area.loading_chat': 'Loading chat...',
     
-    // Convocore Welcome
-    'convocore.welcome': 'Welcome to Convocore',
+    // Convocore Page
+    'convocore.welcome': 'Hello! How can I help you today?',
     'convocore.start_conversation': 'Start a new conversation or select one from the sidebar.',
+    'convocore.placeholder1': 'Generate a landing page for a new SaaS product',
     
     // Subscription
     'subscription.free': 'Free',
@@ -98,6 +100,9 @@ const translations = {
     'common.share': 'Share',
     'common.export': 'Export',
     'common.import': 'Import',
+    'model_info_modal.input_title': 'Input',
+    'model_info_modal.output_title': 'Output',
+    'model_info_modal.latency_title': 'Latency',
   },
   ko: {
     // Model descriptions  
@@ -136,10 +141,12 @@ const translations = {
     'chat.attach': '파일 첨부',
     'chat.newConversation': '새 대화',
     'chat.recentChats': '최근 채팅',
+    'chat_area.loading_chat': '대화 불러오는 중...',
     
-    // Convocore Welcome
-    'convocore.welcome': 'Convocore에 오신 것을 환영합니다',
+    // Convocore Page
+    'convocore.welcome': '안녕하세요! 무엇을 도와드릴까요?',
     'convocore.start_conversation': '새 대화를 시작하거나 사이드바에서 대화를 선택하세요.',
+    'convocore.placeholder1': '새로운 SaaS 제품을 위한 랜딩 페이지 생성',
     
     // Subscription
     'subscription.free': '무료',
@@ -183,6 +190,9 @@ const translations = {
     'common.share': '공유',
     'common.export': '내보내기',
     'common.import': '가져오기',
+    'model_info_modal.input_title': '입력',
+    'model_info_modal.output_title': '결과',
+    'model_info_modal.latency_title': '지연 시간',
   }
 };
 

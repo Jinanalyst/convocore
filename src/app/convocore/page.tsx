@@ -24,6 +24,7 @@ interface Chat {
   title: string;
   lastMessage: string;
   timestamp: Date;
+  threadId?: string;
 }
 
 export default function ConvocorePage() {
@@ -36,6 +37,7 @@ export default function ConvocorePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [usage, setUsage] = useState({
     used: 0,
     limit: 3,
@@ -87,11 +89,9 @@ export default function ConvocorePage() {
     try {
       console.log('🔄 Loading chats...');
       
-      // Check if user is authenticated via wallet or Supabase
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
-        // For wallet users, fetch from backend API
         try {
           const res = await fetch('/api/wallet/conversations');
           if (res.ok) {
@@ -100,11 +100,11 @@ export default function ConvocorePage() {
               id: conv.id,
               title: conv.title,
               lastMessage: 'Start a new conversation...',
-              timestamp: new Date(conv.updated_at)
+              timestamp: new Date(conv.updated_at),
+              threadId: conv.thread_id,
             }));
             setChats(fetchedChats);
             console.log('📥 Loaded', fetchedChats.length, 'wallet conversations from backend');
-            // Cache locally for offline use
             localStorage.setItem('wallet_chats', JSON.stringify(fetchedChats));
             return;
           }
@@ -112,7 +112,6 @@ export default function ConvocorePage() {
           console.warn('Failed to fetch wallet conversations, falling back to localStorage');
         }
 
-        // Fallback to localStorage demo or stored data
         const savedChats = localStorage.getItem('wallet_chats');
         if (savedChats) {
           setChats(JSON.parse(savedChats));
@@ -120,7 +119,6 @@ export default function ConvocorePage() {
         return;
       }
 
-      // Check for local storage chats (fallback for unauthenticated users)
       const localChats = localStorage.getItem('local_chats');
       if (localChats) {
         const parsedLocalChats = JSON.parse(localChats);
@@ -135,7 +133,6 @@ export default function ConvocorePage() {
         }
       }
 
-      // For Supabase authenticated users
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
@@ -145,6 +142,7 @@ export default function ConvocorePage() {
           id,
           title,
           updated_at,
+          thread_id,
           messages (
             content,
             created_at
@@ -155,20 +153,9 @@ export default function ConvocorePage() {
 
       if (error) {
         console.warn('Could not load Supabase chats (expected if not configured):', error);
-        // Fallback to demo chats for users without Supabase
         const demoChats: Chat[] = [
-          {
-            id: `demo_${Date.now()}_1`,
-            title: "AI Assistant",
-            lastMessage: "Hello! How can I help you today?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          },
-          {
-            id: `demo_${Date.now()}_2`,
-            title: "Code Generation",
-            lastMessage: "I can help you write and debug code...",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          },
+          { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
+          { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
         ];
         setChats(demoChats);
         console.log('📝 Loaded demo chats (Supabase unavailable)');
@@ -178,23 +165,13 @@ export default function ConvocorePage() {
           title: conv.title,
           lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
           timestamp: new Date(conv.updated_at),
+          threadId: conv.thread_id,
         })) || [];
 
-        // If no conversations exist, show demo chats
         if (formattedChats.length === 0) {
           const demoChats: Chat[] = [
-            {
-              id: `demo_${Date.now()}_1`,
-              title: "AI Assistant",
-              lastMessage: "Hello! How can I help you today?",
-              timestamp: new Date(Date.now() - 1000 * 60 * 30),
-            },
-            {
-              id: `demo_${Date.now()}_2`,
-              title: "Code Generation",
-              lastMessage: "I can help you write and debug code...",
-              timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-            },
+            { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
+            { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
           ];
           setChats(demoChats);
           console.log('📝 No Supabase conversations found, showing demo chats');
@@ -205,32 +182,43 @@ export default function ConvocorePage() {
       }
     } catch (error) {
       console.error('Error loading chats:', error);
-      // Fallback to demo chats
       const demoChats: Chat[] = [
-        {
-          id: `demo_${Date.now()}_1`,
-          title: "AI Assistant",
-          lastMessage: "Hello! How can I help you today?",
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        },
-        {
-          id: `demo_${Date.now()}_2`,
-          title: "Code Generation",
-          lastMessage: "I can help you write and debug code...",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        },
+        { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
+        { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
       ];
       setChats(demoChats);
       console.log('🆘 Error loading chats, fallback to demo chats');
     }
   };
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = async (chatId: string) => {
     console.log('🎯 Selecting chat:', chatId);
     setActiveChatId(chatId);
-    // When a chat is selected, clear existing messages and prepare for new ones.
-    // In a real app, you would fetch the message history for this chat here.
-    setMessages([]); 
+    setIsChatLoading(true);
+    setMessages([]);
+
+    const selectedChat = chats.find(c => c.id === chatId);
+    if (selectedChat) {
+      setThreadId(selectedChat.threadId || null);
+    } else {
+      setThreadId(null);
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages([
+        { 
+          id: 'welcome-message', 
+          role: 'assistant', 
+          content: `Continuing conversation: **${selectedChat?.title || 'this chat'}**...`
+        }
+      ]);
+    } catch (error) {
+      console.error("Error fetching messages for chat:", chatId, error);
+      setMessages([{ id: 'error-message', role: 'assistant', content: 'Could not load messages.' }]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
   const handleDeleteChat = async (chatId: string) => {
@@ -240,16 +228,13 @@ export default function ConvocorePage() {
       setMessages([]);
     }
     
-    // Remove from local state immediately for better UX
     const updatedChats = chats.filter(chat => chat.id !== chatId);
     setChats(updatedChats);
     
-    // If wallet user, also update localStorage
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
     if (walletConnected) {
       localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
     } else {
-      // Persist deletion for local users
       localStorage.setItem('local_chats', JSON.stringify(updatedChats));
     }
   };
@@ -259,25 +244,21 @@ export default function ConvocorePage() {
 
     let currentChatId = activeChatId;
 
-    // If there is no active chat, create one before proceeding.
     if (!currentChatId) {
-      const newChatId = await handleNewChat(message, true); // Pass a flag to indicate this is for a new message
+      const newChatId = await handleNewChat(message, true);
       if (newChatId) {
         currentChatId = newChatId;
       } else {
         console.error("Failed to create a new chat, message not sent.");
-        // Optionally show an error message in the UI
         const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: "Sorry, I couldn't start a new chat. Please try again." };
         setMessages([errorMessage]);
         return;
       }
     }
 
-    // Add user message to UI immediately
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
 
-    // Increment usage before sending
     usageService.incrementUsage(user?.id ?? 'local');
 
     let reply = "Assistant is thinking...";
@@ -290,6 +271,23 @@ export default function ConvocorePage() {
       const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
       setMessages(prev => [...prev, assistantMessage]);
 
+      const chatToUpdate = chats.find(c => c.id === currentChatId);
+      if (chatToUpdate && !chatToUpdate.threadId) {
+        try {
+          const { createClientComponentClient } = await import('@/lib/supabase');
+          const supabase = createClientComponentClient();
+          await supabase
+            .from('conversations')
+            .update({ thread_id: assistantResponse.threadId })
+            .eq('id', currentChatId);
+          
+          setChats(prev => prev.map(c => c.id === currentChatId ? {...c, threadId: assistantResponse.threadId} : c));
+
+        } catch (error) {
+          console.error('Failed to update thread_id in Supabase:', error);
+        }
+      }
+
     } catch (error) {
       console.error("Error calling assistant:", error);
       reply = "Sorry, I couldn't respond.";
@@ -297,9 +295,6 @@ export default function ConvocorePage() {
       setMessages(prev => [...prev, errorMessage]);
     }
     
-    // Now we are sure we have a currentChatId, so we update the corresponding chat.
-    // We need to use a functional update for `setChats` to get the latest `chats` state,
-    // especially after a new one might have just been added.
     setChats(prevChats => {
       const updatedChats = prevChats.map(chat => 
         chat.id === currentChatId 
@@ -311,7 +306,6 @@ export default function ConvocorePage() {
           : chat
       );
       
-      // Also update localStorage
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       if (walletConnected) {
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
@@ -328,44 +322,30 @@ export default function ConvocorePage() {
       console.log('⚠️ No active chat to share');
       return;
     }
-
     console.log("✅ Share button clicked! Opening share modal for chat:", activeChatId);
-    console.log("Current chat title:", getCurrentChatTitle());
     setShareModalOpen(true);
   };
 
   const handleSettings = () => {
-    console.log("✅ Settings button clicked! Opening settings modal");
     setSettingsOpen(true);
   };
 
   const handleProfile = () => {
     console.log("Opening profile");
-    // In a real app, this would open profile management
   };
 
   const handleLogout = async () => {
     console.log("Logging out");
-    
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-    
     if (walletConnected) {
-      // Clear wallet authentication
       localStorage.removeItem('wallet_connected');
       localStorage.removeItem('wallet_address');
       localStorage.removeItem('wallet_type');
       localStorage.removeItem('user_id');
       localStorage.removeItem('wallet_chats');
-      
-      // Clear cookies
-      document.cookie = 'wallet_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      document.cookie = 'wallet_address=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      document.cookie = 'wallet_type=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      
-      // Redirect to login
+      document.cookie.split(";").forEach(c => { document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); });
       window.location.href = '/auth/login';
     } else {
-      // Handle Supabase logout
       try {
         const { createClientComponentClient } = await import('@/lib/supabase');
         const supabase = createClientComponentClient();
@@ -380,119 +360,82 @@ export default function ConvocorePage() {
 
   const getCurrentChatTitle = () => {
     if (!activeChatId) return undefined;
-    
     const currentChat = chats.find(chat => chat.id === activeChatId);
     return currentChat?.title;
   };
 
-  const handleNewChat = async (initialMessage?: string, isContinuation = false) => {
+  const handleNewChat = async (initialMessage?: string, isContinuation = false): Promise<string | undefined> => {
     console.log('✨ Creating new chat...');
     
-    // Only clear messages if it's a true new chat, not a continuation
     if (!isContinuation) {
       setMessages([]);
       setThreadId(null);
+      setActiveChatId(null);
     }
 
-    const newChat: Chat = {
-      id: `chat_${Date.now()}`,
-      title: initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat",
-      lastMessage: initialMessage || 'Start a new conversation...',
-      timestamp: new Date(),
-    };
-
+    const newChatTitle = initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat";
+    
     try {
-      // Note: Usage is now tracked per message instead of per conversation
-      
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      
       if (walletConnected) {
-        // For wallet users, create chat via backend API
-        try {
-          const res = await fetch('/api/wallet/conversations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: newChat.title })
-          });
-
-          if (res.ok) {
-            const json = await res.json();
-            const newConv = json.conversation;
-            const newChatId = newConv.id;
-            const updatedChats = [newChat, ...chats];
-            setChats(updatedChats);
-            setActiveChatId(newChatId);
-            // Cache locally
-            localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-            console.log('✅ Created new wallet chat via backend:', newChatId);
-            return newChatId;
-          }
-        } catch(err) {
-          console.error('Failed to create wallet conversation via backend, falling back to local');
-        }
-
-        // Fallback to local only
-        const newChatId = `wallet_chat_${Date.now()}`;
-        const updatedChats = [newChat, ...chats];
-        setChats(updatedChats);
-        setActiveChatId(newChatId);
-        localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-        return newChatId;
+          const tempId = `wallet_chat_${Date.now()}`;
+          const newChat: Chat = { id: tempId, title: newChatTitle, lastMessage: initialMessage || 'Start...', timestamp: new Date() };
+          const updatedChats = [newChat, ...chats];
+          setChats(updatedChats);
+          setActiveChatId(tempId);
+          localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
+          return tempId;
       }
 
-      // For Supabase authenticated users
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
       
       const { data: { user: supabaseUser } } = await supabase.auth.getUser();
       if (!supabaseUser) {
-        console.error('User not authenticated');
-        // Fallback to local storage for unauthenticated users
-        const newChatId = `local_chat_${Date.now()}`;
+        console.error('User not authenticated, creating local chat');
+        const tempId = `local_chat_${Date.now()}`;
+        const newChat: Chat = { id: tempId, title: newChatTitle, lastMessage: initialMessage || 'Start...', timestamp: new Date() };
         const updatedChats = [newChat, ...chats];
         setChats(updatedChats);
-        setActiveChatId(newChatId);
-        
-        // Save to localStorage as fallback
+        setActiveChatId(tempId);
         localStorage.setItem('local_chats', JSON.stringify(updatedChats));
-        console.log('📦 Created fallback local chat:', newChatId);
-        return newChatId;
+        return tempId;
       }
 
       const { data: newConversation, error } = await supabase
         .from('conversations')
-        .insert({
-          user_id: supabaseUser.id,
-          title: newChat.title,
-          model: 'gpt-4o'
-        })
+        .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o' })
         .select()
         .single();
 
       if (error) {
         console.error('Error creating new chat:', error);
-        return;
+        return undefined;
       }
 
-      // Add to local state
+      const newChat: Chat = {
+        id: newConversation.id,
+        title: newConversation.title,
+        lastMessage: initialMessage || 'Start...',
+        timestamp: new Date(newConversation.created_at),
+        threadId: newConversation.thread_id,
+      };
+
       const updatedChats = [newChat, ...chats];
       setChats(updatedChats);
       setActiveChatId(newConversation.id);
-      console.log('✅ Created new Supabase chat:', newConversation.id);
-      
-      // Also persist locally so the chat appears in recent chats even if Supabase is unavailable later
       localStorage.setItem('local_chats', JSON.stringify(updatedChats));
       return newConversation.id;
+
     } catch (error) {
       console.error('Error creating new chat:', error);
-      // Fallback to just clearing active chat
       setActiveChatId(null);
+      return undefined;
     }
   };
 
   return (
     <div className="flex h-screen bg-white dark:bg-black relative">
-      {/* Mobile Sidebar Overlay */}
       {isMobile && !sidebarCollapsed && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -500,30 +443,20 @@ export default function ConvocorePage() {
         />
       )}
 
-      {/* Sidebar - Desktop: Normal layout, Mobile: Fixed overlay */}
       <div className={cn(
         "transition-all duration-300 z-50",
         isMobile 
-          ? cn(
-              "fixed left-0 top-0 h-full transform",
-              sidebarCollapsed ? "-translate-x-full" : "translate-x-0 w-80"
-            )
-          : cn(
-              "flex-shrink-0",
-              sidebarCollapsed ? "w-16" : "w-80"
-            )
+          ? cn("fixed left-0 top-0 h-full transform", sidebarCollapsed ? "-translate-x-full" : "translate-x-0 w-80")
+          : cn("flex-shrink-0", sidebarCollapsed ? "w-16" : "w-80")
       )}>
         <Sidebar
           className="h-full"
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onNewChat={handleNewChat}
+          onNewChat={() => handleNewChat()}
           onSelectChat={(chatId) => {
             handleSelectChat(chatId);
-            // Auto-close sidebar on mobile after selecting chat
-            if (isMobile) {
-              setSidebarCollapsed(true);
-            }
+            if (isMobile) setSidebarCollapsed(true);
           }}
           onDeleteChat={handleDeleteChat}
           activeChatId={activeChatId || undefined}
@@ -531,12 +464,7 @@ export default function ConvocorePage() {
         />
       </div>
 
-      {/* Main Content - Full width on mobile, adjusted on desktop */}
-      <div className={cn(
-        "flex-1 flex flex-col min-w-0",
-        isMobile ? "w-full" : ""
-      )}>
-        {/* Header */}
+      <div className={cn("flex-1 flex flex-col min-w-0", isMobile ? "w-full" : "")}>
         <Header
           currentChatTitle={getCurrentChatTitle()}
           currentChatId={activeChatId || undefined}
@@ -548,24 +476,22 @@ export default function ConvocorePage() {
           showMobileMenu={!sidebarCollapsed}
         />
 
-        {/* Chat Area */}
         <div className="flex-1 min-h-0">
           <ChatArea
             chatId={activeChatId || undefined}
             onSendMessage={handleSendMessage}
             messages={messages}
             usage={usage}
+            isLoading={isChatLoading}
           />
         </div>
       </div>
 
-      {/* Settings Modal */}
       <SettingsModal 
         open={settingsOpen} 
         onOpenChange={setSettingsOpen} 
       />
 
-      {/* Share Modal */}
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
@@ -573,11 +499,8 @@ export default function ConvocorePage() {
         chatTitle={getCurrentChatTitle()}
       />
 
-      {/* PWA Install Component */}
       <PWAInstall />
-
-      {/* Voice Assistant microphone */}
       <VoiceAssistant onSend={(message) => handleSendMessage(message, 'default-model')} />
     </div>
   );
-} 
+}

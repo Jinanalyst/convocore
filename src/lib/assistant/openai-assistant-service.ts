@@ -3,8 +3,8 @@
  */
 
 // You can get these from your Supabase project's API settings.
-const SUPABASE_URL = 'https://dxgnrgsvareniosbbksj.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4Z25yZ3N2YXJlbmlvc2Jia3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1Njc4NTgsImV4cCI6MjA2NjE0Mzg1OH0.9xbeqCBZKJcnBajO-MKDczQC3bh_S0o3TGMJ_SmHagE';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
  * Invokes the 'openai-assistant' edge function.

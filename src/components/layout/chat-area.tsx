@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/language-context';
 import { cn } from "@/lib/utils";
 import type { Message } from "@/app/convocore/page";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 
 interface ChatAreaProps {
   className?: string;
@@ -34,6 +35,7 @@ export function ChatArea({
   const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,11 +53,33 @@ export function ChatArea({
     setInputValue(""); // Clear input after sending
   };
 
+  const handleSend = (message: string) => {
+    if (message.trim()) {
+      onSendMessage(message, "gpt-4o"); // Example model
+      setInputValue("");
+    }
+  };
+
+  const placeholders = [
+    t("convocore.placeholder1"),
+    t("convocore.placeholder2"),
+    t("convocore.placeholder3"),
+    t("convocore.placeholder4"),
+    t("convocore.placeholder5"),
+  ];
+
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-          {messages.length === 0 && !isLoading && !inputValue ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                <p className="text-gray-500">{t('chat_area.loading_chat')}</p>
+              </div>
+            </div>
+          ) : messages.length === 0 && !inputValue ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
               <ConvocoreLogo className="w-24 h-24 mb-4" />
               <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">{t('convocore.welcome')}</h2>
