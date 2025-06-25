@@ -8,6 +8,7 @@ import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useLanguage } from '@/lib/language-context';
 import { cn } from "@/lib/utils";
 import type { Message } from "@/app/convocore/page";
+import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 
 interface ChatAreaProps {
   className?: string;
@@ -15,6 +16,11 @@ interface ChatAreaProps {
   messages: Message[];
   isLoading?: boolean;
   onSendMessage: (message: string, model: string, includeWebSearch?: boolean) => void;
+  usage: {
+    used: number;
+    limit: number;
+    plan: 'free' | 'pro' | 'premium';
+  };
 }
 
 export function ChatArea({ 
@@ -22,7 +28,8 @@ export function ChatArea({
   chatId, 
   messages,
   isLoading = false,
-  onSendMessage 
+  onSendMessage,
+  usage
 }: ChatAreaProps) {
   const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -74,6 +81,7 @@ export function ChatArea({
       </div>
       <div className="p-4 md:p-6 border-t bg-white dark:bg-gray-800">
         <div className="max-w-4xl mx-auto">
+          <ChatLimitIndicator usage={usage} className="mb-4" />
           <AIChatInput
             value={inputValue}
             onChange={setInputValue}

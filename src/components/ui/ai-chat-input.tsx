@@ -448,12 +448,11 @@ const AIChatInput = ({
                       className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base"
                       style={{
                         paddingLeft: '3rem',
-                        paddingRight: '8rem',
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         zIndex: 0,
-                        maxWidth: "calc(100% - 8px)",
+                        maxWidth: "calc(100% - 11rem)",
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}

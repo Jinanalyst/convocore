@@ -11,6 +11,7 @@ import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
+import { usageService } from '@/lib/usage-service';
 
 export interface Message {
   id: string;
@@ -35,10 +36,19 @@ export default function ConvocorePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [usage, setUsage] = useState({
+    used: 0,
+    limit: 3,
+    plan: 'free' as 'free' | 'pro' | 'premium',
+  });
 
-  // Load chats on component mount and detect mobile
+  // Load chats and usage on component mount
   useEffect(() => {
     loadChats();
+    loadUsage();
+    
+    // Listen for usage updates from other tabs/windows
+    window.addEventListener('usageUpdated', loadUsage);
     
     // Mobile detection
     const checkMobile = () => {
@@ -52,8 +62,26 @@ export default function ConvocorePage() {
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('usageUpdated', loadUsage);
+    };
+  }, [user]); // Rerun when user changes
+
+  const loadUsage = () => {
+    const userId = user?.id ?? 'local';
+    try {
+      const userUsage = usageService.getUserUsage(userId);
+      const subscription = usageService.getUserSubscription(userId);
+      setUsage({
+        used: userUsage.requestsUsed,
+        limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1,
+        plan: subscription.tier,
+      });
+    } catch (error) {
+      console.error('Error loading usage:', error);
+    }
+  };
 
   const loadChats = async () => {
     try {
@@ -248,6 +276,9 @@ export default function ConvocorePage() {
     // Add user message to UI immediately
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
+
+    // Increment usage before sending
+    usageService.incrementUsage(user?.id ?? 'local');
 
     let reply = "Assistant is thinking...";
     try {
@@ -523,6 +554,7 @@ export default function ConvocorePage() {
             chatId={activeChatId || undefined}
             onSendMessage={handleSendMessage}
             messages={messages}
+            usage={usage}
           />
         </div>
       </div>
