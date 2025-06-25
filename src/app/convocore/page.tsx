@@ -206,6 +206,7 @@ export default function ConvocorePage() {
 
   const handleSelectChat = async (chatId: string) => {
     console.log('🎯 Selecting chat:', chatId);
+    console.log('💬 Fetching /api/chat/' + chatId);
     setActiveChatId(chatId);
     setIsChatLoading(true);
     setMessages([]);
@@ -228,9 +229,9 @@ export default function ConvocorePage() {
       }));
 
       setMessages(formattedMessages);
-    } catch (error) {
-      console.error("Error fetching messages for chat:", chatId, error);
-      setMessages([{ id: 'error-message', role: 'assistant', content: 'Could not load messages.' }]);
+    } catch (error: any) {
+      console.error('🛑 Error fetching messages for chat:', chatId, error);
+      setMessages([{ id: 'error-message', role: 'assistant', content: error.message || 'Could not load messages.' }]);
     } finally {
       setIsChatLoading(false);
     }
