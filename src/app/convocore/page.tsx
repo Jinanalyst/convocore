@@ -242,13 +242,13 @@ export default function ConvocorePage() {
       
       // Add assistant response to UI
       const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
-      setMessages(prev => [...prev, userMessage, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
 
     } catch (error) {
       console.error("Error calling assistant:", error);
       reply = "Sorry, I couldn't respond.";
       const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: reply };
-      setMessages(prev => [...prev, userMessage, errorMessage]);
+      setMessages(prev => [...prev, errorMessage]);
     }
     
     // Update the current chat's last message and timestamp

@@ -47,6 +47,8 @@ interface MentionItem {
 }
 
 interface AIChatInputProps {
+  value: string;
+  onChange: (value: string) => void;
   onSendMessage?: (message: string, options?: { think?: boolean; deepSearch?: boolean }) => void;
   onAttachFile?: (file?: File) => void;
   onVoiceInput?: () => void;
@@ -55,6 +57,8 @@ interface AIChatInputProps {
 }
 
 const AIChatInput = ({
+  value,
+  onChange,
   onSendMessage,
   onAttachFile,
   onVoiceInput,
@@ -66,7 +70,6 @@ const AIChatInput = ({
   const [isActive, setIsActive] = useState(false);
   const [thinkActive, setThinkActive] = useState(false);
   const [deepSearchActive, setDeepSearchActive] = useState(false);
-  const [inputValue, setInputValue] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   
   // Mention functionality
@@ -205,7 +208,7 @@ const AIChatInput = ({
     
     console.log('📝 Input changed:', { value, cursorPos, lastChar: value[cursorPos - 1] });
     
-    setInputValue(value);
+    onChange(value);
     detectMentions(value, cursorPos);
   };
 
@@ -213,13 +216,13 @@ const AIChatInput = ({
   const selectMention = useCallback((item: MentionItem) => {
     if (!inputRef.current) return;
     
-    const beforeMention = inputValue.substring(0, mentionStartPos);
-    const afterMention = inputValue.substring(inputRef.current.selectionStart || inputValue.length);
+    const beforeMention = value.substring(0, mentionStartPos);
+    const afterMention = value.substring(inputRef.current.selectionStart || value.length);
     
     const mentionText = item.type === 'model' ? `@model:${item.name}` : item.id;
     const newValue = beforeMention + mentionText + " " + afterMention;
     
-    setInputValue(newValue);
+    onChange(newValue);
     setShowMentions(false);
     
     // Focus and set cursor position after the mention
@@ -230,10 +233,10 @@ const AIChatInput = ({
         inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
       }
     }, 0);
-  }, [inputValue, mentionStartPos]);
+  }, [value, mentionStartPos, onChange]);
 
   useEffect(() => {
-    if (isActive || inputValue) return;
+    if (isActive || value) return;
     const interval = setInterval(() => {
       setShowPlaceholder(false);
       setTimeout(() => {
@@ -242,44 +245,39 @@ const AIChatInput = ({
       }, 400);
     }, 3000);
     return () => clearInterval(interval);
-  }, [isActive, inputValue]);
+  }, [isActive, value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        if (!inputValue) setIsActive(false);
+        if (!value) setIsActive(false);
         setShowMentions(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [inputValue]);
+  }, [value]);
 
   const handleActivate = () => {
-    if (!disabled) {
-      setIsActive(true);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    if (disabled) return;
+    setIsActive(true);
+    inputRef.current?.focus();
   };
 
   const handleSend = () => {
-    if (inputValue.trim() && !disabled) {
-      console.log('🚀 AIChatInput sending message with options:', {
-        message: inputValue.trim(),
-        think: thinkActive,
-        deepSearch: deepSearchActive
-      });
-      
-      onSendMessage?.(inputValue.trim(), {
+    if (disabled || !value.trim()) return;
+    
+    if (onSendMessage) {
+      onSendMessage(value, {
         think: thinkActive,
         deepSearch: deepSearchActive,
       });
-      setInputValue("");
-      setIsActive(false);
-      setThinkActive(false);
-      setDeepSearchActive(false);
-      setShowMentions(false);
     }
+
+    onChange("");
+    setThinkActive(false);
+    setDeepSearchActive(false);
+    setShowMentions(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -330,7 +328,7 @@ const AIChatInput = ({
         ref={wrapperRef}
         className="w-full max-w-3xl relative"
         variants={containerVariants}
-        animate={isActive || inputValue ? "expanded" : "collapsed"}
+        animate={isActive || value ? "expanded" : "collapsed"}
         initial="collapsed"
         style={{
           overflow: "visible",
@@ -431,31 +429,20 @@ const AIChatInput = ({
             </button>
 
             <div className="relative flex-1 min-w-0">
-                              <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyPress}
-                  onKeyUp={(e) => {
-                    // Also detect mentions on key up to catch cursor position changes
-                    const cursorPos = e.currentTarget.selectionStart || inputValue.length;
-                    detectMentions(inputValue, cursorPos);
-                  }}
-                  onClick={(e) => {
-                    // Detect mentions when clicking to change cursor position
-                    const cursorPos = e.currentTarget.selectionStart || inputValue.length;
-                    detectMentions(inputValue, cursorPos);
-                  }}
-                  className="flex-1 border-0 outline-0 rounded-md py-2 px-1 sm:px-2 text-sm sm:text-base bg-transparent w-full font-normal text-gray-900 dark:text-white disabled:opacity-50"
-                  style={{ position: "relative", zIndex: 1 }}
-                  onFocus={handleActivate}
-                  disabled={disabled}
-                  placeholder={isActive || inputValue ? "Ask me anything..." : ""}
-                />
+              <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyPress}
+                onFocus={() => setIsActive(true)}
+                placeholder={showPlaceholder ? PLACEHOLDERS[placeholderIndex] : "Ask me anything..."}
+                className="w-full h-12 px-4 pr-32 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+                disabled={disabled}
+              />
               <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
                 <AnimatePresence mode="wait">
-                  {showPlaceholder && !isActive && !inputValue && (
+                  {showPlaceholder && !isActive && !value && (
                     <motion.span
                       key={placeholderIndex}
                       className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base"
@@ -501,7 +488,7 @@ const AIChatInput = ({
               type="button"
               tabIndex={-1}
               onClick={handleSend}
-              disabled={disabled || !inputValue.trim()}
+              disabled={disabled || !value.trim()}
             >
               <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
             </button>
@@ -510,7 +497,7 @@ const AIChatInput = ({
           <motion.div
             className="w-full flex justify-start px-4 items-center text-sm"
             initial={{ opacity: 0, y: 20 }}
-            animate={isActive || inputValue ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            animate={isActive || value ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             style={{ marginTop: 8 }}
           >
             <div className="flex gap-3 items-center">

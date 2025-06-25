@@ -52,6 +52,10 @@ const translations = {
     'chat.newConversation': 'New Conversation',
     'chat.recentChats': 'Recent Chats',
     
+    // Convocore Welcome
+    'convocore.welcome': 'Welcome to Convocore',
+    'convocore.start_conversation': 'Start a new conversation or select one from the sidebar.',
+    
     // Subscription
     'subscription.free': 'Free',
     'subscription.pro': 'Pro',
@@ -132,6 +136,10 @@ const translations = {
     'chat.attach': '파일 첨부',
     'chat.newConversation': '새 대화',
     'chat.recentChats': '최근 채팅',
+    
+    // Convocore Welcome
+    'convocore.welcome': 'Convocore에 오신 것을 환영합니다',
+    'convocore.start_conversation': '새 대화를 시작하거나 사이드바에서 대화를 선택하세요.',
     
     // Subscription
     'subscription.free': '무료',
