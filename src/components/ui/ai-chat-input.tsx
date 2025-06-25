@@ -65,7 +65,7 @@ const AIChatInput = ({
   disabled = false,
   className = "",
 }: AIChatInputProps) => {
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholder, setPlaceholder] = useState(PLACEHOLDERS[0]);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const [isActive, setIsActive] = useState(false);
   const [thinkActive, setThinkActive] = useState(false);
@@ -237,15 +237,18 @@ const AIChatInput = ({
 
   useEffect(() => {
     if (isActive || value) return;
+
     const interval = setInterval(() => {
+      const newIndex = (PLACEHOLDERS.indexOf(placeholder) + 1) % PLACEHOLDERS.length;
       setShowPlaceholder(false);
       setTimeout(() => {
-        setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
+        setPlaceholder(PLACEHOLDERS[newIndex]);
         setShowPlaceholder(true);
-      }, 400);
-    }, 3000);
+      }, 500); // fade out duration
+    }, 4000); // stay duration
+
     return () => clearInterval(interval);
-  }, [isActive, value]);
+  }, [isActive, value, placeholder]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -436,32 +439,26 @@ const AIChatInput = ({
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
                 onFocus={() => setIsActive(true)}
-                placeholder={showPlaceholder ? PLACEHOLDERS[placeholderIndex] : "Ask me anything..."}
+                placeholder={isActive || value ? "Ask me anything..." : " "}
                 className="w-full h-12 pl-4 pr-24 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
                 disabled={disabled}
               />
               <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
-                <AnimatePresence mode="wait">
-                  {showPlaceholder && !isActive && !value && (
-                    <motion.span
-                      key={placeholderIndex}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base"
-                      style={{
-                        paddingLeft: '1rem',
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        zIndex: 0,
-                        maxWidth: "calc(100% - 8rem)",
-                      }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      {PLACEHOLDERS[placeholderIndex]}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {!isActive && !value && (
+                  <span
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none pointer-events-none text-sm sm:text-base transition-opacity duration-500 ${showPlaceholder ? 'opacity-100' : 'opacity-0'}`}
+                    style={{
+                      paddingLeft: '1rem',
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      zIndex: 0,
+                      maxWidth: "calc(100% - 8rem)",
+                    }}
+                  >
+                    {placeholder}
+                  </span>
+                )}
               </div>
             </div>
 
