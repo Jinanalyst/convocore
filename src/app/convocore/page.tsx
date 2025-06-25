@@ -1,5 +1,8 @@
 "use client";
 
+// Force this page to be rendered dynamically, avoiding static pre-render/Suspense issues
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
