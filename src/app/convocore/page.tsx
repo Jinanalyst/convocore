@@ -229,6 +229,22 @@ export default function ConvocorePage() {
   const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
 
+    let currentChatId = activeChatId;
+
+    // If there is no active chat, create one before proceeding.
+    if (!currentChatId) {
+      const newChatId = await handleNewChat(message, true); // Pass a flag to indicate this is for a new message
+      if (newChatId) {
+        currentChatId = newChatId;
+      } else {
+        console.error("Failed to create a new chat, message not sent.");
+        // Optionally show an error message in the UI
+        const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: "Sorry, I couldn't start a new chat. Please try again." };
+        setMessages([errorMessage]);
+        return;
+      }
+    }
+
     // Add user message to UI immediately
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
@@ -240,7 +256,6 @@ export default function ConvocorePage() {
       console.log("Assistant says:", reply);
       setThreadId(assistantResponse.threadId);
       
-      // Add assistant response to UI
       const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
       setMessages(prev => [...prev, assistantMessage]);
 
@@ -251,10 +266,12 @@ export default function ConvocorePage() {
       setMessages(prev => [...prev, errorMessage]);
     }
     
-    // Update the current chat's last message and timestamp
-    if (activeChatId) {
-      const updatedChats = chats.map(chat => 
-        chat.id === activeChatId 
+    // Now we are sure we have a currentChatId, so we update the corresponding chat.
+    // We need to use a functional update for `setChats` to get the latest `chats` state,
+    // especially after a new one might have just been added.
+    setChats(prevChats => {
+      const updatedChats = prevChats.map(chat => 
+        chat.id === currentChatId 
           ? { 
               ...chat, 
               lastMessage: reply.substring(0, 50) + (reply.length > 50 ? '...' : ''),
@@ -262,19 +279,17 @@ export default function ConvocorePage() {
             }
           : chat
       );
-      setChats(updatedChats);
       
-      // Update localStorage for wallet or local users
+      // Also update localStorage
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       if (walletConnected) {
         localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
       } else {
         localStorage.setItem('local_chats', JSON.stringify(updatedChats));
       }
-    } else {
-      // If no active chat, create a new one with this message
-      handleNewChat(message);
-    }
+      
+      return updatedChats;
+    });
   };
 
   const handleShare = () => {
@@ -339,10 +354,15 @@ export default function ConvocorePage() {
     return currentChat?.title;
   };
 
-  const handleNewChat = async (initialMessage?: string) => {
+  const handleNewChat = async (initialMessage?: string, isContinuation = false) => {
     console.log('✨ Creating new chat...');
-    setMessages([]);
-    setThreadId(null);
+    
+    // Only clear messages if it's a true new chat, not a continuation
+    if (!isContinuation) {
+      setMessages([]);
+      setThreadId(null);
+    }
+
     const newChat: Chat = {
       id: `chat_${Date.now()}`,
       title: initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat",
