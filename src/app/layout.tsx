@@ -5,7 +5,7 @@ import { NotificationContainer } from "@/components/ui/notification-toast";
 import { LanguageProvider } from "@/lib/language-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
