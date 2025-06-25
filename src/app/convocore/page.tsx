@@ -10,6 +10,7 @@ import { PWAInstall } from "@/components/ui/pwa-install";
 import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 
 interface Chat {
   id: string;
@@ -21,6 +22,7 @@ interface Chat {
 export default function ConvocorePage() {
   const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -196,6 +198,7 @@ export default function ConvocorePage() {
   const handleDeleteChat = async (chatId: string) => {
     if (activeChatId === chatId) {
       setActiveChatId(null);
+      setThreadId(null);
     }
     
     // Remove from local state immediately for better UX
@@ -212,8 +215,20 @@ export default function ConvocorePage() {
     }
   };
 
-  const handleSendMessage = (message: string, model: string, includeWebSearch?: boolean) => {
+  const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
+
+    let reply = "Assistant is thinking...";
+    try {
+      const assistantResponse = await invokeAssistant(message, threadId);
+      reply = assistantResponse.reply;
+      console.log("Assistant says:", reply);
+      setThreadId(assistantResponse.threadId);
+    } catch (error) {
+      console.error("Error calling assistant:", error);
+      reply = "Sorry, I couldn't respond.";
+      // Optionally, show an error message to the user in the UI
+    }
     
     // Update the current chat's last message and timestamp
     if (activeChatId) {
@@ -221,7 +236,7 @@ export default function ConvocorePage() {
         chat.id === activeChatId 
           ? { 
               ...chat, 
-              lastMessage: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+              lastMessage: reply.substring(0, 50) + (reply.length > 50 ? '...' : ''),
               timestamp: new Date()
             }
           : chat
