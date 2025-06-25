@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
@@ -28,7 +28,7 @@ interface Chat {
   threadId?: string;
 }
 
-export default function ConvocorePage() {
+function ConvocorePageContent() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -553,4 +553,12 @@ export default function ConvocorePage() {
       <VoiceAssistant onSend={(message) => handleSendMessage(message, 'default-model')} />
     </div>
   );
+}
+
+export default function ConvocorePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
+      <ConvocorePageContent />
+    </Suspense>
+  )
 }
