@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 import { usageService } from '@/lib/usage-service';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export interface Message {
   id: string;
@@ -28,7 +28,8 @@ interface Chat {
   threadId?: string;
 }
 
-export default function ConvocorePage() {
+function ConvocorePageContent() {
+  const router = useRouter();
   const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -227,15 +228,15 @@ export default function ConvocorePage() {
   };
 
   const handleSelectChat = async (chatId: string) => {
+    // Update URL with selected chatId
+    router.replace(`/convocore?chatId=${chatId}`);
     console.log('🎯 Selecting chat:', chatId);
-    console.log('💬 Fetching /api/chat/' + chatId);
     setActiveChatId(chatId);
     setIsChatLoading(true);
     setMessages([]);
 
     const selectedChat = chats.find(c => c.id === chatId);
     const fetchId = selectedChat?.threadId || chatId;
-
     setThreadId(selectedChat?.threadId || null);
 
     try {
@@ -552,4 +553,12 @@ export default function ConvocorePage() {
       <VoiceAssistant onSend={(message) => handleSendMessage(message, 'default-model')} />
     </div>
   );
+}
+
+export default function ConvocorePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
+      <ConvocorePageContent />
+    </Suspense>
+  )
 }
