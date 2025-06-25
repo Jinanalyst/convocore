@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- Full background gradient to eliminate white spaces -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="cGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f8fafc"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Full background rectangle to ensure no white spaces -->
+  <rect x="0" y="0" width="80" height="80" fill="url(#bgGradient)"/>
+  
+  <!-- Circular mask effect -->
+  <circle cx="40" cy="40" r="40" fill="url(#bgGradient)"/>
+  
+  <!-- Enhanced geometric C with better edges -->
+  <g fill="url(#cGradient)" stroke="none">
+    <!-- Main C shape -->
+    <path d="M30 18 
+             C46 18 58 30 58 40 
+             C58 50 46 62 30 62
+             L30 54
+             C41 54 50 45 50 40
+             C50 35 41 26 30 26
+             L30 18 Z" 
+          fill="url(#cGradient)" 
+          stroke="none"/>
+    
+    <!-- Inner accent dot -->  
+    <circle cx="54" cy="40" r="4" fill="url(#cGradient)" opacity="0.9"/>
+  </g>
+</svg> 

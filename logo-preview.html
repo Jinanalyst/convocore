@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convocore Logo Preview</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .preview-section {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #1e293b;
+        }
+        .logo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .logo-item {
+            text-align: center;
+            padding: 30px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            background: #ffffff;
+        }
+        .logo-item h3 {
+            margin-bottom: 20px;
+            color: #334155;
+            font-size: 18px;
+        }
+        .favicon-sizes {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .size-demo {
+            text-align: center;
+        }
+        .size-demo span {
+            display: block;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .dark-bg {
+            background: #1e293b;
+            color: white;
+        }
+        .mobile-preview {
+            background: #000;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🎨 Convocore New Logo Design</h1>
+        
+        <!-- Main Logo Display -->
+        <div class="preview-section">
+            <h2>Primary Logo</h2>
+            <div style="text-align: center; padding: 40px;">
+                <object data="convocore-logo.svg" type="image/svg+xml" style="height: 100px;"></object>
+            </div>
+        </div>
+
+        <!-- Favicon Sizes -->
+        <div class="preview-section">
+            <h2>Favicon & Icon Sizes</h2>
+            <div class="favicon-sizes">
+                <div class="size-demo">
+                    <object data="favicon.svg" type="image/svg+xml" style="width: 80px; height: 80px;"></object>
+                    <span>80x80 (Large)</span>
+                </div>
+                <div class="size-demo">
+                    <object data="favicon.svg" type="image/svg+xml" style="width: 64px; height: 64px;"></object>
+                    <span>64x64 (Desktop)</span>
+                </div>
+                <div class="size-demo">
+                    <object data="favicon.svg" type="image/svg+xml" style="width: 32px; height: 32px;"></object>
+                    <span>32x32 (Tab)</span>
+                </div>
+                <div class="size-demo">
+                    <object data="favicon.svg" type="image/svg+xml" style="width: 16px; height: 16px;"></object>
+                    <span>16x16 (Small)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile App Preview -->
+        <div class="preview-section mobile-preview">
+            <h2>Mobile App Icon Preview</h2>
+            <div style="display: inline-block; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 20px; margin: 20px;">
+                <object data="favicon.svg" type="image/svg+xml" style="width: 120px; height: 120px; border-radius: 26px;"></object>
+                <div style="margin-top: 10px; font-size: 14px;">Convocore</div>
+            </div>
+        </div>
+
+        <!-- Design Details -->
+        <div class="preview-section">
+            <h2>Design Specifications</h2>
+            <div class="logo-grid">
+                <div class="logo-item">
+                    <h3>🎨 Colors</h3>
+                    <div style="margin: 20px 0;">
+                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); height: 40px; border-radius: 8px; margin-bottom: 10px;"></div>
+                        <p style="margin: 5px 0; font-size: 14px;">Primary: #667eea → #764ba2</p>
+                        <div style="background: linear-gradient(135deg, #ffffff, #f8fafc); height: 30px; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
+                        <p style="margin: 5px 0; font-size: 14px;">Text: #ffffff → #f8fafc</p>
+                    </div>
+                </div>
+                <div class="logo-item">
+                    <h3>📐 Geometry</h3>
+                    <ul style="text-align: left; font-size: 14px; line-height: 1.6;">
+                        <li>Circular background</li>
+                        <li>Modern geometric C letter</li>
+                        <li>Accent dot for visual balance</li>
+                        <li>Clean, minimal design</li>
+                        <li>Scalable vector format</li>
+                    </ul>
+                </div>
+                <div class="logo-item">
+                    <h3>📱 Usage</h3>
+                    <ul style="text-align: left; font-size: 14px; line-height: 1.6;">
+                        <li>Web favicon (SVG)</li>
+                        <li>Mobile app icon (PNG)</li>
+                        <li>Social media profiles</li>
+                        <li>Business cards</li>
+                        <li>Marketing materials</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Notes -->
+        <div class="preview-section">
+            <h2>📋 Implementation Notes</h2>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;">
+                <h4 style="margin-top: 0;">Files Updated:</h4>
+                <ul style="line-height: 1.8;">
+                    <li><code>/public/favicon.svg</code> - Main SVG favicon</li>
+                    <li><code>/public/convocore-logo.svg</code> - Full logo with text</li>
+                    <li><code>/src/components/ui/convocore-logo.tsx</code> - React component</li>
+                    <li><code>/public/manifest.json</code> - PWA configuration</li>
+                    <li><code>/src/app/layout.tsx</code> - Theme colors</li>
+                </ul>
+                <h4>Next Steps:</h4>
+                <ul style="line-height: 1.8;">
+                    <li>Generate PNG versions for mobile icons (192x192, 512x512)</li>
+                    <li>Create Apple touch icon (180x180)</li>
+                    <li>Update social media images (og-image.png, twitter-image.png)</li>
+                    <li>Test across different browsers and devices</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

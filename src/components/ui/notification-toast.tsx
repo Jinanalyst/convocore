@@ -24,7 +24,7 @@ function NotificationToast({ notification, onClose, onAction }: NotificationToas
     const decrement = (interval / duration) * 100;
 
     const timer = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev: number) => {
         const newProgress = prev - decrement;
         if (newProgress <= 0) {
           setIsVisible(false);
@@ -205,8 +205,13 @@ function formatTimestamp(timestamp: Date): string {
 
 export function NotificationContainer() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    
+    if (typeof window === 'undefined') return;
+    
     const unsubscribe = notificationService.subscribe((state) => {
       // Only show unread notifications in toast
       const unreadNotifications = state.notifications
@@ -217,6 +222,11 @@ export function NotificationContainer() {
 
     return unsubscribe;
   }, []);
+
+  // Don't render on server
+  if (!isClient) {
+    return null;
+  }
 
   const handleClose = (id: string) => {
     notificationService.markAsRead(id);
@@ -237,4 +247,4 @@ export function NotificationContainer() {
       </div>
     </div>
   );
-} 
+}

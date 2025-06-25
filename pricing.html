@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvoAI Pricing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9fafb;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .pricing-section {
+            padding: 5rem 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .header h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            color: #6b7280;
+            max-width: 42rem;
+            margin: 0 auto;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 90rem;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            position: relative;
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #e5e7eb;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-color: #d1d5db;
+        }
+
+        .pricing-card.popular {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+            position: relative;
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .plan-header {
+            margin-bottom: 2rem;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-price {
+            margin-bottom: 1rem;
+        }
+
+        .price-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .price-period {
+            color: #6b7280;
+            margin-left: 0.5rem;
+        }
+
+        .plan-description {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .daily-limit {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .daily-limit-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+
+        .daily-limit-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        .features {
+            margin-bottom: 2rem;
+        }
+
+        .features ul {
+            list-style: none;
+        }
+
+        .features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .check-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #10b981;
+            margin-top: 0.125rem;
+            flex-shrink: 0;
+        }
+
+        .feature-text {
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+            border: 1px solid;
+        }
+
+        .cta-button.primary {
+            background: #111827;
+            color: white;
+            border-color: #111827;
+        }
+
+        .cta-button.primary:hover {
+            background: #374151;
+            border-color: #374151;
+        }
+
+        .cta-button.outline {
+            background: transparent;
+            color: #111827;
+            border-color: #d1d5db;
+        }
+
+        .cta-button.outline:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .popular .cta-button.primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .popular .cta-button.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .bottom-notice {
+            text-align: center;
+            margin-top: 3rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h2 {
+                font-size: 2rem;
+            }
+            
+            .pricing-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .pricing-section {
+                padding: 3rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section class="pricing-section">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <h2>Choose Your Plan</h2>
+                <p>Select the perfect plan for your AI conversation needs</p>
+            </div>
+
+            <!-- Pricing Cards -->
+            <div class="pricing-grid">
+                <!-- Free Plan -->
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3 class="plan-name">Free</h3>
+                        <div class="plan-price">
+                            <span class="price-value">$0</span>
+                            <span class="price-period">forever</span>
+                        </div>
+                        <p class="plan-description">Perfect for trying out ConvoAI</p>
+                    </div>
+
+                    <div class="daily-limit">
+                        <div class="daily-limit-label">Daily Requests</div>
+                        <div class="daily-limit-value">3 chats per day</div>
+                    </div>
+
+                    <div class="features">
+                        <ul>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Access to GPT-3.5 Turbo</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Standard response time</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Basic chat interface</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Community support</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="#" class="cta-button outline">Get Started</a>
+                </div>
+
+                <!-- Plus Plan -->
+                <div class="pricing-card popular">
+                    <div class="popular-badge">Most Popular</div>
+                    
+                    <div class="plan-header">
+                        <h3 class="plan-name">Plus</h3>
+                        <div class="plan-price">
+                            <span class="price-value">$20</span>
+                            <span class="price-period">per month</span>
+                        </div>
+                        <p class="plan-description">For individuals and small teams</p>
+                    </div>
+
+                    <div class="daily-limit">
+                        <div class="daily-limit-label">Daily Requests</div>
+                        <div class="daily-limit-value">Unlimited requests</div>
+                    </div>
+
+                    <div class="features">
+                        <ul>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Access to GPT-4 and GPT-4 Turbo</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Access to Claude 3</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Priority response time</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Advanced chat features</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Email support</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Chat history export</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="#" class="cta-button primary">Subscribe</a>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3 class="plan-name">Pro</h3>
+                        <div class="plan-price">
+                            <span class="price-value">$60</span>
+                            <span class="price-period">per month</span>
+                        </div>
+                        <p class="plan-description">For growing businesses and teams</p>
+                    </div>
+
+                    <div class="daily-limit">
+                        <div class="daily-limit-label">Daily Requests</div>
+                        <div class="daily-limit-value">Unlimited requests</div>
+                    </div>
+
+                    <div class="features">
+                        <ul>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Everything in Plus</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Access to all AI models</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Team collaboration tools</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Custom AI agents</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">API access</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Priority support</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Advanced analytics</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="#" class="cta-button primary">Subscribe</a>
+                </div>
+
+                <!-- Creator Plan -->
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3 class="plan-name">Creator</h3>
+                        <div class="plan-price">
+                            <span class="price-value">Custom</span>
+                            <span class="price-period">pricing</span>
+                        </div>
+                        <p class="plan-description">For large organizations and enterprises</p>
+                    </div>
+
+                    <div class="daily-limit">
+                        <div class="daily-limit-label">Daily Requests</div>
+                        <div class="daily-limit-value">Unlimited requests</div>
+                    </div>
+
+                    <div class="features">
+                        <ul>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Everything in Pro</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Custom AI model fine-tuning</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Dedicated support team</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">SLA guarantees</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Custom integrations</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">On-premise deployment</span>
+                            </li>
+                            <li>
+                                <svg class="check-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="feature-text">Advanced security features</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="#" class="cta-button outline">Contact Us</a>
+                </div>
+            </div>
+
+            <!-- Bottom Notice -->
+            <div class="bottom-notice">
+                <p>All plans include unlimited chat history and data export. No setup fees.</p>
+            </div>
+        </div>
+    </section>
+</body>
+</html> 

@@ -23,20 +23,24 @@ class NotificationService {
   private listeners: ((state: NotificationState) => void)[] = [];
   private notifications: Notification[] = [];
   private permission: NotificationPermission = 'default';
+  private settings: any = null;
 
   constructor() {
-    this.checkPermission();
-    this.loadStoredNotifications();
+    if (typeof window !== 'undefined') {
+      this.checkPermission();
+      this.loadStoredNotifications();
+      this.loadSettings();
+    }
   }
 
   private async checkPermission() {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = Notification.permission;
     }
   }
 
   async requestPermission(): Promise<boolean> {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = await Notification.requestPermission();
       return this.permission === 'granted';
     }
@@ -44,6 +48,8 @@ class NotificationService {
   }
 
   private loadStoredNotifications() {
+    if (typeof window === 'undefined') return;
+    
     try {
       const stored = localStorage.getItem('convocore-notifications');
       if (stored) {
@@ -60,6 +66,8 @@ class NotificationService {
   }
 
   private saveNotifications() {
+    if (typeof window === 'undefined') return;
+    
     try {
       localStorage.setItem('convocore-notifications', JSON.stringify(this.notifications));
     } catch (error) {
@@ -86,6 +94,11 @@ class NotificationService {
   }
 
   addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) {
+    // Check if this type of notification should be shown
+    if (!this.shouldShowNotification(notification.type)) {
+      return null;
+    }
+
     const newNotification: Notification = {
       ...notification,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -105,8 +118,14 @@ class NotificationService {
     this.saveNotifications();
     this.notifyListeners();
 
-    // Show browser notification if permission granted and page is not visible
-    if (this.permission === 'granted' && document.hidden) {
+    // Play notification sound if enabled
+    this.playNotificationSound();
+
+    // Show browser notification if permission granted and push notifications enabled
+    if (typeof window !== 'undefined' && 
+        this.permission === 'granted' && 
+        this.settings?.notifications?.push && 
+        document.hidden) {
       this.showBrowserNotification(newNotification);
     }
 
@@ -114,8 +133,10 @@ class NotificationService {
   }
 
   private showBrowserNotification(notification: Notification) {
+    if (typeof window === 'undefined') return;
+    
     try {
-      const browserNotification = new Notification(notification.title, {
+      const browserNotification = new window.Notification(notification.title, {
         body: notification.message,
         icon: '/favicon.ico',
         badge: '/favicon.ico',
@@ -185,41 +206,84 @@ class NotificationService {
       action: chatId ? {
         label: 'View Chat',
         onClick: () => {
-          window.location.href = `/chat?id=${chatId}`;
+          window.location.href = `/convocore?id=${chatId}`;
         }
       } : undefined
     });
   }
 
-  notifyError(title: string, message: string) {
-    this.addNotification({
-      type: 'error',
-      title,
-      message,
-      avatar: '❌',
-      duration: 8000
-    });
+  notifySuccess(title: string, message: string) {
+    this.addNotification({ type: 'success', title, message });
   }
 
-  notifySuccess(title: string, message: string) {
-    this.addNotification({
-      type: 'success',
-      title,
-      message,
-      avatar: '✅',
-      duration: 4000
-    });
+  notifyError(title: string, message: string) {
+    this.addNotification({ type: 'error', title, message, autoClose: false });
+  }
+
+  notifyWarning(title: string, message: string) {
+    this.addNotification({ type: 'warning', title, message });
   }
 
   notifyInfo(title: string, message: string) {
-    this.addNotification({
-      type: 'info',
-      title,
-      message,
-      avatar: 'ℹ️',
-      duration: 5000
-    });
+    this.addNotification({ type: 'info', title, message });
+  }
+
+  private loadSettings() {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('convocore-settings');
+      if (stored) {
+        this.settings = JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  }
+
+  private shouldShowNotification(type: string): boolean {
+    if (!this.settings?.notifications) return true;
+    
+    // Map notification types to settings
+    const typeMap: { [key: string]: string } = {
+      'chat': 'chatComplete',
+      'success': 'systemUpdates',
+      'error': 'securityAlerts',
+      'warning': 'usageAlerts',
+      'info': 'systemUpdates'
+    };
+    
+    const settingKey = typeMap[type] || 'push';
+    return this.settings.notifications[settingKey] !== false;
+  }
+
+  private shouldPlaySound(): boolean {
+    if (typeof window === 'undefined') return false;
+    return this.settings?.audio?.soundEffects !== false;
+  }
+
+  private playNotificationSound() {
+    if (this.shouldPlaySound()) {
+      try {
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(e => console.error("Error playing sound:", e));
+      } catch (error) {
+        console.error("Could not play notification sound:", error);
+      }
+    }
+  }
+
+  public getSettings() {
+    return this.settings;
+  }
+  
+  public updateSettings(newSettings: any) {
+    this.settings = newSettings;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('convocore-settings', JSON.stringify(newSettings));
+    }
   }
 }
 
-export const notificationService = new NotificationService(); 
+export const notificationService = new NotificationService();
