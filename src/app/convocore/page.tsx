@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 import { usageService } from '@/lib/usage-service';
+import { useSearchParams } from 'next/navigation';
 
 export interface Message {
   id: string;
@@ -43,6 +44,9 @@ export default function ConvocorePage() {
     limit: 3,
     plan: 'free' as 'free' | 'pro' | 'premium',
   });
+
+  const searchParams = useSearchParams();
+  const queryChatId = searchParams.get('chatId');
 
   // Persist chats locally whenever they change
   useEffect(() => {
@@ -82,6 +86,24 @@ export default function ConvocorePage() {
       window.removeEventListener('usageUpdated', loadUsage);
     };
   }, [user]); // Rerun when user changes
+
+  // Auto-select the first chat when chats are loaded and no chat is active
+  useEffect(() => {
+    if (!activeChatId && chats.length > 0) {
+      console.log('🤖 Auto-selecting first chat:', chats[0].id);
+      handleSelectChat(chats[0].id);
+    }
+  }, [chats]);
+
+  useEffect(() => {
+    if (queryChatId && chats.length > 0) {
+      const exists = chats.some(c => c.id === queryChatId);
+      if (exists) {
+        console.log('🏷 routing to chat from URL param', queryChatId);
+        handleSelectChat(queryChatId);
+      }
+    }
+  }, [chats, queryChatId]);
 
   const loadUsage = () => {
     const userId = user?.id ?? 'local';
