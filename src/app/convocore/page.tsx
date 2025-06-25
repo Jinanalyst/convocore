@@ -198,23 +198,12 @@ export default function ConvocorePage() {
     setMessages([]);
 
     const selectedChat = chats.find(c => c.id === chatId);
-    const selectedThreadId = selectedChat?.threadId;
+    const fetchId = selectedChat?.threadId || chatId;
 
-    if (selectedChat) {
-      setThreadId(selectedThreadId || null);
-    } else {
-      setThreadId(null);
-    }
-
-    if (!selectedThreadId) {
-      console.error("No threadId found for the selected chat:", chatId);
-      setMessages([{ id: 'error-message', role: 'assistant', content: 'Could not load messages. Chat identifier is missing.' }]);
-      setIsChatLoading(false);
-      return;
-    }
+    setThreadId(selectedChat?.threadId || null);
 
     try {
-      const response = await fetch(`/api/chat/${selectedThreadId}`);
+      const response = await fetch(`/api/chat/${fetchId}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch messages: ${response.statusText}`);
       }
