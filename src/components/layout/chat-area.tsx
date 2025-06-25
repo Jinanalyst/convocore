@@ -69,8 +69,8 @@ export function ChatArea({
   ];
 
   return (
-    <div className={cn("flex flex-col h-full overflow-y-auto", className)}>
-      <div ref={scrollAreaRef} className="p-4 md:p-6">
+    <div className={cn("flex flex-col h-full", className)}>
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
