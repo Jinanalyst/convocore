@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 import { usageService } from '@/lib/usage-service';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export interface Message {
   id: string;
@@ -29,6 +29,7 @@ interface Chat {
 }
 
 export default function ConvocorePage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -227,15 +228,15 @@ export default function ConvocorePage() {
   };
 
   const handleSelectChat = async (chatId: string) => {
+    // Update URL with selected chatId
+    router.replace(`/convocore?chatId=${chatId}`);
     console.log('🎯 Selecting chat:', chatId);
-    console.log('💬 Fetching /api/chat/' + chatId);
     setActiveChatId(chatId);
     setIsChatLoading(true);
     setMessages([]);
 
     const selectedChat = chats.find(c => c.id === chatId);
     const fetchId = selectedChat?.threadId || chatId;
-
     setThreadId(selectedChat?.threadId || null);
 
     try {
