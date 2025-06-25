@@ -204,6 +204,7 @@ CREATE POLICY "Users can create own payments" ON public.payments
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Function to reset daily API limits
+DROP FUNCTION IF EXISTS public.reset_daily_api_limits();
 CREATE OR REPLACE FUNCTION public.reset_daily_api_limits()
 RETURNS void AS $$
 BEGIN
@@ -214,6 +215,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to check API rate limits
+DROP FUNCTION IF EXISTS public.check_api_rate_limit(UUID);
 CREATE OR REPLACE FUNCTION public.check_api_rate_limit(user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -235,6 +237,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to increment API usage
+DROP FUNCTION IF EXISTS public.increment_api_usage(UUID);
 CREATE OR REPLACE FUNCTION public.increment_api_usage(user_id UUID)
 RETURNS void AS $$
 BEGIN
@@ -246,6 +249,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to process payment and update subscription
+DROP FUNCTION IF EXISTS public.process_payment(UUID, TEXT, DECIMAL, subscription_tier);
 CREATE OR REPLACE FUNCTION public.process_payment(
     p_user_id UUID,
     p_transaction_hash TEXT,
@@ -283,6 +287,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to check and expire subscriptions
+DROP FUNCTION IF EXISTS public.check_expired_subscriptions();
 CREATE OR REPLACE FUNCTION public.check_expired_subscriptions()
 RETURNS void AS $$
 BEGIN
@@ -305,6 +310,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get user subscription status
+DROP FUNCTION IF EXISTS public.get_user_subscription(UUID);
 CREATE OR REPLACE FUNCTION public.get_user_subscription(p_user_id UUID)
 RETURNS TABLE(
     tier TEXT,
@@ -336,6 +342,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to reset API usage based on plan
+DROP FUNCTION IF EXISTS public.reset_api_usage();
 CREATE OR REPLACE FUNCTION public.reset_api_usage()
 RETURNS void AS $$
 BEGIN
@@ -362,6 +369,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to upgrade subscription
+DROP FUNCTION IF EXISTS public.upgrade_subscription(UUID, subscription_tier, TEXT);
 CREATE OR REPLACE FUNCTION public.upgrade_subscription(
     p_user_id UUID,
     p_new_tier subscription_tier,
