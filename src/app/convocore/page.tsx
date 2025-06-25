@@ -414,15 +414,25 @@ export default function ConvocorePage() {
         return tempId;
       }
 
-      const { data: newConversation, error } = await supabase
-        .from('conversations')
-        .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o', thread_id: newThreadId })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating new chat:', error);
-        return undefined;
+      let newConversation;
+      try {
+        const { data } = await supabase
+          .from('conversations')
+          .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o', thread_id: newThreadId })
+          .select()
+          .single();
+        newConversation = data;
+      } catch (e: any) {
+        console.warn('Insert with thread_id failed, retrying without column', e);
+      }
+      if (!newConversation) {
+        const { data, error: fallbackErr } = await supabase
+          .from('conversations')
+          .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o' })
+          .select()
+          .single();
+        if (fallbackErr) { console.error('Fallback insert error', fallbackErr); return undefined; }
+        newConversation = data;
       }
 
       const newChat: Chat = {
