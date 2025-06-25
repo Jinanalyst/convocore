@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
+// Helper to create Supabase client without triggering sync cookies error
+function createSupabaseWithCookies() {
+  const cookieStore = cookies();
+  return createRouteHandlerClient({ cookies: () => cookieStore });
+}
+
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createSupabaseWithCookies();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -38,7 +44,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createSupabaseWithCookies();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -76,4 +82,7 @@ async function getLocalUsage(deviceId: string, supabase: any) {
 async function incrementLocalUsage(deviceId: string, supabase: any) {
   // This is a simplified example. In a real app, you'd store this in a separate table.
   console.warn(`Local usage increment not fully implemented for device: ${deviceId}`);
-} 
+}
+
+// Ensure this route is treated as dynamic so that accessing cookies is always allowed
+export const dynamic = 'force-dynamic'; 

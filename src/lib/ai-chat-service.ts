@@ -31,16 +31,19 @@ export class AIChatService {
         }
       }
       
-      // Also send to API for server-side tracking
-      fetch('/api/user/usage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type, increment })
-      }).catch(error => {
-        console.warn('Failed to track usage on server:', error);
-      });
+      // Also send to API for authenticated users only
+      const isLocal = !document.cookie.includes('sb-dxgnrgsvareniosbbksj-auth-token');
+      if (!isLocal) {
+        fetch('/api/user/usage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type, increment })
+        }).catch(error => {
+          console.warn('Failed to track usage on server:', error);
+        });
+      }
     } catch (error) {
       console.warn('Failed to track usage:', error);
     }

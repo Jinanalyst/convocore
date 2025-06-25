@@ -9,87 +9,17 @@ import { cn } from '@/lib/utils';
 
 interface ChatLimitIndicatorProps {
   className?: string;
-}
-
-export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
-  const { user } = useAuth();
-  const [usage, setUsage] = useState<{
+  usage: {
     used: number;
     limit: number;
     plan: 'free' | 'pro' | 'premium';
-  }>({
-    used: 0,
-    limit: 3,
-    plan: 'free'
-  });
+  };
+}
 
-  useEffect(() => {
-    // Run migration on component mount (ensure it happens for current users)
-    try {
-      usageService.migrateFreeUserLimits();
-    } catch (error) {
-      console.error('Migration error:', error);
-    }
-    
-    // Get real usage data (use 'local' for unauthenticated)
-    const loadUsage = () => {
-      const userId = user?.id ?? 'local';
-      try {
-        const userUsage = usageService.getUserUsage(userId);
-        const subscription = usageService.getUserSubscription(userId);
-        
-        console.log('🔄 Loading usage for user:', userId, {
-          used: userUsage.requestsUsed,
-          limit: userUsage.requestsLimit,
-          plan: subscription.tier
-        });
-        
-        setUsage({
-          used: userUsage.requestsUsed,
-          limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1, // -1 means unlimited for paid plans
-          plan: subscription.tier
-        });
-
-        // Sync with server only for authenticated users
-        if (user?.id) {
-          usageService.fetchServerUsage(userId).catch(() => {});
-        }
-      } catch (error) {
-        console.error('Error loading usage:', error);
-      }
-    };
-
-    loadUsage();
-    
-    // Listen for storage changes (usage updates from other tabs or components)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'usage_updated' || e.key?.startsWith('user_usage_')) {
-        console.log('📊 Usage storage change detected, reloading...');
-        loadUsage();
-      }
-    };
-    
-    // Also listen for custom events
-    const handleUsageUpdate = () => {
-      console.log('📊 Custom usage update event detected, reloading...');
-      loadUsage();
-    };
-    
-    // Periodic refresh to ensure UI stays in sync
-    const refreshInterval = setInterval(() => {
-      loadUsage();
-    }, 5000); // Refresh every 5 seconds
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('usageUpdated', handleUsageUpdate);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('usageUpdated', handleUsageUpdate);
-      clearInterval(refreshInterval);
-    };
-  }, [user]);
-
+export function ChatLimitIndicator({
+  className,
+  usage,
+}: ChatLimitIndicatorProps) {
   // Don't show indicator for unlimited plans
   if (usage.plan !== 'free' || usage.limit === -1) {
     return null;
@@ -100,52 +30,60 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
   const isNearLimit = remaining === 1;
 
   return (
-    <div className={cn("w-full", className)}>
-      <div className={cn(
-        "flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all duration-200",
-        isLimitReached 
-          ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800" 
-          : isNearLimit
-          ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800"
-          : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-      )}>
+    <div className={cn('w-full', className)}>
+      <div
+        className={cn(
+          'flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all duration-200',
+          isLimitReached
+            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+            : isNearLimit
+            ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'
+            : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+        )}
+      >
         {/* Left Side - Usage Info */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className={cn(
-            "flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
-            isLimitReached 
-              ? "bg-red-100 dark:bg-red-900/30" 
-              : isNearLimit
-              ? "bg-yellow-100 dark:bg-yellow-900/30"
-              : "bg-blue-100 dark:bg-blue-900/30"
-          )}>
-            <AlertCircle className={cn(
-              "w-3 h-3 sm:w-4 sm:h-4",
-              isLimitReached 
-                ? "text-red-600 dark:text-red-400" 
+          <div
+            className={cn(
+              'flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center',
+              isLimitReached
+                ? 'bg-red-100 dark:bg-red-900/30'
                 : isNearLimit
-                ? "text-yellow-600 dark:text-yellow-400"
-                : "text-blue-600 dark:text-blue-400"
-            )} />
+                ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                : 'bg-blue-100 dark:bg-blue-900/30'
+            )}
+          >
+            <AlertCircle
+              className={cn(
+                'w-3 h-3 sm:w-4 sm:h-4',
+                isLimitReached
+                  ? 'text-red-600 dark:text-red-400'
+                  : isNearLimit
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-blue-600 dark:text-blue-400'
+              )}
+            />
           </div>
-          
+
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className={cn(
-                "text-xs sm:text-sm font-medium",
-                isLimitReached 
-                  ? "text-red-700 dark:text-red-300" 
-                  : isNearLimit
-                  ? "text-yellow-700 dark:text-yellow-300"
-                  : "text-blue-700 dark:text-blue-300"
-              )}>
+              <span
+                className={cn(
+                  'text-xs sm:text-sm font-medium',
+                  isLimitReached
+                    ? 'text-red-700 dark:text-red-300'
+                    : isNearLimit
+                    ? 'text-yellow-700 dark:text-yellow-300'
+                    : 'text-blue-700 dark:text-blue-300'
+                )}
+              >
                 Free Plan
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
                 Daily Limit
               </span>
             </div>
-            
+
             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {isLimitReached ? (
                 <span className="font-medium text-red-600 dark:text-red-400">
@@ -153,8 +91,12 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
                 </span>
               ) : (
                 <span>
-                  <span className="font-medium">{remaining}</span> 
-                  <span className="hidden sm:inline"> chat{remaining !== 1 ? 's' : ''} remaining</span>
+                  <span className="font-medium">{remaining}</span>{' '}
+                  <span className="hidden sm:inline">
+                    {' '}
+                    chat
+                    {remaining !== 1 ? 's' : ''} remaining
+                  </span>
                   <span className="sm:hidden"> left</span>
                   <span className="text-gray-400 dark:text-gray-500 ml-1">
                     ({usage.used}/{usage.limit})
@@ -170,10 +112,10 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
           <Button
             size="sm"
             className={cn(
-              "h-8 sm:h-9 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all duration-200",
-              isLimitReached 
-                ? "bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md" 
-                : "bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black"
+              'h-8 sm:h-9 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all duration-200',
+              isLimitReached
+                ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md'
+                : 'bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black'
             )}
             onClick={() => {
               // Navigate to pricing page
@@ -193,17 +135,17 @@ export function ChatLimitIndicator({ className }: ChatLimitIndicatorProps) {
       {usage.limit > 0 && (
         <div className="mt-2 sm:mt-3">
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 sm:h-2">
-            <div 
+            <div
               className={cn(
-                "h-full rounded-full transition-all duration-500",
-                isLimitReached 
-                  ? "bg-red-500" 
+                'h-full rounded-full transition-all duration-500',
+                isLimitReached
+                  ? 'bg-red-500'
                   : isNearLimit
-                  ? "bg-yellow-500"
-                  : "bg-blue-500"
+                  ? 'bg-yellow-500'
+                  : 'bg-blue-500'
               )}
-              style={{ 
-                width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` 
+              style={{
+                width: `${Math.min(100, (usage.used / usage.limit) * 100)}%`,
               }}
             />
           </div>

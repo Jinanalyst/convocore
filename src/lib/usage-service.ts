@@ -114,8 +114,8 @@ class UsageService {
     // Trigger events for UI updates
     this.triggerUsageUpdate();
 
-    // fire and forget to server
-    if (typeof window !== 'undefined') {
+    // Fire-and-forget to server only for authenticated users
+    if (typeof window !== 'undefined' && !userId.startsWith('local')) {
       fetch('/api/user/usage', { method: 'POST' }).catch(() => {});
     }
 
@@ -378,7 +378,7 @@ class UsageService {
   }
 
   async fetchServerUsage(userId: string) {
-    if (typeof window === 'undefined') return;
+    if (userId.startsWith('local')) return; // Skip anonymous/local users
     try {
       const res = await fetch('/api/user/usage');
       if (!res.ok) return;

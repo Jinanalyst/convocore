@@ -25,7 +25,9 @@ CREATE TABLE public.users (
     api_requests_reset_at TIMESTAMPTZ DEFAULT (CURRENT_DATE + INTERVAL '1 day'),
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('UTC', NOW()) NOT NULL,
-    last_login TIMESTAMPTZ
+    last_login TIMESTAMPTZ,
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    last_request_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Set up Row Level Security (RLS)
@@ -45,12 +47,14 @@ CREATE POLICY "Users can insert own profile" ON public.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.users (id, email, full_name, avatar_url, last_login)
+    INSERT INTO public.users (id, email, full_name, avatar_url, last_login, usage_count, last_request_at)
     VALUES (
         NEW.id,
         NEW.email,
         COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', SPLIT_PART(NEW.email, '@', 1)),
         NEW.raw_user_meta_data->>'avatar_url',
+        NOW(),
+        0,
         NOW()
     );
     RETURN NEW;

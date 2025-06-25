@@ -38,6 +38,7 @@ import { detectAgentFromMessage, formatMessageWithAgent } from "@/lib/intelligen
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { notificationService } from '@/lib/notification-service';
 import { formatChatTimestamp } from '@/lib/date-utils';
+import { AIChatService } from '@/lib/ai-chat-service';
 
 // Helper function to generate unique IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -69,14 +70,59 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
   const [model, setModel] = useState('gpt-4o');
   const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevChatIdRef = useRef<string | undefined>(chatId);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [usage, setUsage] = useState({
+    used: 0,
+    limit: 3,
+    plan: 'free' as 'free' | 'pro' | 'premium',
+  });
+
+  useEffect(() => {
+    const loadUsage = () => {
+      const userId = user?.id ?? 'local';
+      try {
+        const userUsage = usageService.getUserUsage(userId);
+        const subscription = usageService.getUserSubscription(userId);
+        setUsage({
+          used: userUsage.requestsUsed,
+          limit:
+            subscription.tier === 'free' ? userUsage.requestsLimit : -1,
+          plan: subscription.tier,
+        });
+      } catch (error) {
+        console.error('Error loading usage:', error);
+      }
+    };
+    loadUsage();
+
+    window.addEventListener('usageUpdated', loadUsage);
+    return () => window.removeEventListener('usageUpdated', loadUsage);
+  }, [user]);
 
   // Load real messages from Supabase
   useEffect(() => {
-    if (chatId) {
+    if (chatId && prevChatIdRef.current === undefined) {
+      if (messages.length > 0) {
+        (async () => {
+          try {
+            for (const m of messages) {
+              await saveMessage(chatId, m.content, m.role as 'user' | 'assistant');
+            }
+          } catch (e) {
+            console.warn('Failed to back-fill messages into newly created chat', e);
+          }
+        })();
+      } else {
+        loadMessages(chatId);
+      }
+    } else if (chatId && chatId !== prevChatIdRef.current) {
       loadMessages(chatId);
-    } else {
+    } else if (!chatId) {
       setMessages([]);
     }
+
+    prevChatIdRef.current = chatId;
   }, [chatId]);
 
   const loadMessages = async (conversationId: string) => {
@@ -170,24 +216,15 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       timestamp: new Date()
     };
 
-    // Free plan usage tracking (per message)
-    const userId = user?.id ?? 'local';
-    if (!usageService.canMakeRequest(userId)) {
-      // Notify user and abort send if limit reached
-      notificationService.notifyError(
-        language === 'ko' ? '일일 사용 한도 초과' : 'Daily Limit Reached',
-        language === 'ko'
-          ? '무료 요금제의 일일 채팅 한도를 모두 사용하셨습니다. 프로 요금제로 업그레이드하여 무제한으로 사용해 보세요.'
-          : 'You have used all of your free daily chats. Upgrade to Pro for unlimited usage.'
-      );
+    // Client-side check for immediate feedback
+    if (usage.plan === 'free' && usage.used >= usage.limit) {
+      notificationService.notifyError('Daily Limit Reached', 'Please upgrade to continue.');
+      setIsRateLimited(true);
       return;
     }
 
-    // Increment local/client usage count
-    usageService.incrementUsage(userId);
-
-    // Add user message immediately
-    setMessages(prev => [...prev, newMessage]);
+    // Optimistically update UI
+    usageService.incrementUsage(user?.id ?? 'local');
     setIsTyping(true);
 
     try {
@@ -221,6 +258,12 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          notificationService.notifyError('Daily Limit Reached', 'You have used all of your free chats for today.');
+          setIsRateLimited(true);
+          // Sync client state with the server's reality
+          setUsage(prev => ({ ...prev, used: prev.limit }));
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -256,25 +299,43 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     } catch (error) {
       console.error('Error sending message:', error);
       
-      // Notify user of the error
-      const errorTitle = language === 'ko' ? '메시지 전송 실패' : 'Message Send Failed';
-      const errorMsg = language === 'ko' 
-        ? '메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
-        : 'There was an error processing your message. Please try again.';
+      // Avoid double-notifying for 429 errors
+      if (!(error as any).message.includes('429')) {
+        notificationService.notifyError('Message Send Failed', 'There was an error processing your message.');
+      }
       
-      notificationService.notifyError(errorTitle, errorMsg);
-      
-      const errorMessage: Message = {
-        id: generateId(),
-        content: errorMsg,
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Attempt local fallback response (mock) for better UX
+      try {
+        const aiService = new AIChatService();
+        const fallback = await aiService.generateResponse(content);
+        const fallbackMsg: Message = {
+          id: generateId(),
+          content: fallback,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, fallbackMsg]);
+      } catch {
+        // Fallback failed – show default error
+        const errorTitle = language === 'ko' ? '메시지 전송 실패' : 'Message Send Failed';
+        const errorMsg = language === 'ko' 
+          ? '메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
+          : 'There was an error processing your message. Please try again.';
+
+        notificationService.notifyError(errorTitle, errorMsg);
+
+        const errorMessage: Message = {
+          id: generateId(),
+          content: errorMsg,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
     } finally {
       setIsTyping(false);
     }
-  }, [messages, model, includeWebSearch, chatId, language, onSendMessage]);
+  }, [messages, model, includeWebSearch, chatId, language, onSendMessage, user, usage]);
 
   const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
     try {
@@ -433,8 +494,6 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     sendMessageWithOptions(transcript);
   };
 
-
-
   const getAgentIcon = (iconName: string) => {
     const iconMap: Record<string, any> = {
       Code,
@@ -475,8 +534,6 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           {/* Header Section - Mobile Optimized */}
           <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-4 sm:pt-12 pb-3 sm:pb-8">
             <ConvocoreLogo size="lg" className="mx-auto mb-3 sm:mb-6" />
-            
-
             
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
               Your intelligent conversational AI platform
@@ -533,7 +590,10 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <div className="px-4 sm:px-6 py-2 sm:py-4">
               {/* Chat Limit Indicator */}
-              <ChatLimitIndicator className="max-w-2xl mx-auto mb-2 sm:mb-4" />
+              <ChatLimitIndicator
+                usage={usage}
+                className="max-w-2xl mx-auto mb-2 sm:mb-4"
+              />
               
               <AIChatInput
                 onSendMessage={(message, options) => {
@@ -567,7 +627,6 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
             <div className="text-center space-y-4 max-w-md mx-auto px-4">
               <ConvocoreLogo className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50" />
               <div className="space-y-2">
-
                 <p className="text-sm text-muted-foreground/80">
                   Start a conversation by typing a message below. You can use specialized agents by mentioning them with @ (e.g., @codegen, @writer, @debugger).
                 </p>
@@ -587,17 +646,17 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
                 isTyping={message.isTyping}
                 streamingSpeed={25}
                 onCopy={() => handleCopyMessage(message.content)}
-                                 onShare={() => {
-                   notificationService.notifySuccess('Shared!', 'Message shared to clipboard');
-                 }}
-                 onRegenerate={() => handleRegenerateResponse(message.id)}
-                 onFeedback={(type) => {
-                   if (type === 'up') {
-                     notificationService.notifySuccess('Feedback Received', 'Thank you for your positive feedback!');
-                   } else {
-                     notificationService.notifyInfo('Feedback Received', 'Thank you for your feedback!');
-                   }
-                 }}
+                onShare={() => {
+                  notificationService.notifySuccess('Shared!', 'Message shared to clipboard');
+                }}
+                onRegenerate={() => handleRegenerateResponse(message.id)}
+                onFeedback={(type) => {
+                  if (type === 'up') {
+                    notificationService.notifySuccess('Feedback Received', 'Thank you for your positive feedback!');
+                  } else {
+                    notificationService.notifyInfo('Feedback Received', 'Thank you for your feedback!');
+                  }
+                }}
               />
             ))}
             
@@ -620,20 +679,26 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Rate Limit Banner */}
+      {isRateLimited && (
+        <div className="p-4 m-4 text-center bg-red-100 dark:bg-red-900/30 rounded-lg">
+          <p className="font-semibold text-red-700 dark:text-red-300">Daily Limit Reached</p>
+          <p className="text-sm text-red-600 dark:text-red-400">Please upgrade to Pro or try again tomorrow.</p>
+        </div>
+      )}
+
       {/* Usage indicator */}
       <div className="px-4 py-2 border-t">
-        <ChatLimitIndicator />
+        <ChatLimitIndicator usage={usage} />
       </div>
 
       {/* Input Area - Reduced Size */}
       <div className="p-4 border-t bg-background">
         <AIChatInput
-          onSendMessage={(message, options) => {
-            // Use default model and handle new options
-            sendMessageWithOptions(message, options);
-          }}
+          onSendMessage={sendMessageWithOptions}
           onAttachFile={handleFileUpload}
           onVoiceInput={handleVoiceInput}
+          disabled={isRateLimited}
           className="w-full"
         />
       </div>

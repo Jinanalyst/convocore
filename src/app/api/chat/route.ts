@@ -15,6 +15,7 @@ import { formatMessageWithAgent } from '@/lib/intelligent-agent-router';
 import { memoryService } from '@/lib/memory-service';
 import { usageService } from '@/lib/usage-service';
 import { chainScopeService } from '@/lib/chainscope-service';
+import { cookies } from 'next/headers';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
@@ -48,6 +49,8 @@ function extractUserIdFromRequest(request: NextRequest): string | null {
     return null;
   }
 }
+
+const FREE_PLAN_LIMIT = 3;
 
 export async function POST(request: NextRequest) {
   console.log('🚀 Chat API called');
@@ -102,10 +105,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Try Supabase authentication
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        const supabase = createServerComponentClient({ cookies });
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
