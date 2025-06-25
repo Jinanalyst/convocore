@@ -205,14 +205,19 @@ export default function ConvocorePage() {
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setMessages([
-        { 
-          id: 'welcome-message', 
-          role: 'assistant', 
-          content: `Continuing conversation: **${selectedChat?.title || 'this chat'}**...`
-        }
-      ]);
+      const response = await fetch(`/api/chat/${chatId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+      const chatMessages = await response.json();
+
+      // Ensure messages have a unique key if 'id' isn't reliably unique
+      const formattedMessages = chatMessages.map((msg: any, index: number) => ({
+        ...msg,
+        id: msg.id || `msg-${index}` 
+      }));
+
+      setMessages(formattedMessages);
     } catch (error) {
       console.error("Error fetching messages for chat:", chatId, error);
       setMessages([{ id: 'error-message', role: 'assistant', content: 'Could not load messages.' }]);
