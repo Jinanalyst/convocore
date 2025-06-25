@@ -440,7 +440,7 @@ const AIChatInput = ({
                 onKeyDown={handleKeyPress}
                 onFocus={() => setIsActive(true)}
                 placeholder={isActive || value ? "Ask me anything..." : " "}
-                className="w-full h-12 pl-4 pr-24 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+                className="w-full h-12 pl-4 pr-24 bg-transparent focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50 truncate"
                 disabled={disabled}
               />
               <div className="absolute left-1 sm:left-2 top-0 right-0 h-full pointer-events-none flex items-center py-2">
