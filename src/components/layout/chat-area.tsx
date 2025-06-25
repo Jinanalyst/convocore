@@ -1,191 +1,31 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import { AIChatInput } from "@/components/ui/ai-chat-input";
 import { ConvocoreLogo } from "@/components/ui/convocore-logo";
-import { Button } from "@/components/ui/button";
-import { VoiceModal } from "@/components/modals/voice-modal";
 import { EnhancedChatMessage } from "@/components/ui/enhanced-chat-message";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
-import { usageService } from "@/lib/usage-service";
-import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from '@/lib/language-context';
-import { 
-  Copy, 
-  ThumbsUp, 
-  ThumbsDown, 
-  RotateCcw, 
-  User,
-  Bot,
-  Sparkles,
-  Code,
-  Bug,
-  Palette,
-  Image,
-  PenTool,
-  Database,
-  TrendingUp,
-  Rocket,
-  MessageCircle,
-  FileText,
-  Volume2,
-  VolumeX,
-  Trash2
-} from "lucide-react";
-import { cn, formatAIResponseToParagraphs } from "@/lib/utils";
-import { ConvoAgent } from "@/lib/model-agents";
-import { detectAgentFromMessage, formatMessageWithAgent } from "@/lib/intelligent-agent-router";
-import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
-import { notificationService } from '@/lib/notification-service';
-import { formatChatTimestamp } from '@/lib/date-utils';
-import { AIChatService } from '@/lib/ai-chat-service';
-
-// Helper function to generate unique IDs
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
-  isTyping?: boolean;
-  agent?: ConvoAgent;
-}
+import { cn } from "@/lib/utils";
+import type { Message } from "@/app/convocore/page";
 
 interface ChatAreaProps {
   className?: string;
   chatId?: string;
-  onSendMessage?: (message: string, model: string, includeWebSearch?: boolean) => void;
+  messages: Message[];
+  isLoading?: boolean;
+  onSendMessage: (message: string, model: string, includeWebSearch?: boolean) => void;
 }
 
-export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
-  const { user } = useAuth();
-  const { language, t } = useLanguage();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [currentAgent, setCurrentAgent] = useState<ConvoAgent | null>(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
-  const [model, setModel] = useState('gpt-4o');
-  const [includeWebSearch, setIncludeWebSearch] = useState(false);
+export function ChatArea({ 
+  className, 
+  chatId, 
+  messages,
+  isLoading = false,
+  onSendMessage 
+}: ChatAreaProps) {
+  const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevChatIdRef = useRef<string | undefined>(chatId);
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [usage, setUsage] = useState({
-    used: 0,
-    limit: 3,
-    plan: 'free' as 'free' | 'pro' | 'premium',
-  });
-
-  useEffect(() => {
-    const loadUsage = () => {
-      const userId = user?.id ?? 'local';
-      try {
-        const userUsage = usageService.getUserUsage(userId);
-        const subscription = usageService.getUserSubscription(userId);
-        setUsage({
-          used: userUsage.requestsUsed,
-          limit:
-            subscription.tier === 'free' ? userUsage.requestsLimit : -1,
-          plan: subscription.tier,
-        });
-      } catch (error) {
-        console.error('Error loading usage:', error);
-      }
-    };
-    loadUsage();
-
-    window.addEventListener('usageUpdated', loadUsage);
-    return () => window.removeEventListener('usageUpdated', loadUsage);
-  }, [user]);
-
-  // Load real messages from Supabase
-  useEffect(() => {
-    if (chatId && prevChatIdRef.current === undefined) {
-      if (messages.length > 0) {
-        (async () => {
-          try {
-            for (const m of messages) {
-              await saveMessage(chatId, m.content, m.role as 'user' | 'assistant');
-            }
-          } catch (e) {
-            console.warn('Failed to back-fill messages into newly created chat', e);
-          }
-        })();
-      } else {
-        loadMessages(chatId);
-      }
-    } else if (chatId && chatId !== prevChatIdRef.current) {
-      loadMessages(chatId);
-    } else if (!chatId) {
-      setMessages([]);
-    }
-
-    prevChatIdRef.current = chatId;
-  }, [chatId]);
-
-  const loadMessages = async (conversationId: string) => {
-    if (!conversationId) return;
-
-    try {
-      setIsLoading(true);
-      console.log('🔄 Loading messages for conversation:', conversationId);
-
-      // Check if user is using wallet authentication
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      
-      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_') || conversationId.startsWith('local_chat_')) {
-        // For wallet users, demo chats, or local chats, load from localStorage
-        const savedMessages = localStorage.getItem(`chat_messages_${conversationId}`);
-        if (savedMessages) {
-          const parsedMessages = JSON.parse(savedMessages);
-          const formattedMessages: Message[] = parsedMessages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }));
-          setMessages(formattedMessages);
-          console.log('📥 Loaded', formattedMessages.length, 'messages from localStorage');
-        } else {
-          console.log('📭 No saved messages found for this chat');
-          setMessages([]);
-        }
-        return;
-      }
-
-      // For Supabase authenticated users, load from database
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error loading messages:', error);
-        setMessages([]);
-        return;
-      }
-
-      const formattedMessages: Message[] = messages?.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        role: msg.role,
-        timestamp: new Date(msg.created_at)
-      })) || [];
-
-      setMessages(formattedMessages);
-      console.log('📥 Loaded', formattedMessages.length, 'messages from database');
-      
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setMessages([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -195,520 +35,49 @@ export function ChatArea({ className, chatId, onSendMessage }: ChatAreaProps) {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessageWithOptions = useCallback(async (
-    content: string,
-    options?: { think?: boolean; deepSearch?: boolean }
-  ) => {
-    if (!content.trim()) return;
-
-    console.log('📨 ChatArea received message with options:', {
-      content: content.substring(0, 50) + '...',
-      model,
-      includeWebSearch,
-      options,
-      language
-    });
-
-    const newMessage: Message = {
-      id: generateId(),
-      content: content.trim(),
-      role: 'user',
-      timestamp: new Date()
-    };
-
-    // Client-side check for immediate feedback
-    if (usage.plan === 'free' && usage.used >= usage.limit) {
-      notificationService.notifyError('Daily Limit Reached', 'Please upgrade to continue.');
-      setIsRateLimited(true);
-      return;
-    }
-
-    // Optimistically update UI
-    usageService.incrementUsage(user?.id ?? 'local');
-    setIsTyping(true);
-
-    try {
-      // Save user message
-      if (chatId) {
-        await saveMessage(chatId, content.trim(), 'user');
-      }
-
-      // Detect agent from message content
-      const detectedAgent = detectAgentFromMessage(content);
-
-      // Call API with enhanced options including language
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, newMessage].map(m => ({
-            role: m.role,
-            content: m.content,
-            timestamp: m.timestamp
-          })),
-          model,
-          chatId,
-          includeWebSearch: includeWebSearch || options?.deepSearch,
-          deepSearch: options?.deepSearch,
-          think: options?.think,
-          language: language // Pass language preference to API
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          notificationService.notifyError('Daily Limit Reached', 'You have used all of your free chats for today.');
-          setIsRateLimited(true);
-          // Sync client state with the server's reality
-          setUsage(prev => ({ ...prev, used: prev.limit }));
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      const assistantMessage: Message = {
-        id: generateId(),
-        content: data.response || 'Sorry, I could not generate a response.',
-        role: 'assistant',
-        timestamp: new Date(),
-        agent: detectedAgent || undefined
-      };
-
-      // Add assistant message
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Save assistant message
-      if (chatId) {
-        await saveMessage(chatId, assistantMessage.content, 'assistant');
-      }
-
-      // Call external callback if provided
-      onSendMessage?.(content, model, includeWebSearch);
-
-      // Notify chat completion with proper parameters
-      const chatTitle = chatId || 'New Chat';
-      notificationService.notifyChatComplete(
-        chatTitle,
-        assistantMessage.content,
-        chatId
-      );
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Avoid double-notifying for 429 errors
-      if (!(error as any).message.includes('429')) {
-        notificationService.notifyError('Message Send Failed', 'There was an error processing your message.');
-      }
-      
-      // Attempt local fallback response (mock) for better UX
-      try {
-        const aiService = new AIChatService();
-        const fallback = await aiService.generateResponse(content);
-        const fallbackMsg: Message = {
-          id: generateId(),
-          content: fallback,
-          role: 'assistant',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, fallbackMsg]);
-      } catch {
-        // Fallback failed – show default error
-        const errorTitle = language === 'ko' ? '메시지 전송 실패' : 'Message Send Failed';
-        const errorMsg = language === 'ko' 
-          ? '메시지를 처리하는 중에 오류가 발생했습니다. 다시 시도해 주세요.'
-          : 'There was an error processing your message. Please try again.';
-
-        notificationService.notifyError(errorTitle, errorMsg);
-
-        const errorMessage: Message = {
-          id: generateId(),
-          content: errorMsg,
-          role: 'assistant',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      }
-    } finally {
-      setIsTyping(false);
-    }
-  }, [messages, model, includeWebSearch, chatId, language, onSendMessage, user, usage]);
-
-  const saveMessage = async (conversationId: string, content: string, role: 'user' | 'assistant') => {
-    try {
-      console.log('💾 Saving message:', { conversationId, role, content: content.substring(0, 50) + '...' });
-
-      // Check if user is using wallet authentication
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      
-      if (walletConnected || conversationId.startsWith('wallet_chat_') || conversationId.startsWith('demo_') || conversationId.startsWith('local_chat_')) {
-        // For wallet users, demo chats, or local chats, save to localStorage
-        const messageToSave = {
-          id: generateId(),
-          content,
-          role,
-          timestamp: new Date().toISOString()
-        };
-
-        // Get existing messages
-        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
-        const messages = existingMessages ? JSON.parse(existingMessages) : [];
-        
-        // Add new message
-        messages.push(messageToSave);
-        
-        // Save back to localStorage
-        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
-        console.log('✅ Message saved to localStorage');
-
-        // Send to backend for wallet conversations
-        if (conversationId && !conversationId.startsWith('demo_')) {
-          try {
-            await fetch('/api/wallet/messages', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ conversationId, role, content })
-            });
-          } catch (err) {
-            console.warn('Failed to sync wallet message to backend:', err);
-          }
-        }
-        
-        // Also update the chat list with the latest message
-        const walletChats = localStorage.getItem('wallet_chats');
-        if (walletChats) {
-          const chats = JSON.parse(walletChats);
-          const updatedChats = chats.map((chat: any) => 
-            chat.id === conversationId 
-              ? { 
-                  ...chat, 
-                  lastMessage: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-                  timestamp: new Date().toISOString()
-                }
-              : chat
-          );
-          localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-        }
-        return;
-      }
-
-      // For Supabase authenticated users, save to database
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          content,
-          role,
-        });
-
-      if (error) {
-        console.error('Error saving message to database:', error);
-        // Fallback to localStorage if database fails
-        const messageToSave = {
-          id: generateId(),
-          content,
-          role,
-          timestamp: new Date().toISOString()
-        };
-
-        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
-        const messages = existingMessages ? JSON.parse(existingMessages) : [];
-        messages.push(messageToSave);
-        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
-        console.log('📦 Fallback: Message saved to localStorage');
-      } else {
-        console.log('✅ Message saved to database');
-      }
-    } catch (error) {
-      console.error('Error saving message:', error);
-      // Final fallback to localStorage
-      try {
-        const messageToSave = {
-          id: generateId(),
-          content,
-          role,
-          timestamp: new Date().toISOString()
-        };
-
-        const existingMessages = localStorage.getItem(`chat_messages_${conversationId}`);
-        const messages = existingMessages ? JSON.parse(existingMessages) : [];
-        messages.push(messageToSave);
-        localStorage.setItem(`chat_messages_${conversationId}`, JSON.stringify(messages));
-        console.log('🆘 Emergency fallback: Message saved to localStorage');
-      } catch (fallbackError) {
-        console.error('Failed to save message even with fallback:', fallbackError);
-      }
-    }
+  // Adapter function for AIChatInput's onSendMessage
+  const handleChatInputSend = (message: string, options?: { think?: boolean; deepSearch?: boolean }) => {
+    // We'll use a default model and pass the web search option.
+    // The parent `convocore/page.tsx` now handles the actual API call.
+    onSendMessage(message, 'gpt-4o', options?.deepSearch);
   };
-
-  const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
-    
-    // Show success notification
-    const successTitle = language === 'ko' ? '복사됨' : 'Copied';
-    const successMsg = language === 'ko' ? '메시지가 클립보드에 복사되었습니다' : 'Message copied to clipboard';
-    
-    notificationService.notifySuccess(successTitle, successMsg);
-  };
-
-  const handleRegenerateResponse = (messageId: string) => {
-    // Find the message and regenerate the AI response
-    setIsLoading(true);
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, content: "This is a regenerated response with different content." }
-          : msg
-      ));
-      setIsLoading(false);
-    }, 1500);
-  };
-
-  const handleFileUpload = (file?: File) => {
-    if (!file) return;
-    console.log('File uploaded:', file.name, file.type, file.size);
-    // In a real implementation, this would process the file
-    const fileMessage: Message = {
-      id: Date.now().toString(),
-      content: `📎 Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
-      role: 'user',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, fileMessage]);
-  };
-
-  const handleVoiceInput = () => {
-    console.log('Voice input requested - opening voice modal');
-    setVoiceModalOpen(true);
-  };
-
-  const handleVoiceTranscriptComplete = (transcript: string) => {
-    console.log('Voice transcript received:', transcript);
-    // Auto-submit the voice message with default model
-    sendMessageWithOptions(transcript);
-  };
-
-  const getAgentIcon = (iconName: string) => {
-    const iconMap: Record<string, any> = {
-      Code,
-      Bug,
-      Palette,
-      Image,
-      PenTool,
-      Database,
-      TrendingUp,
-      Rocket,
-      Bot,
-      MessageCircle
-    };
-    return iconMap[iconName] || Bot;
-  };
-
-  const handleTextToSpeech = (text: string) => {
-    if (isSpeaking) {
-      // Stop speaking
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    } else {
-      // Start speaking
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  if (!chatId && messages.length === 0) {
-    return (
-      <div className={cn("flex flex-col h-full bg-gray-50 dark:bg-zinc-950", className)}>
-        {/* Welcome Screen */}
-        <div className="flex-1 flex flex-col">
-          {/* Header Section - Mobile Optimized */}
-          <div className="flex-shrink-0 text-center px-4 sm:px-6 pt-4 sm:pt-12 pb-3 sm:pb-8">
-            <ConvocoreLogo size="lg" className="mx-auto mb-3 sm:mb-6" />
-            
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-md mx-auto leading-relaxed">
-              Your intelligent conversational AI platform
-            </p>
-          </div>
-
-          {/* Feature Cards Section - Mobile Optimized */}
-          <div className="flex-1 px-4 sm:px-6 pb-2 sm:pb-4">
-            <div className="max-w-2xl mx-auto">
-              <div className="space-y-2 sm:space-y-4">
-                {/* Feature Card 1 */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Smart Conversations</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                      Advanced AI models for intelligent conversations
-                    </p>
-                  </div>
-                </div>
-
-                {/* Feature Card 2 */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
-                  <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Custom AI Agents</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                      Specialized agents for specific tasks
-                    </p>
-                  </div>
-                </div>
-
-                {/* Feature Card 3 */}
-                <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 p-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                    <Copy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">Prompt Library</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                      Curated prompts and templates
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Input Area */}
-          <div className="flex-shrink-0 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div className="px-4 sm:px-6 py-2 sm:py-4">
-              {/* Chat Limit Indicator */}
-              <ChatLimitIndicator
-                usage={usage}
-                className="max-w-2xl mx-auto mb-2 sm:mb-4"
-              />
-              
-              <AIChatInput
-                onSendMessage={(message, options) => {
-                  // Use default model and handle new options
-                  sendMessageWithOptions(message, options);
-                }}
-                onAttachFile={handleFileUpload}
-                onVoiceInput={handleVoiceInput}
-                className="max-w-2xl mx-auto"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Voice Modal */}
-        <VoiceModal
-          open={voiceModalOpen}
-          onOpenChange={setVoiceModalOpen}
-          onTranscriptComplete={handleVoiceTranscriptComplete}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Messages Area with Scrollbar */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-thin">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4 max-w-md mx-auto px-4">
-              <ConvocoreLogo className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50" />
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground/80">
-                  Start a conversation by typing a message below. You can use specialized agents by mentioning them with @ (e.g., @codegen, @writer, @debugger).
-                </p>
-              </div>
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-4xl mx-auto">
+          {messages.length === 0 && !isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+              <ConvocoreLogo className="w-24 h-24 mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">{t('convocore.welcome')}</h2>
+              <p className="mt-2">{t('convocore.start_conversation')}</p>
             </div>
-          </div>
-        ) : (
-          <>
-            {messages.map((message) => (
-              <EnhancedChatMessage
-                key={message.id}
-                id={message.id}
-                content={message.content}
-                role={message.role}
-                timestamp={message.timestamp}
-                agent={message.agent}
-                isTyping={message.isTyping}
-                streamingSpeed={25}
-                onCopy={() => handleCopyMessage(message.content)}
-                onShare={() => {
-                  notificationService.notifySuccess('Shared!', 'Message shared to clipboard');
-                }}
-                onRegenerate={() => handleRegenerateResponse(message.id)}
-                onFeedback={(type) => {
-                  if (type === 'up') {
-                    notificationService.notifySuccess('Feedback Received', 'Thank you for your positive feedback!');
-                  } else {
-                    notificationService.notifyInfo('Feedback Received', 'Thank you for your feedback!');
-                  }
-                }}
-              />
-            ))}
-            
-            {/* Enhanced Typing indicator */}
-            {isTyping && (
-              <TypingIndicator
-                isVisible={true}
-                message={`${currentAgent?.displayName || 'AI'} is thinking...`}
-                avatar={
-                  currentAgent ? (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
-                      {currentAgent.tag.slice(1, 3).toUpperCase()}
-                    </div>
-                  ) : undefined
-                }
-              />
-            )}
-          </>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Rate Limit Banner */}
-      {isRateLimited && (
-        <div className="p-4 m-4 text-center bg-red-100 dark:bg-red-900/30 rounded-lg">
-          <p className="font-semibold text-red-700 dark:text-red-300">Daily Limit Reached</p>
-          <p className="text-sm text-red-600 dark:text-red-400">Please upgrade to Pro or try again tomorrow.</p>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((message) => (
+                <EnhancedChatMessage
+                  key={message.id}
+                  id={message.id}
+                  content={message.content}
+                  role={message.role}
+                  timestamp={new Date()} // Placeholder, consider passing real timestamp
+                  onCopy={() => navigator.clipboard.writeText(message.content)}
+                />
+              ))}
+              <TypingIndicator isVisible={isLoading} />
+              <div ref={messagesEndRef} />
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Usage indicator */}
-      <div className="px-4 py-2 border-t">
-        <ChatLimitIndicator usage={usage} />
       </div>
-
-      {/* Input Area - Reduced Size */}
-      <div className="p-4 border-t bg-background">
-        <AIChatInput
-          onSendMessage={sendMessageWithOptions}
-          onAttachFile={handleFileUpload}
-          onVoiceInput={handleVoiceInput}
-          disabled={isRateLimited}
-          className="w-full"
-        />
+      <div className="p-4 md:p-6 border-t bg-white dark:bg-gray-800">
+        <div className="max-w-4xl mx-auto">
+          <AIChatInput
+            onSendMessage={handleChatInputSend}
+            disabled={isLoading}
+          />
+        </div>
       </div>
-
-      {/* Voice Modal */}
-      <VoiceModal
-        open={voiceModalOpen}
-        onOpenChange={setVoiceModalOpen}
-        onTranscriptComplete={handleVoiceTranscriptComplete}
-      />
     </div>
   );
 } 

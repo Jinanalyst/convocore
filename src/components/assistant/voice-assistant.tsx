@@ -3,18 +3,19 @@
 import { useRef, useState } from "react";
 import { Mic, Loader2 } from "lucide-react";
 import { transcribeAudio } from "@/lib/assistant/stt";
-import { chatCompletion, ChatMessage } from "@/lib/assistant/nlp";
-import { synthesizeSpeech } from "@/lib/assistant/tts";
-import { parseCommand } from "@/lib/assistant/command-parser";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
+interface VoiceAssistantProps {
+  onSend: (message: string) => void;
+}
+
 /**
  * Floating voice assistant button that records audio, transcribes via Whisper,
- * detects commands and either executes them or replies using OpenAI & TTS.
+ * and sends the transcript to the main chat handler.
  * Visible only for Pro / Premium users.
  */
-export function VoiceAssistant() {
+export function VoiceAssistant({ onSend }: VoiceAssistantProps) {
   const { user } = useAuth();
   const isAllowed = user && ["pro", "premium"].includes(user.subscriptionTier);
 
@@ -50,7 +51,6 @@ export function VoiceAssistant() {
             const base64Audio = btoa(
               String.fromCharCode(...new Uint8Array(arrayBuffer))
             );
-
             const text = await transcribeAudio(base64Audio);
             await handleTranscript(text);
           } catch (err) {
@@ -76,50 +76,21 @@ export function VoiceAssistant() {
     console.log("🗣️ Transcript:", text);
     setTooltip(`Heard: ${text}`);
 
-    const command = parseCommand(text);
-    if (command.action !== "none") {
-      executeCommand(command);
-      return;
-    }
+    // Pass the transcript to the parent component to handle.
+    onSend(text);
 
-    // Conversational reply
-    try {
-      const history: ChatMessage[] = [
-        { role: "system", content: "You are Convocore AI Assistant." },
-        { role: "user", content: text },
-      ];
-      const reply = await chatCompletion(history);
-      console.log("🤖 Reply:", reply);
-      setTooltip(reply);
-
-      // Speak back
-      const audioB64 = await synthesizeSpeech(reply);
-      const audio = new Audio(`data:audio/mpeg;base64,${audioB64}`);
-      audio.play();
-    } catch (err) {
-      console.error(err);
-    }
+    // Command parsing could still happen here, or be moved to the parent
+    // const command = parseCommand(text);
+    // if (command.action !== "none") {
+    //   executeCommand(command);
+    //   return;
+    // }
   };
 
-  const executeCommand = (cmd: ReturnType<typeof parseCommand>) => {
-    switch (cmd.action) {
-      case "call": {
-        window.location.href = `tel:${cmd.number}`;
-        break;
-      }
-      case "search": {
-        const url = `https://www.google.com/search?q=${encodeURIComponent(cmd.query)}`;
-        window.open(url, "_blank");
-        break;
-      }
-      case "read": {
-        window.open(cmd.url, "_blank");
-        break;
-      }
-      default:
-        break;
-    }
-  };
+  // Command execution can be kept or removed depending on desired functionality
+  // const executeCommand = (cmd: ReturnType<typeof parseCommand>) => {
+  //   ...
+  // };
 
   return (
     <div className="fixed bottom-6 right-6 z-50">

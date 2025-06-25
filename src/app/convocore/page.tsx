@@ -12,6 +12,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface Chat {
   id: string;
   title: string;
@@ -22,6 +28,7 @@ interface Chat {
 export default function ConvocorePage() {
   const { user } = useAuth();
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -193,12 +200,16 @@ export default function ConvocorePage() {
   const handleSelectChat = (chatId: string) => {
     console.log('🎯 Selecting chat:', chatId);
     setActiveChatId(chatId);
+    // When a chat is selected, clear existing messages and prepare for new ones.
+    // In a real app, you would fetch the message history for this chat here.
+    setMessages([]); 
   };
 
   const handleDeleteChat = async (chatId: string) => {
     if (activeChatId === chatId) {
       setActiveChatId(null);
       setThreadId(null);
+      setMessages([]);
     }
     
     // Remove from local state immediately for better UX
@@ -218,16 +229,26 @@ export default function ConvocorePage() {
   const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
 
+    // Add user message to UI immediately
+    const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
+    setMessages(prev => [...prev, userMessage]);
+
     let reply = "Assistant is thinking...";
     try {
       const assistantResponse = await invokeAssistant(message, threadId);
       reply = assistantResponse.reply;
       console.log("Assistant says:", reply);
       setThreadId(assistantResponse.threadId);
+      
+      // Add assistant response to UI
+      const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
+      setMessages(prev => [...prev, userMessage, assistantMessage]);
+
     } catch (error) {
       console.error("Error calling assistant:", error);
       reply = "Sorry, I couldn't respond.";
-      // Optionally, show an error message to the user in the UI
+      const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: reply };
+      setMessages(prev => [...prev, userMessage, errorMessage]);
     }
     
     // Update the current chat's last message and timestamp
@@ -319,6 +340,16 @@ export default function ConvocorePage() {
   };
 
   const handleNewChat = async (initialMessage?: string) => {
+    console.log('✨ Creating new chat...');
+    setMessages([]);
+    setThreadId(null);
+    const newChat: Chat = {
+      id: `chat_${Date.now()}`,
+      title: initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat",
+      lastMessage: initialMessage || 'Start a new conversation...',
+      timestamp: new Date(),
+    };
+
     try {
       // Note: Usage is now tracked per message instead of per conversation
       
@@ -327,26 +358,16 @@ export default function ConvocorePage() {
       if (walletConnected) {
         // For wallet users, create chat via backend API
         try {
-          const title = initialMessage ? 
-            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
-            `New Chat ${new Date().toLocaleDateString()}`;
           const res = await fetch('/api/wallet/conversations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title })
+            body: JSON.stringify({ title: newChat.title })
           });
 
           if (res.ok) {
             const json = await res.json();
             const newConv = json.conversation;
             const newChatId = newConv.id;
-            const newChat: Chat = {
-              id: newChatId,
-              title: newConv.title,
-              lastMessage: initialMessage || 'Start a new conversation...',
-              timestamp: new Date(newConv.created_at),
-            };
-
             const updatedChats = [newChat, ...chats];
             setChats(updatedChats);
             setActiveChatId(newChatId);
@@ -361,14 +382,6 @@ export default function ConvocorePage() {
 
         // Fallback to local only
         const newChatId = `wallet_chat_${Date.now()}`;
-        const newChat: Chat = {
-          id: newChatId,
-          title: initialMessage ? 
-            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
-            `New Chat ${new Date().toLocaleDateString()}`,
-          lastMessage: initialMessage || 'Start a new conversation...',
-          timestamp: new Date(),
-        };
         const updatedChats = [newChat, ...chats];
         setChats(updatedChats);
         setActiveChatId(newChatId);
@@ -385,15 +398,6 @@ export default function ConvocorePage() {
         console.error('User not authenticated');
         // Fallback to local storage for unauthenticated users
         const newChatId = `local_chat_${Date.now()}`;
-        const newChat: Chat = {
-          id: newChatId,
-          title: initialMessage ? 
-            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
-            `New Chat ${new Date().toLocaleDateString()}`,
-          lastMessage: initialMessage || 'Start a new conversation...',
-          timestamp: new Date(),
-        };
-
         const updatedChats = [newChat, ...chats];
         setChats(updatedChats);
         setActiveChatId(newChatId);
@@ -408,9 +412,7 @@ export default function ConvocorePage() {
         .from('conversations')
         .insert({
           user_id: supabaseUser.id,
-          title: initialMessage ? 
-            (initialMessage.length > 30 ? initialMessage.substring(0, 30) + '...' : initialMessage) :
-            `New Chat ${new Date().toLocaleDateString()}`,
+          title: newChat.title,
           model: 'gpt-4o'
         })
         .select()
@@ -422,13 +424,6 @@ export default function ConvocorePage() {
       }
 
       // Add to local state
-      const newChat: Chat = {
-        id: newConversation.id,
-        title: newConversation.title,
-        lastMessage: initialMessage || 'Start a new conversation...',
-        timestamp: new Date(newConversation.created_at),
-      };
-
       const updatedChats = [newChat, ...chats];
       setChats(updatedChats);
       setActiveChatId(newConversation.id);
@@ -507,6 +502,7 @@ export default function ConvocorePage() {
           <ChatArea
             chatId={activeChatId || undefined}
             onSendMessage={handleSendMessage}
+            messages={messages}
           />
         </div>
       </div>
@@ -529,7 +525,7 @@ export default function ConvocorePage() {
       <PWAInstall />
 
       {/* Voice Assistant microphone */}
-      <VoiceAssistant />
+      <VoiceAssistant onSend={(message) => handleSendMessage(message, 'default-model')} />
     </div>
   );
 } 
