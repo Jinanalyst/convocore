@@ -44,6 +44,19 @@ export default function ConvocorePage() {
     plan: 'free' as 'free' | 'pro' | 'premium',
   });
 
+  // Persist chats locally whenever they change
+  useEffect(() => {
+    if (chats.length === 0) return;
+    const walletConnected = localStorage.getItem('wallet_connected') === 'true';
+    const key = walletConnected ? 'wallet_chats' : 'local_chats';
+    try {
+      localStorage.setItem(key, JSON.stringify(chats));
+      console.log('💾 Chats saved to', key, chats.length);
+    } catch (err) {
+      console.warn('Failed to save chats to localStorage', err);
+    }
+  }, [chats]);
+
   // Load chats and usage on component mount
   useEffect(() => {
     loadChats();
