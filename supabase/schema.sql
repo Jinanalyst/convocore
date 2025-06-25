@@ -92,6 +92,7 @@ GRANT ALL ON public.users TO authenticated;
 GRANT SELECT ON public.users TO anon;
 
 -- Conversations table
+DROP TABLE IF EXISTS public.conversations CASCADE;
 CREATE TABLE public.conversations (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -103,6 +104,7 @@ CREATE TABLE public.conversations (
 );
 
 -- Messages table
+DROP TABLE IF EXISTS public.messages CASCADE;
 CREATE TABLE public.messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE,
@@ -115,6 +117,7 @@ CREATE TABLE public.messages (
 );
 
 -- Conversation History table for memory-aware AI (as requested)
+DROP TABLE IF EXISTS public.convo_history CASCADE;
 CREATE TABLE public.convo_history (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -124,6 +127,7 @@ CREATE TABLE public.convo_history (
 );
 
 -- Payments table
+DROP TABLE IF EXISTS public.payments CASCADE;
 CREATE TABLE public.payments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -449,4 +453,4 @@ CREATE POLICY "Anonymous cannot access wallet_conversations" ON public.wallet_co
 CREATE POLICY "Anonymous cannot access wallet_messages" ON public.wallet_messages
     FOR ALL USING (false);
 
--- End of wallet tables 
+-- End of wallet tables
