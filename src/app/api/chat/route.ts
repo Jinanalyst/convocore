@@ -106,7 +106,6 @@ export async function POST(request: NextRequest) {
       // Try Supabase authentication
       try {
         const supabase = createServerComponentClient({ cookies });
-        
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           userId = user.id;
@@ -469,4 +468,4 @@ export async function OPTIONS(request: NextRequest) {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
-} 
+}

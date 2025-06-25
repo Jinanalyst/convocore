@@ -24,7 +24,7 @@ function NotificationToast({ notification, onClose, onAction }: NotificationToas
     const decrement = (interval / duration) * 100;
 
     const timer = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev: number) => {
         const newProgress = prev - decrement;
         if (newProgress <= 0) {
           setIsVisible(false);
@@ -247,4 +247,4 @@ export function NotificationContainer() {
       </div>
     </div>
   );
-} 
+}

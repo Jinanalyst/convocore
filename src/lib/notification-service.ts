@@ -212,34 +212,20 @@ class NotificationService {
     });
   }
 
-  notifyError(title: string, message: string) {
-    this.addNotification({
-      type: 'error',
-      title,
-      message,
-      avatar: '❌',
-      duration: 8000
-    });
+  notifySuccess(title: string, message: string) {
+    this.addNotification({ type: 'success', title, message });
   }
 
-  notifySuccess(title: string, message: string) {
-    this.addNotification({
-      type: 'success',
-      title,
-      message,
-      avatar: '✅',
-      duration: 4000
-    });
+  notifyError(title: string, message: string) {
+    this.addNotification({ type: 'error', title, message, autoClose: false });
+  }
+
+  notifyWarning(title: string, message: string) {
+    this.addNotification({ type: 'warning', title, message });
   }
 
   notifyInfo(title: string, message: string) {
-    this.addNotification({
-      type: 'info',
-      title,
-      message,
-      avatar: 'ℹ️',
-      duration: 5000
-    });
+    this.addNotification({ type: 'info', title, message });
   }
 
   private loadSettings() {
@@ -272,48 +258,32 @@ class NotificationService {
   }
 
   private shouldPlaySound(): boolean {
-    return this.settings?.notifications?.sound !== false;
+    if (typeof window === 'undefined') return false;
+    return this.settings?.audio?.soundEffects !== false;
   }
 
   private playNotificationSound() {
-    if (!this.shouldPlaySound()) return;
-    
-    try {
-      // Create a simple notification sound using AudioContext
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
-      console.warn('Could not play notification sound:', error);
+    if (this.shouldPlaySound()) {
+      try {
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(e => console.error("Error playing sound:", e));
+      } catch (error) {
+        console.error("Could not play notification sound:", error);
+      }
     }
   }
 
-  // Method to refresh settings when they change
-  refreshSettings() {
-    this.loadSettings();
+  public getSettings() {
+    return this.settings;
   }
-
-  // Method to check if notifications are enabled for a specific type
-  isNotificationEnabled(type: string): boolean {
-    return this.shouldShowNotification(type);
-  }
-
-  // Method to get current notification settings
-  getNotificationSettings() {
-    return this.settings?.notifications || {};
+  
+  public updateSettings(newSettings: any) {
+    this.settings = newSettings;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('convocore-settings', JSON.stringify(newSettings));
+    }
   }
 }
 
-export const notificationService = new NotificationService(); 
+export const notificationService = new NotificationService();

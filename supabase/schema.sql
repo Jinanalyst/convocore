@@ -1,7 +1,12 @@
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types
+-- Create custom types (with IF NOT EXISTS to avoid duplicate errors)
+DROP TYPE IF EXISTS subscription_tier CASCADE;
+DROP TYPE IF EXISTS subscription_status CASCADE;
+DROP TYPE IF EXISTS payment_status CASCADE;
+DROP TYPE IF EXISTS message_role CASCADE;
+
 CREATE TYPE subscription_tier AS ENUM ('free', 'pro', 'premium');
 CREATE TYPE subscription_status AS ENUM ('active', 'inactive', 'cancelled', 'expired');
 CREATE TYPE payment_status AS ENUM ('pending', 'confirmed', 'failed');
@@ -10,14 +15,14 @@ CREATE TYPE message_role AS ENUM ('user', 'assistant', 'system');
 -- Drop the existing table if it exists and recreate with proper structure
 DROP TABLE IF EXISTS public.users CASCADE;
 
--- Create users table with proper structure
+-- Create users table with proper structure (ENUM 타입 사용으로 수정)
 CREATE TABLE public.users (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
     email TEXT,
     full_name TEXT,
     avatar_url TEXT,
-    subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'premium')),
-    subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'cancelled', 'expired')),
+    subscription_tier subscription_tier DEFAULT 'free',
+    subscription_status subscription_status DEFAULT 'active',
     subscription_expires_at TIMESTAMPTZ NULL,
     subscription_auto_renew BOOLEAN DEFAULT FALSE,
     api_requests_used INTEGER DEFAULT 0,
@@ -34,16 +39,24 @@ CREATE TABLE public.users (
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 CREATE POLICY "Users can view own profile" ON public.users
     FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 CREATE POLICY "Users can update own profile" ON public.users
     FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
 CREATE POLICY "Users can insert own profile" ON public.users
     FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Drop trigger first, then function
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
 -- Create function to handle new user registration
+DROP FUNCTION IF EXISTS public.handle_new_user();
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -62,7 +75,6 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create trigger to automatically create user profile when user signs up
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -71,7 +83,7 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = TIMEZONE('UTC', NOW());
+    NEW.updated_at = TIMEZONE('utc', NOW());
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -158,19 +170,24 @@ ALTER TABLE public.convo_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
 -- Conversations policies
+DROP POLICY IF EXISTS "Users can view own conversations" ON public.conversations;
 CREATE POLICY "Users can view own conversations" ON public.conversations
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can create own conversations" ON public.conversations;
 CREATE POLICY "Users can create own conversations" ON public.conversations
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own conversations" ON public.conversations;
 CREATE POLICY "Users can update own conversations" ON public.conversations
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can delete own conversations" ON public.conversations;
 CREATE POLICY "Users can delete own conversations" ON public.conversations
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING (auth.uid() = id);
 
 -- Messages policies
+DROP POLICY IF EXISTS "Users can view messages in own conversations" ON public.messages;
 CREATE POLICY "Users can view messages in own conversations" ON public.messages
     FOR SELECT USING (
         EXISTS (
@@ -180,6 +197,7 @@ CREATE POLICY "Users can view messages in own conversations" ON public.messages
         )
     );
 
+DROP POLICY IF EXISTS "Users can create messages in own conversations" ON public.messages;
 CREATE POLICY "Users can create messages in own conversations" ON public.messages
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -190,16 +208,20 @@ CREATE POLICY "Users can create messages in own conversations" ON public.message
     );
 
 -- Conversation History policies
+DROP POLICY IF EXISTS "Users can view own conversation history" ON public.convo_history;
 CREATE POLICY "Users can view own conversation history" ON public.convo_history
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create own conversation history" ON public.convo_history;
 CREATE POLICY "Users can create own conversation history" ON public.convo_history
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Payments policies
+DROP POLICY IF EXISTS "Users can view own payments" ON public.payments;
 CREATE POLICY "Users can view own payments" ON public.payments
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create own payments" ON public.payments;
 CREATE POLICY "Users can create own payments" ON public.payments
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -215,7 +237,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to check API rate limits
-DROP FUNCTION IF EXISTS public.check_api_rate_limit(UUID);
+DROP FUNCTION IF EXISTS public.check_api_rate_limit(uuid);
 CREATE OR REPLACE FUNCTION public.check_api_rate_limit(user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -237,7 +259,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to increment API usage
-DROP FUNCTION IF EXISTS public.increment_api_usage(UUID);
+DROP FUNCTION IF EXISTS public.increment_api_usage(uuid);
 CREATE OR REPLACE FUNCTION public.increment_api_usage(user_id UUID)
 RETURNS void AS $$
 BEGIN
@@ -249,7 +271,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to process payment and update subscription
-DROP FUNCTION IF EXISTS public.process_payment(UUID, TEXT, DECIMAL, subscription_tier);
+DROP FUNCTION IF EXISTS public.process_payment(uuid, text, numeric, subscription_tier);
 CREATE OR REPLACE FUNCTION public.process_payment(
     p_user_id UUID,
     p_transaction_hash TEXT,
@@ -310,11 +332,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get user subscription status
-DROP FUNCTION IF EXISTS public.get_user_subscription(UUID);
+DROP FUNCTION IF EXISTS public.get_user_subscription(uuid);
 CREATE OR REPLACE FUNCTION public.get_user_subscription(p_user_id UUID)
 RETURNS TABLE(
-    tier TEXT,
-    status TEXT,
+    tier subscription_tier,
+    status subscription_status,
     expires_at TIMESTAMPTZ,
     auto_renew BOOLEAN,
     requests_used INTEGER,
@@ -369,7 +391,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to upgrade subscription
-DROP FUNCTION IF EXISTS public.upgrade_subscription(UUID, subscription_tier, TEXT);
+DROP FUNCTION IF EXISTS public.upgrade_subscription(uuid, subscription_tier, text);
 CREATE OR REPLACE FUNCTION public.upgrade_subscription(
     p_user_id UUID,
     p_new_tier subscription_tier,
@@ -456,9 +478,63 @@ ALTER TABLE public.wallet_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallet_messages ENABLE ROW LEVEL SECURITY;
 
 -- Simple policies to allow service role access; client access will be via server routes
+DROP POLICY IF EXISTS "Anonymous cannot access wallet_conversations" ON public.wallet_conversations;
 CREATE POLICY "Anonymous cannot access wallet_conversations" ON public.wallet_conversations
     FOR ALL USING (false);
+DROP POLICY IF EXISTS "Anonymous cannot access wallet_messages" ON public.wallet_messages;
 CREATE POLICY "Anonymous cannot access wallet_messages" ON public.wallet_messages
     FOR ALL USING (false);
 
 -- End of wallet tables
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Add RLS policies
+-- Users can view their own conversations
+DROP POLICY IF EXISTS "Allow individual read access" ON conversations;
+CREATE POLICY "Allow individual read access" ON conversations FOR SELECT USING (auth.uid() = user_id);
+-- Users can create their own conversations
+DROP POLICY IF EXISTS "Allow individual insert access" ON conversations;
+CREATE POLICY "Allow individual insert access" ON conversations FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Users can update their own conversations
+DROP POLICY IF EXISTS "Allow individual update access" ON conversations;
+CREATE POLICY "Allow individual update access" ON conversations FOR UPDATE USING (auth.uid() = user_id);
+-- Users can delete their own conversations
+DROP POLICY IF EXISTS "Allow individual delete access" ON conversations;
+CREATE POLICY "Allow individual delete access" ON conversations FOR DELETE USING (auth.uid() = user_id);
+
+-- Policies for messages table
+-- Users can view messages in conversations they own
+DROP POLICY IF EXISTS "Allow read access to messages in own conversations" ON messages;
+CREATE POLICY "Allow read access to messages in own conversations" ON messages
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1
+    FROM conversations
+    WHERE conversations.id = messages.conversation_id AND conversations.user_id = auth.uid()
+  )
+);
+-- Users can insert messages into their own conversations
+DROP POLICY IF EXISTS "Allow insert access to messages in own conversations" ON messages;
+CREATE POLICY "Allow insert access to messages in own conversations" ON messages
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM conversations
+    WHERE conversations.id = messages.conversation_id AND conversations.user_id = auth.uid()
+  )
+);
+-- Users can delete messages from their own conversations
+DROP POLICY IF EXISTS "Allow delete access to messages in own conversations" ON messages;
+CREATE POLICY "Allow delete access to messages in own conversations" ON messages
+FOR DELETE USING (
+  EXISTS (
+    SELECT 1
+    FROM conversations
+    WHERE conversations.id = messages.conversation_id AND conversations.user_id = auth.uid()
+  )
+);
+
+-- Set up Storage!

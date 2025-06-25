@@ -37,7 +37,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 interface Chat {
   id: string;
   title: string;
-  lastMessage: string;
+  lastMessage?: string;
   timestamp: Date;
   isActive?: boolean;
 }
@@ -153,7 +153,7 @@ export function Sidebar({
 
   const filteredChats = chats.filter(chat =>
     chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Helper for rendering icon buttons with tooltips in collapsed mode
