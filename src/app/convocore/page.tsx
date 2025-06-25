@@ -198,23 +198,31 @@ export default function ConvocorePage() {
     setMessages([]);
 
     const selectedChat = chats.find(c => c.id === chatId);
+    const selectedThreadId = selectedChat?.threadId;
+
     if (selectedChat) {
-      setThreadId(selectedChat.threadId || null);
+      setThreadId(selectedThreadId || null);
     } else {
       setThreadId(null);
     }
 
+    if (!selectedThreadId) {
+      console.error("No threadId found for the selected chat:", chatId);
+      setMessages([{ id: 'error-message', role: 'assistant', content: 'Could not load messages. Chat identifier is missing.' }]);
+      setIsChatLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/chat/${chatId}`);
+      const response = await fetch(`/api/chat/${selectedThreadId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch messages');
+        throw new Error(`Failed to fetch messages: ${response.statusText}`);
       }
       const chatMessages = await response.json();
 
-      // Ensure messages have a unique key if 'id' isn't reliably unique
       const formattedMessages = chatMessages.map((msg: any, index: number) => ({
         ...msg,
-        id: msg.id || `msg-${index}` 
+        id: msg.id || `msg-${index}`
       }));
 
       setMessages(formattedMessages);
@@ -371,7 +379,7 @@ export default function ConvocorePage() {
 
   const handleNewChat = async (initialMessage?: string, isContinuation = false): Promise<string | undefined> => {
     console.log('✨ Creating new chat...');
-    
+
     if (!isContinuation) {
       setMessages([]);
       setThreadId(null);
@@ -379,37 +387,34 @@ export default function ConvocorePage() {
     }
 
     const newChatTitle = initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat";
-    
-    try {
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      if (walletConnected) {
-          const tempId = `wallet_chat_${Date.now()}`;
-          const newChat: Chat = { id: tempId, title: newChatTitle, lastMessage: initialMessage || 'Start...', timestamp: new Date() };
-          const updatedChats = [newChat, ...chats];
-          setChats(updatedChats);
-          setActiveChatId(tempId);
-          localStorage.setItem('wallet_chats', JSON.stringify(updatedChats));
-          return tempId;
-      }
+    const newThreadId = `thread_${Date.now()}`;
 
+    try {
       const { createClientComponentClient } = await import('@/lib/supabase');
       const supabase = createClientComponentClient();
-      
+
       const { data: { user: supabaseUser } } = await supabase.auth.getUser();
       if (!supabaseUser) {
         console.error('User not authenticated, creating local chat');
         const tempId = `local_chat_${Date.now()}`;
-        const newChat: Chat = { id: tempId, title: newChatTitle, lastMessage: initialMessage || 'Start...', timestamp: new Date() };
+        const newChat: Chat = { 
+            id: tempId, 
+            title: newChatTitle, 
+            lastMessage: initialMessage || 'Start...', 
+            timestamp: new Date(),
+            threadId: newThreadId,
+        };
         const updatedChats = [newChat, ...chats];
         setChats(updatedChats);
         setActiveChatId(tempId);
-        localStorage.setItem('local_chats', JSON.stringify(updatedChats));
+        setThreadId(newThreadId);
+        // No need to save to local_chats here, it will be handled by the auto-save mechanism
         return tempId;
       }
 
       const { data: newConversation, error } = await supabase
         .from('conversations')
-        .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o' })
+        .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o', thread_id: newThreadId })
         .select()
         .single();
 
@@ -429,7 +434,7 @@ export default function ConvocorePage() {
       const updatedChats = [newChat, ...chats];
       setChats(updatedChats);
       setActiveChatId(newConversation.id);
-      localStorage.setItem('local_chats', JSON.stringify(updatedChats));
+      setThreadId(newConversation.thread_id);
       return newConversation.id;
 
     } catch (error) {
@@ -437,6 +442,10 @@ export default function ConvocorePage() {
       setActiveChatId(null);
       return undefined;
     }
+  };
+
+  const debouncedSaveChats = () => {
+    // ... existing code ...
   };
 
   return (

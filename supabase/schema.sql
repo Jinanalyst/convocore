@@ -95,6 +95,7 @@ GRANT SELECT ON public.users TO anon;
 CREATE TABLE public.conversations (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    thread_id TEXT UNIQUE,
     title TEXT NOT NULL,
     model TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -104,7 +105,8 @@ CREATE TABLE public.conversations (
 -- Messages table
 CREATE TABLE public.messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
+    conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE,
+    thread_id TEXT,
     role message_role NOT NULL,
     content TEXT NOT NULL,
     model TEXT,
@@ -169,7 +171,7 @@ CREATE POLICY "Users can view messages in own conversations" ON public.messages
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.conversations 
-            WHERE conversations.id = messages.conversation_id 
+            WHERE conversations.thread_id = messages.thread_id
             AND conversations.user_id = auth.uid()
         )
     );
@@ -178,7 +180,7 @@ CREATE POLICY "Users can create messages in own conversations" ON public.message
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.conversations 
-            WHERE conversations.id = messages.conversation_id 
+            WHERE conversations.thread_id = messages.thread_id
             AND conversations.user_id = auth.uid()
         )
     );

@@ -13,7 +13,7 @@ export async function GET(
     const { data: messages, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('thread_id', chatId)
+      .eq('conversation_id', chatId)
       .order('created_at', { ascending: true });
 
     if (error) {
