@@ -91,14 +91,14 @@ function ConvocorePageContent() {
   // Auto-select the first chat when chats are loaded and no chat is active
   useEffect(() => {
     if (!activeChatId && chats.length > 0) {
-      console.log('🤖 Auto-selecting first chat:', chats[0].id);
-      handleSelectChat(chats[0].id);
+      console.log('🤖 Auto-selecting first chat:', chats[0].threadId || chats[0].id);
+      handleSelectChat(chats[0].threadId || chats[0].id);
     }
   }, [chats]);
 
   useEffect(() => {
     if (queryChatId && chats.length > 0) {
-      const exists = chats.some(c => c.id === queryChatId);
+      const exists = chats.some(c => c.threadId === queryChatId || c.id === queryChatId);
       if (exists) {
         console.log('🏷 routing to chat from URL param', queryChatId);
         handleSelectChat(queryChatId);
@@ -227,20 +227,18 @@ function ConvocorePageContent() {
     }
   };
 
-  const handleSelectChat = async (chatId: string) => {
-    // Update URL with selected chatId
-    router.replace(`/convocore?chatId=${chatId}`);
-    console.log('🎯 Selecting chat:', chatId);
-    setActiveChatId(chatId);
+  const handleSelectChat = async (threadId: string) => {
+    router.replace(`/convocore?chatId=${threadId}`);
+    console.log('🎯 Selecting chat (threadId):', threadId);
+    setActiveChatId(threadId);
     setIsChatLoading(true);
     setMessages([]);
 
-    const selectedChat = chats.find(c => c.id === chatId);
-    const fetchId = selectedChat?.threadId || chatId;
-    setThreadId(selectedChat?.threadId || null);
+    const selectedChat = chats.find(c => c.threadId === threadId || c.id === threadId);
+    setThreadId(threadId);
 
     try {
-      const response = await fetch(`/api/chat/${fetchId}`);
+      const response = await fetch(`/api/chat/${threadId}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch messages: ${response.statusText}`);
       }
@@ -253,21 +251,21 @@ function ConvocorePageContent() {
 
       setMessages(formattedMessages);
     } catch (error: any) {
-      console.error('🛑 Error fetching messages for chat:', chatId, error);
+      console.error('🛑 Error fetching messages for chat:', threadId, error);
       setMessages([{ id: 'error-message', role: 'assistant', content: error.message || 'Could not load messages.' }]);
     } finally {
       setIsChatLoading(false);
     }
   };
 
-  const handleDeleteChat = async (chatId: string) => {
-    if (activeChatId === chatId) {
+  const handleDeleteChat = async (threadId: string) => {
+    if (activeChatId === threadId) {
       setActiveChatId(null);
       setThreadId(null);
       setMessages([]);
     }
     
-    const updatedChats = chats.filter(chat => chat.id !== chatId);
+    const updatedChats = chats.filter(chat => chat.threadId !== threadId && chat.id !== threadId);
     setChats(updatedChats);
     
     const walletConnected = localStorage.getItem('wallet_connected') === 'true';
@@ -281,12 +279,12 @@ function ConvocorePageContent() {
   const handleSendMessage = async (message: string, model: string, includeWebSearch?: boolean) => {
     console.log("Sending message:", message, "with model:", model, "web search:", includeWebSearch);
 
-    let currentChatId = activeChatId;
+    let currentThreadId = activeChatId;
 
-    if (!currentChatId) {
-      const newChatId = await handleNewChat(message, true);
-      if (newChatId) {
-        currentChatId = newChatId;
+    if (!currentThreadId) {
+      const newThreadId = await handleNewChat(message, true);
+      if (newThreadId) {
+        currentThreadId = newThreadId;
       } else {
         console.error("Failed to create a new chat, message not sent.");
         const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: "Sorry, I couldn't start a new chat. Please try again." };
@@ -310,7 +308,7 @@ function ConvocorePageContent() {
       const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
       setMessages(prev => [...prev, assistantMessage]);
 
-      const chatToUpdate = chats.find(c => c.id === currentChatId);
+      const chatToUpdate = chats.find(c => c.threadId === currentThreadId || c.id === currentThreadId);
       if (chatToUpdate && !chatToUpdate.threadId) {
         try {
           const { createClientComponentClient } = await import('@/lib/supabase');
@@ -318,9 +316,9 @@ function ConvocorePageContent() {
           await supabase
             .from('conversations')
             .update({ thread_id: assistantResponse.threadId })
-            .eq('id', currentChatId);
+            .eq('id', currentThreadId);
           
-          setChats(prev => prev.map(c => c.id === currentChatId ? {...c, threadId: assistantResponse.threadId} : c));
+          setChats(prev => prev.map(c => (c.threadId === currentThreadId || c.id === currentThreadId) ? {...c, threadId: assistantResponse.threadId} : c));
 
         } catch (error) {
           console.error('Failed to update thread_id in Supabase:', error);
@@ -336,7 +334,7 @@ function ConvocorePageContent() {
     
     setChats(prevChats => {
       const updatedChats = prevChats.map(chat => 
-        chat.id === currentChatId 
+        (chat.threadId === currentThreadId || chat.id === currentThreadId) 
           ? { 
               ...chat, 
               lastMessage: reply.substring(0, 50) + (reply.length > 50 ? '...' : ''),
@@ -399,7 +397,7 @@ function ConvocorePageContent() {
 
   const getCurrentChatTitle = () => {
     if (!activeChatId) return undefined;
-    const currentChat = chats.find(chat => chat.id === activeChatId);
+    const currentChat = chats.find(chat => chat.threadId === activeChatId || chat.id === activeChatId);
     return currentChat?.title;
   };
 
@@ -469,9 +467,9 @@ function ConvocorePageContent() {
 
       const updatedChats = [newChat, ...chats];
       setChats(updatedChats);
-      setActiveChatId(newConversation.id);
+      setActiveChatId(newConversation.thread_id);
       setThreadId(newConversation.thread_id);
-      return newConversation.id;
+      return newConversation.thread_id;
 
     } catch (error) {
       console.error('Error creating new chat:', error);
