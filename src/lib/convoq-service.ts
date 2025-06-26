@@ -35,7 +35,15 @@ export class ConvoQService {
   private baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.NEXT_PUBLIC_GROQ_API_KEY || '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';
+    // Do NOT commit secrets. Expect the key to be provided at runtime via:
+    // 1) Constructor param 2) NEXT_PUBLIC_GROQ_API_KEY env (browser)
+    // 3) GROQ_API_KEY env (server)
+    this.apiKey =
+      apiKey ||
+      (typeof window === 'undefined'
+        ? process.env.GROQ_API_KEY
+        : process.env.NEXT_PUBLIC_GROQ_API_KEY) ||
+      '';
   }
 
   async generateResponse(request: ConvoQRequest): Promise<ConvoQResponse> {
