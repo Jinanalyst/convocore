@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Mic, MicOff, Send, Paperclip, Globe, X } from "lucide-react";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { cn } from "@/lib/utils";
+import { getDefaultModelForTier } from "@/lib/ai-service";
 
 interface AIInputDemoProps {
   onSubmit?: (message: string, model: string, includeWebSearch?: boolean) => void;
@@ -21,7 +22,7 @@ export function AIInputDemo({
   className 
 }: AIInputDemoProps) {
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gpt-4o");
+  const [selectedModel, setSelectedModel] = useState(getDefaultModelForTier('free'));
   const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isMobile, setIsMobile] = useState(false);

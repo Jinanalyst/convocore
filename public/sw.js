@@ -5,8 +5,8 @@ const urlsToCache = [
   '/auth/login',
   '/pricing',
   '/demo',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  // '/static/js/bundle.js', // Removed: not used in Next.js
+  // '/static/css/main.css', // Removed: not used in Next.js
   '/favicon.ico',
   '/icon-192.png',
   '/icon-512.png'

@@ -1,13 +1,9 @@
 /**
- * This service handles communication with the OpenAI Assistant Supabase edge function.
+ * This service handles communication with the local OpenAI Assistant API route.
  */
 
-// You can get these from your Supabase project's API settings.
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 /**
- * Invokes the 'openai-assistant' edge function.
+ * Invokes the local OpenAI Assistant API route.
  *
  * @param message The message from the user.
  * @param threadId The ID of the conversation thread (optional).
@@ -16,31 +12,30 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const invokeAssistant = async (message: string, threadId: string | null = null) => {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/openai-assistant`,
+      '/api/assistant/chat',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ message, threadId }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: message }], threadId }),
       }
     );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to call function');
+      throw new Error(errorData.error || 'Failed to call assistant API');
     }
 
     const data = await response.json();
-    console.log('Assistant reply:', data.reply);
+    console.log('Assistant reply:', data.content);
     console.log('Thread ID:', data.threadId);
     
     // You should store the threadId somewhere in your application state
     // so you can continue the same conversation.
-    return data;
+    return { reply: data.content, threadId: data.threadId };
   } catch (error) {
-    console.error('Error invoking function:', error);
+    console.error('Error invoking assistant API:', error);
     throw error;
   }
 };
@@ -65,7 +60,4 @@ export const invokeAssistant = async (message: string, threadId: string | null =
  *        // Handle any errors, e.g., show a notification to the user.
  *      }
  *    };
- *
- * 4. Remember to replace '<your-project-ref>' and '<your-supabase-anon-key>'
- *    in this file with your actual Supabase project reference and anon key.
  */ 

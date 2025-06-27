@@ -111,6 +111,17 @@ export const SUPPORTED_NETWORKS: NetworkConfig[] = [
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     blockExplorer: 'https://solscan.io',
     type: 'solana'
+  },
+  {
+    id: 'convoai',
+    name: 'ConvoAI Token',
+    symbol: 'CONVO',
+    icon: '🤖',
+    recipientAddress: 'DHyRK8gue96rB8QxAg7d16ghDjxvRERJramcGCFNmoon',
+    usdtContractAddress: 'DHyRK8gue96rB8QxAg7d16ghDjxvRERJramcGCFNmoon',
+    rpcUrl: 'https://api.mainnet-beta.solana.com',
+    blockExplorer: 'https://solscan.io',
+    type: 'solana'
   }
 ];
 

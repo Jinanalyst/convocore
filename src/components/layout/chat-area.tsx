@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { Message } from "@/app/convocore/page";
 import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
 interface ChatAreaProps {
   className?: string;
@@ -37,6 +38,23 @@ export function ChatArea({
   const [inputValue, setInputValue] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[ChatArea] Messages updated:', {
+      count: messages.length,
+      messages: messages.map(m => ({ id: m.id, role: m.role, contentLength: m.content.length, contentPreview: m.content.substring(0, 50) }))
+    });
+  }, [messages]);
+
+  useEffect(() => {
+    console.log('[ChatArea] Props updated:', {
+      chatId,
+      isLoading,
+      messagesCount: messages.length,
+      usage
+    });
+  }, [chatId, isLoading, messages.length, usage]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -47,6 +65,7 @@ export function ChatArea({
 
   // Adapter function for AIChatInput's onSendMessage
   const handleChatInputSend = (message: string, options?: { think?: boolean; deepSearch?: boolean }) => {
+    console.log('[ChatArea] Sending message:', { message, options });
     // We'll use a default model and pass the web search option.
     // The parent `convocore/page.tsx` now handles the actual API call.
     onSendMessage(message, 'gpt-4o', options?.deepSearch);
@@ -55,6 +74,7 @@ export function ChatArea({
 
   const handleSend = (message: string) => {
     if (message.trim()) {
+      console.log('[ChatArea] handleSend called:', message);
       onSendMessage(message, "gpt-4o"); // Example model
       setInputValue("");
     }
@@ -80,23 +100,24 @@ export function ChatArea({
               </div>
             </div>
           ) : messages.length === 0 && !inputValue ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-              <ConvocoreLogo className="w-24 h-24 mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">{t('convocore.welcome')}</h2>
-              <p className="mt-2">{t('convocore.start_conversation')}</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-gray-500 py-12">
+              {/* Empty state: no logo, no welcome text */}
             </div>
           ) : (
             <div className="space-y-6">
-              {messages.map((message) => (
-                <EnhancedChatMessage
-                  key={message.id}
-                  id={message.id}
-                  content={message.content}
-                  role={message.role}
-                  timestamp={new Date()} // Placeholder, consider passing real timestamp
-                  onCopy={() => navigator.clipboard.writeText(message.content)}
-                />
-              ))}
+              {messages.map((message) => {
+                console.log('[ChatArea] Rendering message:', { id: message.id, role: message.role, contentLength: message.content.length });
+                return (
+                  <EnhancedChatMessage
+                    key={message.id}
+                    id={message.id}
+                    content={message.content}
+                    role={message.role}
+                    timestamp={new Date()} // Placeholder, consider passing real timestamp
+                    onCopy={() => navigator.clipboard.writeText(message.content)}
+                  />
+                );
+              })}
               <TypingIndicator isVisible={isLoading} />
               <div ref={messagesEndRef} />
             </div>

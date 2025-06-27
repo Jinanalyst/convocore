@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { NotificationContainer } from "@/components/ui/notification-toast";
 import { LanguageProvider } from "@/lib/language-context";
-import { AuthProvider } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -186,13 +185,11 @@ export default function RootLayout({
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white antialiased`}>
         <div className="min-h-full flex flex-col">
           <ErrorBoundary>
-            <AuthProvider>
-              <LanguageProvider>
-                {children}
-                <NotificationContainer />
-                <Analytics />
-              </LanguageProvider>
-            </AuthProvider>
+            <LanguageProvider>
+              {children}
+              <NotificationContainer />
+              <Analytics />
+            </LanguageProvider>
           </ErrorBoundary>
         </div>
       </body>

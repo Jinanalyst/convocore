@@ -9,59 +9,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const models = [
-  {
-    id: "gpt-4o",
-    name: "Convocore Omni",
-    description: "Flagship model, multimodal, high performance, fast",
-    provider: "Convocore",
-  },
-  {
-    id: "gpt-4-turbo",
-    name: "Convocore Turbo",
-    description: "High-speed response + quality balance, code/text optimization",
-    provider: "Convocore",
-  },
-  {
-    id: "claude-3-opus-20240229",
-    name: "Convocore Alpha",
-    description: "Most precise reasoning ability, long-form writing, advanced analysis",
-    provider: "Convocore",
-  },
-  {
-    id: "claude-3-sonnet-20240229",
-    name: "Convocore Nova",
-    description: "Balanced performance, fast response, suitable for practical daily tasks",
-    provider: "Convocore",
-  },
-  {
-    id: "deepseek/deepseek-r1:free",
-    name: "ConvoMini",
-    description: "Compact and efficient model for quick responses and daily conversations",
-    provider: "Convocore",
-  },
-  {
-    id: "convoart",
-    name: "ConvoArt",
-    description: "Advanced text-to-image generation powered by DeepAI technology",
-    provider: "Convocore",
-  },
-  {
-    id: "convoq",
-    name: "ConvoQ",
-    description: "Ultra-fast responses powered by Groq's lightning-fast inference",
-    provider: "Convocore",
-  },
-];
+import { getAvailableModelsForTier } from "@/lib/ai-service";
 
 interface ModelSelectorProps {
   selectedModel: string;
   onModelChange: (modelId: string) => void;
+  plan?: 'free' | 'pro' | 'premium';
 }
 
-export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
-  const currentModel = models.find(model => model.id === selectedModel) || models[0];
+export function ModelSelector({ selectedModel, onModelChange, plan = 'free' }: ModelSelectorProps) {
+  const availableModels = getAvailableModelsForTier(plan);
+  const currentModel = availableModels.find(model => model.id === selectedModel) || availableModels[0];
 
   return (
     <DropdownMenu>
@@ -80,7 +38,7 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        {models.map((model) => (
+        {availableModels.map((model) => (
           <DropdownMenuItem
             key={model.id}
             onClick={() => onModelChange(model.id)}

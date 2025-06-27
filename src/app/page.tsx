@@ -235,7 +235,7 @@ export default function Home() {
                 Learn More
               </button>
               <button
-                onClick={() => router.push('/auth/signup')}
+                onClick={() => router.push('/auth/login')}
                 className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-8 py-3 text-sm font-medium text-white dark:text-black shadow-lg transition hover:scale-105 hover:shadow-xl"
               >
                 Get Started

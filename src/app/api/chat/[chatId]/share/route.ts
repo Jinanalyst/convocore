@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClientComponentClient } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
@@ -16,38 +15,6 @@ export async function POST(
     // Create share URL using custom domain
     const baseUrl = 'https://convocore.site';
     const shareUrl = `${baseUrl}/shared/${shareId}`;
-
-    try {
-      // Try to save to database if Supabase is configured
-      const supabase = createClientComponentClient();
-      
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Save share record to database
-        const { error } = await supabase
-          .from('shared_chats')
-          .insert({
-            id: shareId,
-            chat_id: chatId,
-            user_id: user.id,
-            is_public: isPublic,
-            allow_comments: allowComments,
-            expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-            password_hash: password ? await hashPassword(password) : null,
-            created_at: new Date().toISOString()
-          });
-
-        if (error) {
-          console.error('Error saving share record:', error);
-          // Continue with fallback approach
-        }
-      }
-    } catch (dbError) {
-      console.error('Database error, using fallback:', dbError);
-      // Continue with fallback approach
-    }
 
     // For now, we'll store share info in a simple way
     // In production, you'd want to use a proper database
@@ -74,16 +41,6 @@ export async function POST(
   }
 }
 
-// Simple password hashing (in production, use bcrypt or similar)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ chatId: string }> }
@@ -91,33 +48,8 @@ export async function GET(
   try {
     const { chatId } = await params;
     
-    // Get existing share links for this chat
-    try {
-      const supabase = createClientComponentClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: shares, error } = await supabase
-          .from('shared_chats')
-          .select('id, is_public, allow_comments, expires_at, created_at')
-          .eq('chat_id', chatId)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (!error && shares) {
-          const baseUrl = 'https://convocore.site';
-          const shareLinks = shares.map(share => ({
-            ...share,
-            shareUrl: `${baseUrl}/shared/${share.id}`
-          }));
-          
-          return NextResponse.json({ shares: shareLinks });
-        }
-      }
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-    }
-
+    // For now, return empty shares array since we're not using a database
+    // In production, you'd fetch from your database here
     return NextResponse.json({ shares: [] });
     
   } catch (error) {

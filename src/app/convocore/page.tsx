@@ -9,7 +9,6 @@ import { ShareModal } from "@/components/modals/share-modal";
 import { PWAInstall } from "@/components/ui/pwa-install";
 import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
 import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 import { usageService } from '@/lib/usage-service';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -30,24 +29,24 @@ interface Chat {
 
 function ConvocorePageContent() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const queryChatId = searchParams.get('chatId');
+  
   const [messages, setMessages] = useState<Message[]>([]);
+  const [demoChatMessages, setDemoChatMessages] = useState<Record<string, Message[]>>({});
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [chats, setChats] = useState<Chat[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [isChatLoading, setIsChatLoading] = useState(false);
   const [usage, setUsage] = useState({
     used: 0,
     limit: 3,
     plan: 'free' as 'free' | 'pro' | 'premium',
   });
-
-  const searchParams = useSearchParams();
-  const queryChatId = searchParams.get('chatId');
 
   // Persist chats locally whenever they change
   useEffect(() => {
@@ -86,7 +85,7 @@ function ConvocorePageContent() {
       window.removeEventListener('resize', checkMobile);
       window.removeEventListener('usageUpdated', loadUsage);
     };
-  }, [user]); // Rerun when user changes
+  }, []);
 
   // Auto-select the first chat when chats are loaded and no chat is active
   useEffect(() => {
@@ -107,7 +106,7 @@ function ConvocorePageContent() {
   }, [chats, queryChatId]);
 
   const loadUsage = () => {
-    const userId = user?.id ?? 'local';
+    const userId = localStorage.getItem('wallet_connected') === 'true' ? localStorage.getItem('wallet_address') : 'local';
     try {
       const userUsage = usageService.getUserUsage(userId);
       const subscription = usageService.getUserSubscription(userId);
@@ -123,42 +122,38 @@ function ConvocorePageContent() {
 
   const loadChats = async () => {
     try {
-      console.log('🔄 Loading chats...');
-      
       const walletConnected = localStorage.getItem('wallet_connected') === 'true';
       
       if (walletConnected) {
-        try {
-          const res = await fetch('/api/wallet/conversations');
-          if (res.ok) {
-            const json = await res.json();
-            const fetchedChats: Chat[] = json.conversations.map((conv: any) => ({
-              id: conv.id,
-              title: conv.title,
-              lastMessage: 'Start a new conversation...',
-              timestamp: new Date(conv.updated_at),
-              threadId: conv.thread_id,
-            }));
-            setChats(fetchedChats);
-            console.log('📥 Loaded', fetchedChats.length, 'wallet conversations from backend');
-            localStorage.setItem('wallet_chats', JSON.stringify(fetchedChats));
-            return;
-          }
-        } catch(err) {
+        // Load chats from Solana for wallet users
+        const response = await fetch('/api/wallet/conversations');
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedChats: Chat[] = data.conversations.map((conv: any) => ({
+            id: conv.id,
+            title: conv.title,
+            lastMessage: conv.lastMessage,
+            timestamp: new Date(conv.updated_at),
+            threadId: conv.thread_id,
+          }));
+          
+          setChats(fetchedChats);
+          localStorage.setItem('wallet_chats', JSON.stringify(fetchedChats));
+          console.log('📥 Loaded', fetchedChats.length, 'Solana chats');
+          return;
+        } else {
           console.warn('Failed to fetch wallet conversations, falling back to localStorage');
         }
-
-        const savedChats = localStorage.getItem('wallet_chats');
-        if (savedChats) {
-          setChats(JSON.parse(savedChats));
-        }
-        return;
       }
 
-      const localChats = localStorage.getItem('local_chats');
-      if (localChats) {
-        const parsedLocalChats = JSON.parse(localChats);
-        const realLocalChats = parsedLocalChats.filter((chat: Chat) => 
+      // Load from localStorage for unauthenticated users or as fallback
+      const savedChats = walletConnected ? 
+        localStorage.getItem('wallet_chats') : 
+        localStorage.getItem('local_chats');
+      
+      if (savedChats) {
+        const parsedChats = JSON.parse(savedChats);
+        const realLocalChats = parsedChats.filter((chat: Chat) => 
           !chat.id.startsWith('demo_') && chat.lastMessage !== 'Hello! How can I help you today?'
         );
         
@@ -169,53 +164,13 @@ function ConvocorePageContent() {
         }
       }
 
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          title,
-          updated_at,
-          thread_id,
-          messages (
-            content,
-            created_at
-          )
-        `)
-        .order('updated_at', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.warn('Could not load Supabase chats (expected if not configured):', error);
-        const demoChats: Chat[] = [
-          { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
-          { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-        ];
-        setChats(demoChats);
-        console.log('📝 Loaded demo chats (Supabase unavailable)');
-      } else {
-        const formattedChats: Chat[] = conversations?.map(conv => ({
-          id: conv.id,
-          title: conv.title,
-          lastMessage: conv.messages?.[conv.messages.length - 1]?.content || 'No messages yet',
-          timestamp: new Date(conv.updated_at),
-          threadId: conv.thread_id,
-        })) || [];
-
-        if (formattedChats.length === 0) {
-          const demoChats: Chat[] = [
-            { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
-            { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-          ];
-          setChats(demoChats);
-          console.log('📝 No Supabase conversations found, showing demo chats');
-        } else {
-          setChats(formattedChats);
-          console.log('📥 Loaded', formattedChats.length, 'Supabase conversations');
-        }
-      }
+      // Show demo chats for new users
+      const demoChats: Chat[] = [
+        { id: `demo_${Date.now()}_1`, title: "AI Assistant", lastMessage: "Hello! How can I help you today?", timestamp: new Date(Date.now() - 1000 * 60 * 30) },
+        { id: `demo_${Date.now()}_2`, title: "Code Generation", lastMessage: "I can help you write and debug code...", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
+      ];
+      setChats(demoChats);
+      console.log('📝 Loaded demo chats for new user');
     } catch (error) {
       console.error('Error loading chats:', error);
       const demoChats: Chat[] = [
@@ -228,14 +183,35 @@ function ConvocorePageContent() {
   };
 
   const handleSelectChat = async (threadId: string) => {
+    // Don't re-select the same chat
+    if (activeChatId === threadId) {
+      console.log('🎯 Chat already selected:', threadId);
+      return;
+    }
+
     router.replace(`/convocore?chatId=${threadId}`);
     console.log('🎯 Selecting chat (threadId):', threadId);
     setActiveChatId(threadId);
     setIsChatLoading(true);
-    setMessages([]);
 
     const selectedChat = chats.find(c => c.threadId === threadId || c.id === threadId);
     setThreadId(threadId);
+
+    // Handle demo and local chats - they don't have server-side messages
+    if (threadId.startsWith('demo_') || threadId.startsWith('local_chat_')) {
+      console.log('📝 Demo/local chat detected, no server messages to fetch');
+      
+      // Restore messages for this demo chat if they exist
+      const savedMessages = demoChatMessages[threadId] || [];
+      setMessages(savedMessages);
+      console.log('📝 Restored', savedMessages.length, 'messages for demo chat');
+      
+      setIsChatLoading(false);
+      return;
+    }
+
+    // Clear messages for server-side chats
+    setMessages([]);
 
     try {
       const response = await fetch(`/api/chat/${threadId}`);
@@ -294,42 +270,64 @@ function ConvocorePageContent() {
     }
 
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
-    setMessages(prev => [...prev, userMessage]);
-
-    usageService.incrementUsage(user?.id ?? 'local');
+    console.log('[handleSendMessage] Adding user message:', userMessage);
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage];
+      console.log('[handleSendMessage] Updated messages after user:', newMessages);
+      
+      // Save messages for demo chats
+      if (currentThreadId && (currentThreadId.startsWith('demo_') || currentThreadId.startsWith('local_chat_'))) {
+        setDemoChatMessages(prev => ({
+          ...prev,
+          [currentThreadId]: newMessages
+        }));
+      }
+      
+      return newMessages;
+    });
 
     let reply = "Assistant is thinking...";
     try {
-      const assistantResponse = await invokeAssistant(message, threadId);
+      const assistantResponse = await invokeAssistant(message, threadId || '');
       reply = assistantResponse.reply;
       console.log("Assistant says:", reply);
-      setThreadId(assistantResponse.threadId);
+      if (assistantResponse.threadId) {
+        setThreadId(assistantResponse.threadId);
+      }
       
       const assistantMessage: Message = { id: `asst-${Date.now()}`, role: 'assistant', content: reply };
-      setMessages(prev => [...prev, assistantMessage]);
+      console.log('[handleSendMessage] Adding assistant message:', assistantMessage);
+      setMessages(prev => {
+        const newMessages = [...prev, assistantMessage];
+        console.log('[handleSendMessage] Updated messages after assistant:', newMessages);
+        
+        // Save messages for demo chats
+        if (currentThreadId && (currentThreadId.startsWith('demo_') || currentThreadId.startsWith('local_chat_'))) {
+          setDemoChatMessages(prev => ({
+            ...prev,
+            [currentThreadId]: newMessages
+          }));
+        }
+        
+        return newMessages;
+      });
 
       const chatToUpdate = chats.find(c => c.threadId === currentThreadId || c.id === currentThreadId);
-      if (chatToUpdate && !chatToUpdate.threadId) {
-        try {
-          const { createClientComponentClient } = await import('@/lib/supabase');
-          const supabase = createClientComponentClient();
-          await supabase
-            .from('conversations')
-            .update({ thread_id: assistantResponse.threadId })
-            .eq('id', currentThreadId);
-          
-          setChats(prev => prev.map(c => (c.threadId === currentThreadId || c.id === currentThreadId) ? {...c, threadId: assistantResponse.threadId} : c));
-
-        } catch (error) {
-          console.error('Failed to update thread_id in Supabase:', error);
-        }
+      if (chatToUpdate && !chatToUpdate.threadId && assistantResponse.threadId) {
+        // Update thread ID in local state for unauthenticated users
+        setChats(prev => prev.map(c => (c.threadId === currentThreadId || c.id === currentThreadId) ? {...c, threadId: assistantResponse.threadId} : c));
       }
 
     } catch (error) {
       console.error("Error calling assistant:", error);
       reply = "Sorry, I couldn't respond.";
       const errorMessage: Message = { id: `err-${Date.now()}`, role: 'assistant', content: reply };
-      setMessages(prev => [...prev, errorMessage]);
+      console.log('[handleSendMessage] Adding error message:', errorMessage);
+      setMessages(prev => {
+        const newMessages = [...prev, errorMessage];
+        console.log('[handleSendMessage] Updated messages after error:', newMessages);
+        return newMessages;
+      });
     }
     
     setChats(prevChats => {
@@ -383,15 +381,10 @@ function ConvocorePageContent() {
       document.cookie.split(";").forEach(c => { document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); });
       window.location.href = '/auth/login';
     } else {
-      try {
-        const { createClientComponentClient } = await import('@/lib/supabase');
-        const supabase = createClientComponentClient();
-        await supabase.auth.signOut();
-        window.location.href = '/auth/login';
-      } catch (error) {
-        console.error('Error logging out:', error);
-        window.location.href = '/auth/login';
-      }
+      // Clear local storage for unauthenticated users
+      localStorage.removeItem('local_chats');
+      localStorage.removeItem('user_usage');
+      window.location.href = '/auth/login';
     }
   };
 
@@ -413,69 +406,59 @@ function ConvocorePageContent() {
     const newChatTitle = initialMessage ? `Chat about "${initialMessage.substring(0, 20)}..."` : "New Chat";
     const newThreadId = `thread_${Date.now()}`;
 
-    try {
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
+    // Check if wallet is connected for Solana storage
+    const walletConnected = localStorage.getItem('wallet_connected') === 'true';
 
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      if (!supabaseUser) {
-        console.error('User not authenticated, creating local chat');
-        const tempId = `local_chat_${Date.now()}`;
-        const newChat: Chat = { 
-            id: tempId, 
-            title: newChatTitle, 
-            lastMessage: initialMessage || 'Start...', 
-            timestamp: new Date(),
-            threadId: newThreadId,
-        };
-        const updatedChats = [newChat, ...chats];
-        setChats(updatedChats);
-        setActiveChatId(tempId);
-        setThreadId(newThreadId);
-        // No need to save to local_chats here, it will be handled by the auto-save mechanism
-        return tempId;
-      }
-
-      let newConversation;
+    if (walletConnected) {
       try {
-        const { data } = await supabase
-          .from('conversations')
-          .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o', thread_id: newThreadId })
-          .select()
-          .single();
-        newConversation = data;
-      } catch (e: any) {
-        console.warn('Insert with thread_id failed, retrying without column', e);
+        // Create chat on Solana
+        const response = await fetch('/api/wallet/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: newChatTitle,
+            lastMessage: initialMessage || 'Start a new conversation...',
+            threadId: newThreadId,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newChat: Chat = {
+            id: data.conversation.id,
+            title: data.conversation.title,
+            lastMessage: data.conversation.lastMessage,
+            timestamp: new Date(data.conversation.updated_at),
+            threadId: data.conversation.thread_id,
+          };
+
+          const updatedChats = [newChat, ...chats];
+          setChats(updatedChats);
+          setActiveChatId(newChat.threadId || newChat.id);
+          setThreadId(newChat.threadId || newChat.id);
+
+          return newChat.threadId || newChat.id;
+        }
+      } catch (error) {
+        console.error('Failed to create Solana chat:', error);
+        // Fall back to local storage
       }
-      if (!newConversation) {
-        const { data, error: fallbackErr } = await supabase
-          .from('conversations')
-          .insert({ user_id: supabaseUser.id, title: newChatTitle, model: 'gpt-4o' })
-          .select()
-          .single();
-        if (fallbackErr) { console.error('Fallback insert error', fallbackErr); return undefined; }
-        newConversation = data;
-      }
-
-      const newChat: Chat = {
-        id: newConversation.id,
-        title: newConversation.title,
-        lastMessage: initialMessage || 'Start...',
-        timestamp: new Date(newConversation.created_at),
-        threadId: newConversation.thread_id,
-      };
-
-      const updatedChats = [newChat, ...chats];
-      setChats(updatedChats);
-      setActiveChatId(newConversation.thread_id);
-      setThreadId(newConversation.thread_id);
-      return newConversation.thread_id;
-
-    } catch (error) {
-      console.error('Error creating new chat:', error);
-      setActiveChatId(null);
-      return undefined;
     }
+
+    // Create local chat for unauthenticated users
+    const tempId = `local_chat_${Date.now()}`;
+    const newChat: Chat = { 
+        id: tempId, 
+        title: newChatTitle, 
+        lastMessage: initialMessage || 'Start...', 
+        timestamp: new Date(),
+        threadId: newThreadId,
+    };
+    const updatedChats = [newChat, ...chats];
+    setChats(updatedChats);
+    setActiveChatId(tempId);
+    setThreadId(newThreadId);
+    return tempId;
   };
 
   const debouncedSaveChats = () => {
@@ -548,7 +531,6 @@ function ConvocorePageContent() {
       />
 
       <PWAInstall />
-      <VoiceAssistant onSend={(message) => handleSendMessage(message, 'default-model')} />
     </div>
   );
 }

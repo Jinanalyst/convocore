@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BillingModal } from "@/components/modals/billing-modal";
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
 const pricingPlans = [
   {
@@ -75,10 +76,6 @@ interface NetworkInfo {
 }
 
 const supportedNetworks: NetworkInfo[] = [
-  { name: "TRON", icon: "🔗", symbol: "TRX" },
-  { name: "Ethereum", icon: "⟠", symbol: "ETH" },
-  { name: "BNB Chain", icon: "🟡", symbol: "BNB" },
-  { name: "Polygon", icon: "🟣", symbol: "MATIC" },
   { name: "Solana", icon: "🌅", symbol: "SOL" }
 ];
 
@@ -220,66 +217,6 @@ export function PricingSection() {
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Payment Methods */}
-          <div className="mt-12 sm:mt-16 text-center">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-6">
-              Secure Multi-Network Payments
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
-              {supportedNetworks.map((network) => (
-                <div
-                  key={network.name}
-                  className={`relative p-4 border rounded-lg transition-all hover:shadow-md ${
-                    network.comingSoon 
-                      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20' 
-                      : 'border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800'
-                  }`}
-                >
-                  {network.comingSoon && (
-                    <div className="absolute -top-2 -right-2">
-                      <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-                        Soon
-                      </span>
-                    </div>
-                  )}
-                  <div className="text-center">
-                    <div className="text-3xl mb-2">{network.icon}</div>
-                    <div className="font-medium text-gray-900 dark:text-white text-sm">
-                      {network.name}
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {network.symbol}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Google Users Info */}
-          <div className="mt-12 sm:mt-16 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="flex justify-center items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-                  Google Users Welcome!
-                </h3>
-              </div>
-              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
-                Already signed in with Google? Perfect! You can easily subscribe to any plan using PayPal or USDT payments. 
-                Choose PayPal for traditional payment methods, or connect a crypto wallet for USDT payments. Your plan will be 
-                linked to your Google account for seamless access across all devices.
-              </p>
-            </div>
           </div>
 
           {/* Bottom Notice */}

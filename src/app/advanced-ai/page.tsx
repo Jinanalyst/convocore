@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
 import AdvancedChatInterface from '@/components/ui/advanced-chat-interface';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react';
 
 export default function AdvancedAIPage() {
-  const { user } = useAuth();
   const [agents, setAgents] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>('general-assistant');
   const [isLoading, setIsLoading] = useState(true);
@@ -111,12 +109,6 @@ export default function AdvancedAIPage() {
                   <Badge variant="default" className="bg-green-500">
                     {systemStats.status}
                   </Badge>
-                </div>
-              )}
-              
-              {user && (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Welcome, {user.email}
                 </div>
               )}
             </div>

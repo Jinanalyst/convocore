@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Wallet, ExternalLink, Copy, Check, ChevronDown, ChevronUp, Smartphone, Monitor, AlertCircle, X, CheckCircle } from "lucide-react";
 import { tronPaymentService, formatTronAddress, CONVO_AI_RECIPIENT_ADDRESS } from "@/lib/blockchain";
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
 interface WalletOption {
   id: string;
@@ -155,6 +156,39 @@ export function WalletConnector({
           return response.publicKey.toString();
         } catch (error) {
           console.error('Phantom connection failed:', error);
+          return null;
+        }
+      },
+      supportsMobile: true,
+      deepLink: 'phantom://browse/'
+    },
+    {
+      id: 'convoai',
+      name: 'ConvoAI Token',
+      icon: '🤖',
+      description: 'ConvoAI Token payment integration',
+      type: 'solana',
+      installUrl: 'https://phantom.app/',
+      mobileInstallUrl: 'https://phantom.app/download',
+      isInstalled: () => {
+        if (typeof window === 'undefined') return false;
+        return !!(window as any).solana?.isPhantom || 
+               !!(window as any).phantom?.solana ||
+               !!(window as any).phantom;
+      },
+      connect: async () => {
+        if (typeof window === 'undefined') return null;
+        
+        const solana = (window as any).solana || (window as any).phantom?.solana;
+        if (!solana?.isPhantom) return null;
+        
+        try {
+          console.log('Attempting ConvoAI Token connection...');
+          const response = await solana.connect();
+          console.log('ConvoAI Token connection response:', response);
+          return response.publicKey.toString();
+        } catch (error) {
+          console.error('ConvoAI Token connection failed:', error);
           return null;
         }
       },
@@ -741,7 +775,11 @@ export function WalletConnector({
                           onClick={() => handleWalletSelect(wallet)}
                         >
                           <div className="flex-shrink-0">
-                            <span className="text-xl">{wallet.icon}</span>
+                            {wallet.id === 'convoai' ? (
+                              <ConvoAILogo className="w-8 h-8" />
+                            ) : (
+                              <span className="text-xl">{wallet.icon}</span>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
@@ -779,7 +817,11 @@ export function WalletConnector({
                           onClick={() => installWallet(wallet)}
                         >
                           <div className="flex-shrink-0">
-                            <span className="text-xl opacity-60">{wallet.icon}</span>
+                            {wallet.id === 'convoai' ? (
+                              <ConvoAILogo className="w-8 h-8 opacity-60" />
+                            ) : (
+                              <span className="text-xl opacity-60">{wallet.icon}</span>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">

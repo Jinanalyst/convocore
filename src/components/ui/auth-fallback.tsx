@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Chrome, Wallet, ArrowRight } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
 
 interface AuthFallbackProps {
   error: string;

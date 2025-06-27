@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { AlertCircle, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usageService, type UserUsage } from '@/lib/usage-service';
-import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
 interface ChatLimitIndicatorProps {

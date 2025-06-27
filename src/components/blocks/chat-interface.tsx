@@ -35,9 +35,7 @@ import { ShareModal } from '@/components/modals/share-modal';
 import { ModelSelector } from '@/components/ui/model-selector';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getRelativeTime } from '@/lib/date-utils';
-
-// Types
-import { chatStorageService, type ChatMessage, type ChatSession } from "@/lib/chat-storage-service";
+import { getDefaultModelForTier } from "@/lib/ai-service";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -65,13 +63,11 @@ const generateTitle = (firstMessage: string): string => {
   return title + '...';
 };
 
-
-
 // Sidebar Component
 const ChatSidebar: React.FC<{
-  sessions: ChatSession[];
-  currentSession: ChatSession | null;
-  onSessionSelect: (session: ChatSession) => void;
+  sessions: any[];
+  currentSession: any | null;
+  onSessionSelect: (session: any) => void;
   onNewChat: () => void;
   onDeleteSession: (sessionId: string) => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
@@ -105,7 +101,7 @@ const ChatSidebar: React.FC<{
     }
   };
 
-  const startEditing = (session: ChatSession) => {
+  const startEditing = (session: any) => {
     setEditingId(session.id);
     setEditTitle(session.title);
   };
@@ -387,7 +383,7 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
 
 // Message Component
 const MessageComponent: React.FC<{
-  message: ChatMessage;
+  message: any;
   onCopy: (content: string) => void;
   onRegenerate?: () => void;
   isLast: boolean;
@@ -473,11 +469,11 @@ const MessageComponent: React.FC<{
 
 // Main Chat Interface Component
 export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) {
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [currentSession, setCurrentSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gpt-4o');
+  const [selectedModel, setSelectedModel] = useState(getDefaultModelForTier('free'));
   const [includeWebSearch, setIncludeWebSearch] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -489,38 +485,6 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   const isMobile = useIsMobile();
   const vh = useViewportHeight();
   const isKeyboardOpen = useKeyboardOpen();
-
-  // Load sessions using the chat storage service
-  useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        const loadedSessions = await chatStorageService.loadChatSessions();
-        setSessions(loadedSessions);
-      } catch (error) {
-        console.error('Failed to load sessions:', error);
-      }
-    };
-
-    loadSessions();
-  }, []);
-
-  // Save sessions using the chat storage service whenever sessions change
-  useEffect(() => {
-    const saveSessions = async () => {
-      if (sessions.length > 0) {
-        // Save each session to the storage service
-        for (const session of sessions) {
-          try {
-            await chatStorageService.saveChatSession(session);
-          } catch (error) {
-            console.error('Failed to save session:', session.id, error);
-          }
-        }
-      }
-    };
-
-    saveSessions();
-  }, [sessions]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -544,7 +508,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   });
 
   const createNewSession = useCallback(() => {
-    const newSession: ChatSession = {
+    const newSession: any = {
       id: generateId(),
       title: 'New Chat',
       messages: [],
@@ -564,18 +528,14 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
     }, 100);
   }, [selectedModel]);
 
-  const selectSession = useCallback((session: ChatSession) => {
+  const selectSession = useCallback((session: any) => {
     setCurrentSession(session);
     setSidebarOpen(false);
   }, []);
 
   const deleteSession = useCallback(async (sessionId: string) => {
     try {
-      await chatStorageService.deleteChatSession(sessionId);
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
-      if (currentSession?.id === sessionId) {
-        setCurrentSession(null);
-      }
+      // Implement delete session logic
     } catch (error) {
       console.error('Failed to delete session:', error);
     }
@@ -583,16 +543,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
 
   const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
     try {
-      await chatStorageService.updateSessionTitle(sessionId, newTitle);
-      setSessions(prev => prev.map(session => 
-        session.id === sessionId 
-          ? { ...session, title: newTitle, updatedAt: new Date() }
-          : session
-      ));
-      
-      if (currentSession?.id === sessionId) {
-        setCurrentSession(prev => prev ? { ...prev, title: newTitle, updatedAt: new Date() } : null);
-      }
+      // Implement rename session logic
     } catch (error) {
       console.error('Failed to rename session:', error);
     }
@@ -618,7 +569,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
       setCurrentSession(session);
     }
 
-    const userMessage: ChatMessage = {
+    const userMessage: any = {
       id: generateId(),
       role: 'user',
       content: content.trim(),
@@ -662,7 +613,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
 
       const data = await response.json();
       
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: any = {
         id: generateId(),
         role: 'assistant',
         content: data.content || data.data?.content || 'Sorry, I could not generate a response.',
@@ -688,7 +639,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
     } catch (error) {
       console.error('Failed to send message:', error);
       
-      const errorMessage: ChatMessage = {
+      const errorMessage: any = {
         id: generateId(),
         role: 'assistant',
         content: 'Sorry, I encountered an error while processing your request. Please try again.',

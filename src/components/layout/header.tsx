@@ -37,7 +37,6 @@ import { ProfileModal } from "@/components/modals/profile-modal";
 import { NotificationsModal } from "@/components/modals/notifications-modal";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
-import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import Link from "next/link";
 
@@ -71,7 +70,6 @@ export function Header({
   currentChatId
 }: HeaderProps) {
   const isMobile = useIsMobile();
-  const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -135,7 +133,7 @@ export function Header({
   };
 
   const handleLogout = async () => {
-    await signOut();
+    // Placeholder for logout logic
     onLogout?.();
   };
 
@@ -169,23 +167,9 @@ export function Header({
           {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
 
-        {/* Center: Chat Title + Upgrade Button */}
-        <div className="flex-1 flex items-center justify-center gap-3 px-2">
-          {currentChatTitle && (
-            <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm max-w-[120px]">
-              {currentChatTitle}
-            </h1>
-          )}
-          
-          {/* Compact Upgrade Button for Mobile */}
-          <Button
-            asChild
-            className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 font-medium rounded-full text-xs px-3 py-1.5 h-7 shrink-0"
-          >
-            <Link href="/pricing">
-              Upgrade
-            </Link>
-          </Button>
+        {/* Center: Logo */}
+        <div className="flex-1 flex items-center justify-center gap-2 px-2">
+          {/* Logo */}
         </div>
 
         {/* Right: Action Buttons */}
@@ -265,14 +249,9 @@ export function Header({
 
       {/* Desktop Layout */}
       <div className="hidden md:flex items-center justify-between w-full">
-        {/* Left Section - Chat Title only (no sidebar controls) */}
+        {/* Left Section - Logo */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Chat Title */}
-          {currentChatTitle && (
-            <h1 className="text-lg lg:text-xl font-semibold text-gray-900 dark:text-white truncate max-w-md lg:max-w-lg xl:max-w-xl">
-              {currentChatTitle}
-            </h1>
-          )}
+          {/* Logo */}
         </div>
 
         {/* Center - Upgrade Button */}

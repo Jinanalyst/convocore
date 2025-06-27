@@ -29,7 +29,7 @@ function loadUserSettings(): UserSettings {
       const parsed = JSON.parse(savedSettings);
       return {
         aiModel: {
-          defaultModel: parsed.aiModel?.defaultModel || 'gpt-4o',
+          defaultModel: parsed.aiModel?.defaultModel || 'convoq',
           temperature: parsed.aiModel?.temperature ?? 0.7,
           maxTokens: parsed.aiModel?.maxTokens || 2048,
           streamResponse: parsed.aiModel?.streamResponse ?? true
@@ -43,7 +43,7 @@ function loadUserSettings(): UserSettings {
   // Return defaults if loading fails
   return {
     aiModel: {
-      defaultModel: 'gpt-4o',
+      defaultModel: 'convoq',
       temperature: 0.7,
       maxTokens: 2048,
       streamResponse: true
@@ -59,6 +59,7 @@ export const AI_MODELS = {
     description: 'Flagship model, multimodal, high performance, fast',
     maxTokens: 4096,
     contextLength: 128000,
+    tier: 'pro' as const, // Paid model
   },
   'gpt-4-turbo': {
     provider: 'openai' as const,
@@ -66,6 +67,7 @@ export const AI_MODELS = {
     description: 'High-speed response + quality balance, code/text optimization',
     maxTokens: 4096,
     contextLength: 128000,
+    tier: 'pro' as const, // Paid model
   },
   'claude-3-opus-20240229': {
     provider: 'anthropic' as const,
@@ -73,6 +75,7 @@ export const AI_MODELS = {
     description: 'Most precise reasoning ability, long-form writing, advanced analysis',
     maxTokens: 4096,
     contextLength: 200000,
+    tier: 'premium' as const, // Premium model
   },
   'claude-3-sonnet-20240229': {
     provider: 'anthropic' as const,
@@ -80,6 +83,7 @@ export const AI_MODELS = {
     description: 'Balanced performance, fast response, suitable for practical daily tasks',
     maxTokens: 4096,
     contextLength: 200000,
+    tier: 'pro' as const, // Paid model
   },
   'deepseek/deepseek-r1:free': {
     provider: 'openrouter' as const,
@@ -87,6 +91,7 @@ export const AI_MODELS = {
     description: 'Compact and efficient model for quick responses and daily conversations',
     maxTokens: 4096,
     contextLength: 32000,
+    tier: 'free' as const, // Free model
   },
   'convoq': {
     provider: 'groq' as const,
@@ -94,6 +99,7 @@ export const AI_MODELS = {
     description: 'Ultra-fast responses powered by Groq\'s lightning-fast inference',
     maxTokens: 8192,
     contextLength: 8192,
+    tier: 'free' as const, // Free model
   },
 } as const;
 
@@ -407,6 +413,40 @@ export async function getModelConfig(modelId: string): Promise<(typeof AI_MODELS
   return AI_MODELS[modelId as keyof typeof AI_MODELS] || null;
 }
 
+// Get available models based on user tier
+export function getAvailableModelsForTier(tier: 'free' | 'pro' | 'premium' = 'free'): Array<{ id: string; name: string; description: string; provider: string; tier: string }> {
+  const models = Object.entries(AI_MODELS).map(([id, config]) => ({
+    id,
+    name: config.name,
+    description: config.description,
+    provider: config.provider,
+    tier: config.tier,
+  }));
+
+  if (tier === 'free') {
+    return models.filter(model => model.tier === 'free');
+  } else if (tier === 'pro') {
+    return models.filter(model => model.tier === 'free' || model.tier === 'pro');
+  } else if (tier === 'premium') {
+    return models; // Premium users get access to all models
+  }
+
+  return models.filter(model => model.tier === 'free'); // Default to free models
+}
+
+// Get default model for tier
+export function getDefaultModelForTier(tier: 'free' | 'pro' | 'premium' = 'free'): string {
+  if (tier === 'free') {
+    return 'convoq'; // Free users get ConvoQ by default
+  } else if (tier === 'pro') {
+    return 'gpt-4o'; // Pro users get Convocore Omni by default
+  } else if (tier === 'premium') {
+    return 'claude-3-opus-20240229'; // Premium users get Convocore Alpha by default
+  }
+  
+  return 'convoq'; // Default fallback
+}
+
 // Utility function to validate API keys
 export async function validateAPIKeys(): Promise<{ openai: boolean; anthropic: boolean; openrouter: boolean; groq: boolean }> {
   return {
@@ -499,7 +539,7 @@ export const aiService = {
 
   async validateConfiguration() {
     const validation = await validateAPIKeys();
-    console.log('🔍 API Key Validation:', validation);
+    console.log('�� API Key Validation:', validation);
     return validation;
   }
 }; 

@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { Button } from '@/components/ui/button';
-import { usageService, type UserUsage, type SubscriptionInfo } from '@/lib/usage-service';
-import { useAuth } from '@/lib/auth-context';
+import { usageService, type UserUsage, type Subscription } from '@/lib/usage-service';
 import { 
   User, 
   Mail, 
@@ -32,18 +31,17 @@ interface UserProfile {
   full_name: string;
   avatar_url?: string;
   subscription_tier: 'free' | 'pro' | 'premium';
-  subscription_status: 'active' | 'cancelled' | 'expired';
+  subscription_status: 'active' | 'cancelled' | 'expired' | 'free' | 'pro' | 'premium';
   api_requests_used: number;
   api_requests_limit: number;
-  created_at: string;
+  created_at?: string;
   last_login: string;
 }
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
-  const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [usage, setUsage] = useState<UserUsage | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
@@ -61,33 +59,43 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const loadUserProfile = async () => {
     try {
       setIsLoading(true);
-      
-      if (!user) {
-        setIsLoading(false);
+
+      // Detect wallet connection
+      let walletAddress = null;
+      if (typeof window !== 'undefined') {
+        walletAddress = localStorage.getItem('wallet-public-key') || localStorage.getItem('wallet_address');
+        if (!walletAddress && (window as any).solana?.isConnected) {
+          walletAddress = (window as any).solana.publicKey?.toString();
+        }
+      }
+
+      if (!walletAddress) {
+        setUserProfile(null);
+        setUsage(null);
+        setSubscription(null);
         return;
       }
 
-      // Load real usage and subscription data
-      const userUsage = usageService.getUserUsage(user.id);
-      const userSubscription = usageService.getUserSubscription(user.id);
-      
-      setUsage(userUsage);
-      setSubscription(userSubscription);
+      // Use wallet address as user ID
+      const userUsage = usageService.getUserUsage(walletAddress);
+      const userSubscription = usageService.getUserSubscription(walletAddress);
 
-      // Create user profile based on real data
       const profile: UserProfile = {
-        id: user.id,
-        email: user.email,
-        full_name: user.name,
+        id: walletAddress,
+        email: walletAddress + '@wallet',
+        full_name: 'Wallet User',
+        avatar_url: undefined,
         subscription_tier: userSubscription.tier,
-        subscription_status: userSubscription.status,
+        subscription_status: userSubscription.tier,
         api_requests_used: userUsage.requestsUsed,
         api_requests_limit: userUsage.requestsLimit,
-        created_at: userSubscription.startDate,
+        created_at: (userSubscription as any).createdAt || new Date().toISOString(),
         last_login: new Date().toISOString()
       };
 
       setUserProfile(profile);
+      setUsage(userUsage);
+      setSubscription(userSubscription);
       setEditForm({
         full_name: profile.full_name,
         email: profile.email
@@ -96,43 +104,6 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
       console.error('Error loading user profile:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!userProfile) return;
-    
-    setIsSaving(true);
-    try {
-      const { createClientComponentClient } = await import('@/lib/supabase');
-      const supabase = createClientComponentClient();
-      
-      const { error } = await supabase
-        .from('users')
-        .upsert({
-          id: userProfile.id,
-          email: editForm.email,
-          full_name: editForm.full_name,
-          updated_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Error updating profile:', error);
-        return;
-      }
-
-      // Update local state
-      setUserProfile(prev => prev ? {
-        ...prev,
-        full_name: editForm.full_name,
-        email: editForm.email
-      } : null);
-      
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving profile:', error);
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -187,7 +158,22 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   }
 
   if (!userProfile) {
-    return null;
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Profile & Account
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+            No wallet connected.<br />
+            Please connect your wallet to view your profile.
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -227,7 +213,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     />
                     <div className="flex gap-2">
                       <Button
-                        onClick={handleSaveProfile}
+                        onClick={() => {
+                          // Placeholder for saving profile
+                        }}
                         disabled={isSaving}
                         className="bg-gray-900 hover:bg-gray-800 text-white text-sm px-3 py-1"
                       >
@@ -254,7 +242,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {userProfile.full_name}
+                        {(userProfile.full_name || 'Wallet User')}
                       </h3>
                       <Button
                         variant="ghost"
@@ -267,7 +255,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     </div>
                     <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-1">
                       <Mail className="w-3 h-3" />
-                      {userProfile.email}
+                      {(userProfile.email || 'wallet@wallet')}
                     </p>
                   </div>
                 )}
@@ -285,7 +273,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   "px-3 py-1 rounded-full text-xs font-medium text-white",
                   getSubscriptionColor(userProfile.subscription_tier)
                 )}>
-                  {userProfile.subscription_tier.toUpperCase()}
+                  {(userProfile.subscription_tier || 'free').toUpperCase()}
                 </span>
               </div>
               
@@ -298,14 +286,14 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                       ? "text-green-600 dark:text-green-400" 
                       : "text-red-600 dark:text-red-400"
                   )}>
-                    {userProfile.subscription_status.charAt(0).toUpperCase() + userProfile.subscription_status.slice(1)}
+                    {(userProfile.subscription_status || 'expired').charAt(0).toUpperCase() + (userProfile.subscription_status || 'expired').slice(1)}
                   </span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-300">API Usage:</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {userProfile.api_requests_used.toLocaleString()} / {userProfile.api_requests_limit.toLocaleString()}
+                    {(userProfile.api_requests_used || 0).toLocaleString()} / {(userProfile.api_requests_limit || 0).toLocaleString()}
                   </span>
                 </div>
                 
@@ -336,7 +324,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     Member since
                   </span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(userProfile.created_at)}
+                    {formatDate(userProfile.created_at || '')}
                   </p>
                 </div>
                 <div>
@@ -345,7 +333,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     Last login
                   </span>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(userProfile.last_login)}
+                    {formatDate(userProfile.last_login || '')}
                   </p>
                 </div>
               </div>

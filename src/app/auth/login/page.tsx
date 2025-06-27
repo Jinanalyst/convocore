@@ -1,264 +1,428 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ConvocoreLogo } from '@/components/ui/convocore-logo';
-import { WalletConnector } from '@/components/ui/wallet-connector';
-import { useAuth } from '@/lib/auth-context';
-import { Chrome, Wallet, ArrowRight, AlertCircle } from 'lucide-react';
-import { AuthFallback } from '@/components/ui/auth-fallback';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ConvoAILogo } from '@/components/ui/convoai-logo';
+import { sessionKeyService } from '@/lib/session-key-service';
+import { 
+  Wallet, 
+  Shield, 
+  CheckCircle, 
+  AlertCircle, 
+  Loader2,
+  ArrowRight,
+  Sparkles
+} from 'lucide-react';
 
-function LoginPageContent() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loginType, setLoginType] = useState<'google' | 'kakao' | 'wallet' | null>(null);
-  const [showFallback, setShowFallback] = useState(false);
-  
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/convocore';
-  const { signInWithGoogle, signInWithKakao, signInWithWallet } = useAuth();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [connectionStep, setConnectionStep] = useState<'idle' | 'connecting' | 'authorizing' | 'complete'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
-  // KakaoTalk icon component
-  const KakaoIcon = ({ className }: { className?: string }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#FFE500"/>
-      <path d="M12 3C7.03 3 3 6.58 3 11C3 13.83 4.83 16.31 7.59 17.62L6.67 20.84C6.58 21.13 6.89 21.36 7.15 21.21L11.12 18.95C11.41 18.98 11.7 19 12 19C16.97 19 21 15.42 21 11C21 6.58 16.97 3 12 3Z" fill="#3C1E1E"/>
-    </svg>
-  );
-
-  // Check for auth callback errors
   useEffect(() => {
-    const errorParam = searchParams.get('error');
-    const messageParam = searchParams.get('message');
-    
-    if (errorParam) {
-      let errorMessage = 'Authentication failed';
-      
-      switch (errorParam) {
-        case 'configuration':
-          errorMessage = 'Authentication service is not configured. Please contact support.';
-          break;
-        case 'auth_failed':
-          errorMessage = messageParam ? decodeURIComponent(messageParam) : 'Authentication failed';
-          break;
-        case 'callback_error':
-          errorMessage = 'There was an error processing your authentication. Please try again.';
-          break;
-        default:
-          errorMessage = 'Authentication failed. Please try again.';
+    // Check if already connected
+    const walletConnected = localStorage.getItem('wallet-connected') === 'true';
+    if (walletConnected) {
+      const address = localStorage.getItem('wallet-public-key');
+      if (address) {
+        setWalletAddress(address);
+        // Check if session key exists
+        const hasSession = sessionKeyService.hasValidSessionKey(address);
+        console.log('[Login] Checking for valid session key:', hasSession, address);
+        if (hasSession) {
+          setConnectionStep('complete');
+        } else {
+          setConnectionStep('authorizing');
+        }
       }
-      
-      setError(errorMessage);
-      
-      // Clear error parameters from URL
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('error');
-      newUrl.searchParams.delete('message');
-      window.history.replaceState({}, '', newUrl.toString());
     }
-  }, [searchParams]);
+  }, []);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
+  const connectWallet = async () => {
+    console.log('[Login] Starting wallet connection...');
+    setIsConnecting(true);
     setError(null);
-    setLoginType('google');
+    setConnectionStep('connecting');
 
     try {
-      await signInWithGoogle();
-      // Don't redirect here - let the auth state change handler do it
-      // The OAuth flow will handle the redirect through the callback
-    } catch (err: any) {
-      console.error('Google login error:', err);
-      
-      if (err.message.includes('not configured') || err.message.includes('not enabled')) {
-        setError('Google authentication is not enabled. Please use wallet login instead.');
-      } else {
-        setError(`Google login failed: ${err.message}`);
+      // Check if Phantom is installed
+      if (!window.solana || !window.solana.isPhantom) {
+        console.error('[Login] Phantom wallet not installed');
+        throw new Error('Phantom wallet is not installed. Please install it from https://phantom.app/');
       }
-      
-      setLoading(false);
-      setLoginType(null);
-    }
-  };
+      console.log('[Login] Phantom wallet is installed');
 
-  const handleKakaoLogin = async () => {
-    setLoading(true);
-    setError(null);
-    setLoginType('kakao');
+      // Connect to wallet
+      console.log('[Login] Connecting to wallet...');
+      const response = await window.solana.connect();
+      const publicKey = response.publicKey.toString();
 
-    try {
-      await signInWithKakao();
-      // Don't redirect here - let the auth state change handler do it
-      // The OAuth flow will handle the redirect through the callback
-    } catch (err: any) {
-      console.error('Kakao login error:', err);
-      
-      if (err.message.includes('not configured') || err.message.includes('not enabled') || err.message.includes('KOE205')) {
-        setError(err.message);
-        setShowFallback(true);
-      } else {
-        setError(`Kakao login failed: ${err.message}`);
+      console.log('[Login] Wallet connected successfully:', publicKey);
+
+      // Store wallet info in localStorage or session
+      localStorage.setItem('wallet-connected', 'true');
+      localStorage.setItem('wallet-public-key', publicKey);
+      // Store member since and last login
+      const now = new Date().toISOString();
+      if (!localStorage.getItem('wallet-member-since')) {
+        localStorage.setItem('wallet-member-since', now);
       }
-      
-      setLoading(false);
-      setLoginType(null);
-    }
-  };
+      localStorage.setItem('wallet-last-login', now);
 
-  const handleWalletLogin = async (walletAddress: string, walletType: string) => {
-    setLoading(true);
-    setError(null);
-    setLoginType('wallet');
+      setWalletAddress(publicKey);
+      setConnectionStep('authorizing');
 
-    try {
-      await signInWithWallet(walletAddress, walletType);
-      router.push(redirectTo);
-    } catch (err: any) {
-      console.error('Wallet login error:', err);
-      setError(`Wallet connection failed: ${err.message}`);
+      // Check if session key already exists
+      console.log('[Login] Checking for existing session key...');
+      const hasSession = sessionKeyService.hasValidSessionKey(publicKey);
+      console.log('[Login] Session key exists after connect:', hasSession);
+      if (hasSession) {
+        console.log('[Login] Valid session key found, skipping authorization');
+        setConnectionStep('complete');
+        return;
+      }
+
+      // Request session key authorization
+      console.log('[Login] No valid session key found, requesting authorization...');
+      await requestSessionKeyAuthorization(publicKey);
+
+    } catch (err) {
+      console.error('[Login] Wallet connection error:', err);
+      setError(err instanceof Error ? err.message : String(err));
+      setConnectionStep('idle');
     } finally {
-      setLoading(false);
-      setLoginType(null);
+      setIsConnecting(false);
+    }
+  };
+
+  const requestSessionKeyAuthorization = async (address: string) => {
+    console.log('[Login] Starting session key authorization for:', address);
+    setIsAuthorizing(true);
+    setError(null);
+
+    try {
+      // Create authorization message
+      const scope = ['chat:write', 'chat:read', 'chat:delete'];
+      const message = sessionKeyService.createAuthorizationMessage(address, scope);
+      console.log('[Login] Authorization message created:', message);
+
+      console.log('[Login] Requesting session key authorization for:', address);
+
+      // Check if solana is available
+      if (!window.solana) {
+        console.error('[Login] Phantom wallet not available');
+        throw new Error('Phantom wallet not available');
+      }
+      console.log('[Login] Phantom wallet is available');
+
+      // Request signature from wallet
+      const encodedMessage = new TextEncoder().encode(message);
+      console.log('[Login] Requesting signature for message...');
+      let signedMessage;
+      try {
+        signedMessage = await (window.solana as any).signMessage(encodedMessage, 'utf8');
+        console.log('[Login] Message signed successfully:', signedMessage.signature);
+      } catch (signError) {
+        console.error('[Login] User rejected signature or error:', signError);
+        setError('Signature was rejected or failed. Please try again.');
+        setConnectionStep('idle');
+        return;
+      }
+
+      // Verify the signature
+      console.log('[Login] Verifying signature...');
+      let isValid = false;
+      try {
+        isValid = await sessionKeyService.verifyAuthorization(
+          address,
+          signedMessage.signature.toString(),
+          message
+        );
+        console.log('[Login] Signature verification result:', isValid);
+      } catch (verifyError) {
+        console.error('[Login] Signature verification error:', verifyError);
+        setError('Signature verification failed. Please try again.');
+        setConnectionStep('idle');
+        return;
+      }
+
+      if (!isValid) {
+        console.error('[Login] Invalid signature');
+        setError('Invalid signature. Please try again.');
+        setConnectionStep('idle');
+        return;
+      }
+
+      // Create session key
+      console.log('[Login] Creating session key...');
+      try {
+        await sessionKeyService.createSessionKey({
+          walletAddress: address,
+          scope,
+          expiresIn: 7 // 7 days
+        });
+        console.log('[Login] Session key created successfully for:', address);
+        // Log localStorage for debugging
+        console.log('[Login] localStorage after session key:', Object.keys(localStorage));
+      } catch (createError) {
+        console.error('[Login] Failed to create session key:', createError);
+        setError('Failed to create session key. Please try again.');
+        setConnectionStep('idle');
+        return;
+      }
+
+      console.log('[Login] Authorization completed successfully');
+      setConnectionStep('complete');
+
+      // Redirect to convocore after a short delay
+      setTimeout(() => {
+        router.push('/convocore');
+      }, 2000);
+
+    } catch (err) {
+      console.error('[Login] Session key authorization error:', err);
+      setError(err instanceof Error ? err.message : String(err));
+      setConnectionStep('idle');
+    } finally {
+      setIsAuthorizing(false);
+    }
+  };
+
+  const handleContinue = () => {
+    if (connectionStep === 'complete') {
+      router.push('/convocore');
+    }
+  };
+
+  const getStepIcon = (step: string) => {
+    switch (step) {
+      case 'connecting':
+        return <Loader2 className="w-5 h-5 animate-spin" />;
+      case 'authorizing':
+        return <Shield className="w-5 h-5" />;
+      case 'complete':
+        return <CheckCircle className="w-5 h-5" />;
+      default:
+        return <Wallet className="w-5 h-5" />;
+    }
+  };
+
+  const getStepText = (step: string) => {
+    switch (step) {
+      case 'connecting':
+        return 'Connecting to wallet...';
+      case 'authorizing':
+        return 'Authorizing chat access...';
+      case 'complete':
+        return 'Ready to chat!';
+      default:
+        return 'Connect your wallet';
+    }
+  };
+
+  const getStepDescription = (step: string) => {
+    switch (step) {
+      case 'connecting':
+        return 'Establishing secure connection to your Phantom wallet';
+      case 'authorizing':
+        return 'Signing authorization for automatic chat storage (one-time only)';
+      case 'complete':
+        return 'Your wallet is connected and authorized for seamless chat experience';
+      default:
+        return 'Connect your Solana wallet to start chatting with AI';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <ConvocoreLogo className="h-12 w-auto mx-auto mb-4" />
+          <ConvoAILogo className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome to Convocore
+            Welcome to ConvoAI
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Choose your preferred way to sign in
+          <p className="text-gray-600 dark:text-gray-300">
+            Connect your wallet to start chatting
           </p>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-            </div>
-          </div>
-        )}
+        {/* Connection Card */}
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="flex items-center justify-center gap-2">
+              {getStepIcon(connectionStep)}
+              {getStepText(connectionStep)}
+            </CardTitle>
+            <CardDescription>
+              {getStepDescription(connectionStep)}
+            </CardDescription>
+          </CardHeader>
 
-        {/* Login Options */}
-        <div className="space-y-4">
-          {/* Google Login */}
-          <Button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full h-14 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-600 shadow-sm"
-            variant="outline"
-          >
-            <div className="flex items-center justify-center gap-3">
-              {loading && loginType === 'google' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 dark:border-white"></div>
-              ) : (
-                <Chrome className="h-5 w-5 text-[#4285f4]" />
+          <CardContent className="space-y-4">
+            {/* Connection Steps */}
+            <div className="space-y-3">
+              {/* Step 1: Connect Wallet */}
+              <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+                connectionStep === 'idle' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' :
+                connectionStep === 'connecting' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' :
+                'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+              }`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  connectionStep === 'idle' ? 'bg-gray-300 dark:bg-gray-600' :
+                  connectionStep === 'connecting' ? 'bg-blue-500' :
+                  'bg-green-500'
+                }`}>
+                  {connectionStep === 'connecting' ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-white" />
+                  ) : connectionStep === 'idle' ? (
+                    <span className="text-xs text-gray-600 dark:text-gray-400">1</span>
+                  ) : (
+                    <CheckCircle className="w-3 h-3 text-white" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">Connect Wallet</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {walletAddress ? `Connected: ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : 'Connect your Phantom wallet'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Authorize Session */}
+              <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+                connectionStep === 'authorizing' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' :
+                connectionStep === 'complete' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
+                'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+              }`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  connectionStep === 'authorizing' ? 'bg-blue-500' :
+                  connectionStep === 'complete' ? 'bg-green-500' :
+                  'bg-gray-300 dark:bg-gray-600'
+                }`}>
+                  {connectionStep === 'authorizing' ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-white" />
+                  ) : connectionStep === 'complete' ? (
+                    <CheckCircle className="w-3 h-3 text-white" />
+                  ) : (
+                    <span className="text-xs text-gray-600 dark:text-gray-400">2</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">Authorize Chat Access</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {connectionStep === 'authorizing' ? 'Signing authorization message...' :
+                     connectionStep === 'complete' ? 'Authorized for 7 days' :
+                     'One-time authorization for seamless chat'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {connectionStep === 'idle' && (
+                <Button
+                  onClick={connectWallet}
+                  disabled={isConnecting}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Phantom Wallet
+                    </>
+                  )}
+                </Button>
               )}
-              <span className="font-medium">Continue with Google</span>
-              <ArrowRight className="h-4 w-4 ml-auto" />
-            </div>
-          </Button>
 
-          {/* Kakao Login - Coming Soon */}
-          <Button
-            disabled={true}
-            className="w-full h-14 bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-zinc-600 shadow-sm cursor-not-allowed relative"
-            variant="outline"
-          >
-            <div className="flex items-center justify-center gap-3 w-full">
-              <KakaoIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-              <span className="font-medium">Continue with Kakao</span>
-              <span className="ml-auto text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full font-semibold">
-                Coming Soon
-              </span>
-            </div>
-          </Button>
+              {connectionStep === 'connecting' && (
+                <Button
+                  onClick={connectWallet}
+                  disabled={isConnecting}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </Button>
+              )}
 
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-zinc-600" />
+              {connectionStep === 'authorizing' && (
+                <Button
+                  disabled={isAuthorizing}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                >
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Authorizing...
+                </Button>
+              )}
+
+              {connectionStep === 'complete' && (
+                <Button
+                  onClick={handleContinue}
+                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
+                >
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Start Chatting
+                </Button>
+              )}
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 dark:bg-zinc-900 text-gray-500 dark:text-gray-400">
-                or
-              </span>
+
+            {/* Session Key Info */}
+            {connectionStep === 'complete' && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800 dark:text-green-400">
+                    Session Key Active
+                  </span>
+                </div>
+                <div className="text-xs text-green-700 dark:text-green-300">
+                  Your chat messages will be stored automatically on Solana for the next 7 days. No more transaction popups!
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Features */}
+        <div className="mt-8 grid grid-cols-1 gap-4">
+          <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+            <div>
+              <div className="font-medium text-sm">AI-Powered Chat</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Advanced AI models for intelligent conversations</div>
             </div>
           </div>
-
-          {/* Wallet Connection */}
-          <div className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4 bg-white dark:bg-zinc-800" data-wallet-connector>
-            <div className="flex items-center gap-3 mb-3">
-              <Wallet className="h-5 w-5 text-purple-500" />
-              <span className="font-medium text-gray-900 dark:text-white">Connect Wallet</span>
+          
+          <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
+            <Shield className="w-5 h-5 text-green-600" />
+            <div>
+              <div className="font-medium text-sm">Secure Storage</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Your chats stored securely on Solana blockchain</div>
             </div>
-                         <WalletConnector
-               onWalletConnected={handleWalletLogin}
-             />
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Don't have an account?{' '}
-            <Link 
-              href="/auth/signup" 
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-            >
-              Sign up
-            </Link>
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-            By continuing, you agree to our{' '}
-            <Link href="/terms" className="hover:underline">Terms of Service</Link>
-            {' '}and{' '}
-            <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-          </p>
         </div>
       </div>
-
-      {/* Kakao Auth Fallback Modal */}
-      {showFallback && (
-        <AuthFallback
-          error={error || 'Kakao authentication failed'}
-          onGoogleLogin={() => {
-            setShowFallback(false);
-            handleGoogleLogin();
-          }}
-          onWalletLogin={() => {
-            setShowFallback(false);
-            // Scroll to wallet section
-            document.querySelector('[data-wallet-connector]')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          onDismiss={() => {
-            setShowFallback(false);
-            setError(null);
-          }}
-        />
-      )}
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-      </div>
-    }>
-      <LoginPageContent />
-    </Suspense>
   );
 } 

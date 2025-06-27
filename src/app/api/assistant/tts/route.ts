@@ -42,4 +42,8 @@ export async function POST(req: Request) {
     console.error("/api/assistant/tts error", err);
     return NextResponse.json({ error: err?.message || "Unknown error" }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ error: 'Not found' }, { status: 404 });
 } 

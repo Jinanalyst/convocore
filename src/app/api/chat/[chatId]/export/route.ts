@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 
 export async function POST(
   request: NextRequest,
@@ -18,91 +16,19 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Handle demo chats - return error
+    if (chatId.startsWith('demo_')) {
+      return NextResponse.json({ error: 'Demo chats cannot be exported' }, { status: 400 });
     }
 
-    // Get conversation with messages
-    const { data: conversation, error: convError } = await supabase
-      .from('conversations')
-      .select(`
-        id,
-        title,
-        model,
-        created_at,
-        messages (
-          id,
-          role,
-          content,
-          created_at
-        )
-      `)
-      .eq('id', chatId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (convError || !conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    // Handle local chats - return error (they're stored in localStorage)
+    if (chatId.startsWith('local_chat_')) {
+      return NextResponse.json({ error: 'Local chats cannot be exported. Please connect your wallet to export chats.' }, { status: 400 });
     }
 
-    // Sort messages by creation time
-    const sortedMessages = conversation.messages.sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-
-    let content: string;
-    let mimeType: string;
-    let filename: string;
-
-    switch (format) {
-      case 'json':
-        content = JSON.stringify({
-          conversation: {
-            id: conversation.id,
-            title: conversation.title,
-            model: conversation.model,
-            created_at: conversation.created_at,
-            exported_at: new Date().toISOString(),
-            messages: sortedMessages
-          }
-        }, null, 2);
-        mimeType = 'application/json';
-        filename = `${conversation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-        break;
-
-      case 'md':
-        content = generateMarkdown(conversation, sortedMessages);
-        mimeType = 'text/markdown';
-        filename = `${conversation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-        break;
-
-      case 'txt':
-        content = generatePlainText(conversation, sortedMessages);
-        mimeType = 'text/plain';
-        filename = `${conversation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
-        break;
-
-      case 'pdf':
-        // For PDF, we'll return HTML that can be converted to PDF on the client side
-        content = generateHTML(conversation, sortedMessages);
-        mimeType = 'text/html';
-        filename = `${conversation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
-        break;
-
-      default:
-        return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
-    }
-
-    return new NextResponse(content, {
-      headers: {
-        'Content-Type': mimeType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
+    // For Solana wallet chats, we would need to implement export functionality
+    // For now, return an error indicating this feature is not yet implemented
+    return NextResponse.json({ error: 'Export functionality for Solana chats is not yet implemented' }, { status: 501 });
 
   } catch (error) {
     console.error('Export error:', error);

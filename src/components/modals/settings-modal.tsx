@@ -8,8 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/lib/auth-context";
-import { usageService, type UserUsage, type SubscriptionInfo } from "@/lib/usage-service";
+import { usageService, type UserUsage } from "@/lib/usage-service";
 import { 
   Settings, 
   User, 
@@ -28,11 +27,15 @@ import {
   Star,
   Copy,
   MessageCircle,
-  Volume2
+  Volume2,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { useLanguage } from '@/lib/language-context';
+import { sessionKeyService } from "@/lib/session-key-service";
+import { Badge } from "@/components/ui/badge";
+import { getDefaultModelForTier, getAvailableModelsForTier } from "@/lib/ai-service";
 
 interface SettingsModalProps {
   open?: boolean;
@@ -42,7 +45,6 @@ interface SettingsModalProps {
 type SettingsTab = 'general' | 'account' | 'ai-model' | 'appearance' | 'notifications' | 'privacy' | 'billing';
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState({
@@ -60,7 +62,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       usageAlerts: true
     },
     aiModel: {
-      defaultModel: 'gpt-4o',
+      defaultModel: getDefaultModelForTier('free'),
       temperature: 0.7,
       maxTokens: 2048,
       streamResponse: true,
@@ -74,19 +76,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   });
   const [userInfo, setUserInfo] = useState({
-    name: '',
-    email: '',
     walletAddress: '',
     walletType: '',
     subscriptionTier: 'free',
-    isWalletUser: false
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [usage, setUsage] = useState<UserUsage | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscription, setSubscription] = useState<{ tier: 'free' | 'pro' | 'premium' }>({ tier: 'free' });
+  const [memberSince, setMemberSince] = useState<Date | null>(null);
+  const [lastLogin, setLastLogin] = useState<Date | null>(null);
 
   // Load settings from localStorage and Supabase on mount
   useEffect(() => {
@@ -98,53 +99,35 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const loadSettings = async () => {
     setIsLoading(true);
     try {
-      // Use auth context data and load real usage/subscription data
-      if (user) {
-        // Load real usage and subscription data
-        const userUsage = usageService.getUserUsage(user.id);
-        const userSubscription = usageService.getUserSubscription(user.id);
-        setUsage(userUsage);
-        setSubscription(userSubscription);
-
-        setUserInfo({
-          name: user.name,
-          email: user.email,
-          walletAddress: user.walletAddress || '',
-          walletType: user.walletType || '',
-          subscriptionTier: userSubscription.tier,
-          isWalletUser: user.authType === 'wallet'
-        });
+      // Load real usage and subscription data
+      const walletAddress = localStorage.getItem('wallet-public-key') || '';
+      const walletType = 'solana'; // Only supporting Solana wallet
+      const userUsage = usageService.getUserUsage(walletAddress);
+      const userSubscription = usageService.getUserSubscription(walletAddress);
+      
+      setUserInfo({
+        walletAddress,
+        walletType,
+        subscriptionTier: userSubscription.tier,
+      });
+      
+      setSubscription(userSubscription);
+      setUsage(userUsage);
+      
+      // Load saved settings from localStorage
+      const savedSettings = localStorage.getItem('convocore-settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings(parsedSettings);
       }
-
-      // Load from localStorage first for immediate UI update
-      const localSettings = localStorage.getItem('convocore-settings');
-      if (localSettings) {
-        const parsed = JSON.parse(localSettings);
-        setSettings(prev => ({ ...prev, ...parsed }));
-        // Apply theme immediately
-        applyTheme(parsed.theme || 'system');
-      }
-
-      // For Supabase users, load additional settings from database
-      if (user?.authType === 'supabase') {
-        const { createClientComponentClient } = await import('@/lib/supabase');
-        const supabase = createClientComponentClient();
-        
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-        if (supabaseUser) {
-          // Load user settings
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('settings')
-            .eq('id', supabaseUser.id)
-            .single();
-
-          if (!userError && userData?.settings) {
-            setSettings(prev => ({ ...prev, ...userData.settings }));
-            applyTheme(userData.settings.theme || 'system');
-          }
-        }
-      }
+      
+      // Load member since and last login dates
+      const memberSince = localStorage.getItem('wallet-member-since');
+      const lastLogin = localStorage.getItem('wallet-last-login');
+      
+      setMemberSince(memberSince ? new Date(memberSince) : null);
+      setLastLogin(lastLogin ? new Date(lastLogin) : null);
+      
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -165,33 +148,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       // Apply language changes
       if (newSettings.language !== settings.language) {
         applyLanguage(newSettings.language);
-      }
-
-      // Refresh notification service settings
-      if (typeof window !== 'undefined') {
-        const { notificationService } = await import('@/lib/notification-service');
-        notificationService.refreshSettings();
-      }
-
-      // For Supabase users, save to database
-      if (user?.authType === 'supabase') {
-        const { createClientComponentClient } = await import('@/lib/supabase');
-        const supabase = createClientComponentClient();
-        
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-        if (supabaseUser) {
-          const { error } = await supabase
-            .from('users')
-            .upsert({
-              id: supabaseUser.id,
-              settings: newSettings,
-              updated_at: new Date().toISOString()
-            });
-
-          if (error) {
-            console.error('Error saving settings to Supabase:', error);
-          }
-        }
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -285,21 +241,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   ] as const;
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setSaveStatus('idle');
     try {
-      await Promise.all([
-        saveSettings(settings),
-        saveUserInfo()
-      ]);
-      setSaveStatus('success');
-      setTimeout(() => {
-        onOpenChange?.(false);
-      }, 1000);
+      setIsSaving(true);
+      
+      // Save settings
+      await saveSettings(settings);
+      
+      // No need to save user info since we're wallet-only
+      
+      // Show success message
+      console.log("Settings saved");
+      
+      onOpenChange?.(false);
     } catch (error) {
       console.error('Error saving settings:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      console.log("Error saving settings. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -308,45 +264,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const updateSettings = (updates: Partial<typeof settings>) => {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
-    
-    // Handle language changes immediately
-    if (updates.language) {
-      applyLanguage(updates.language);
-    }
-    
-    // Auto-save certain settings immediately
-    if (updates.theme || updates.language || updates.aiModel) {
-      saveSettings(newSettings);
-      console.log('🔄 Auto-saved settings:', updates);
-    }
-  };
-
-  const saveUserInfo = async () => {
-    try {
-      const walletConnected = localStorage.getItem('wallet_connected') === 'true';
-      if (!walletConnected) {
-        const { createClientComponentClient } = await import('@/lib/supabase');
-        const supabase = createClientComponentClient();
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { error } = await supabase
-            .from('users')
-            .upsert({
-              id: user.id,
-              full_name: userInfo.name,
-              email: userInfo.email,
-              updated_at: new Date().toISOString()
-            });
-
-          if (error) {
-            console.error('Error saving user info:', error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error saving user info:', error);
-    }
+    saveSettings(newSettings);
   };
 
   const renderTabContent = () => {
@@ -419,80 +337,53 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               {/* Avatar and Basic Info */}
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
-                  {userInfo.isWalletUser ? (
-                    <Wallet className="w-8 h-8 text-white dark:text-gray-900" />
-                  ) : (
-                    <User className="w-8 h-8 text-white dark:text-gray-900" />
-                  )}
+                  <Wallet className="w-8 h-8 text-white dark:text-gray-900" />
                 </div>
                 <div className="flex-1">
                   <div className="space-y-3">
-                    {userInfo.isWalletUser ? (
-                      <>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Wallet User
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Connected via {userInfo.walletType || 'crypto wallet'}
-                          </p>
-                        </div>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Wallet Address
-                            </label>
-                            <div className="relative">
-                              <input 
-                                type="text" 
-                                value={userInfo.walletAddress}
-                                readOnly
-                                className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm font-mono"
-                              />
-                              <button
-                                onClick={() => navigator.clipboard.writeText(userInfo.walletAddress)}
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded"
-                                title="Copy address"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              Wallet Type
-                            </label>
-                            <input 
-                              type="text" 
-                              value={userInfo.walletType}
-                              readOnly
-                              className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm capitalize"
-                            />
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <input
-                            type="text"
-                            value={userInfo.name}
-                            onChange={(e) => setUserInfo(prev => ({ ...prev, name: e.target.value }))}
-                            className="text-lg font-semibold bg-transparent border-none outline-none text-gray-900 dark:text-white p-0 w-full focus:ring-0"
-                            placeholder="Enter your name"
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Wallet User
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Connected via {userInfo.walletType || 'crypto wallet'}
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Wallet Address
+                        </label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            value={userInfo.walletAddress}
+                            readOnly
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm font-mono"
                           />
-                          <input
-                            type="email"
-                            value={userInfo.email}
-                            onChange={(e) => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
-                            className="text-sm bg-transparent border-none outline-none text-gray-600 dark:text-gray-400 p-0 w-full focus:ring-0 mt-1"
-                            placeholder="Enter your email"
-                          />
+                          <button
+                            onClick={() => navigator.clipboard.writeText(userInfo.walletAddress)}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded"
+                            title="Copy address"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
                         </div>
-                      </>
-                    )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Wallet Type
+                        </label>
+                        <input 
+                          type="text" 
+                          value={userInfo.walletType}
+                          readOnly
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm capitalize"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -502,15 +393,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      userInfo.subscriptionTier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
-                      userInfo.subscriptionTier === 'pro' ? 'bg-gradient-to-r from-blue-500 to-purple-600' :
+                      subscription.tier === 'premium' ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                      subscription.tier === 'pro' ? 'bg-gradient-to-r from-blue-500 to-purple-600' :
                       'bg-gray-500'
                     }`}>
-                      {userInfo.subscriptionTier === 'premium' ? (
+                      {subscription.tier === 'premium' ? (
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
-                      ) : userInfo.subscriptionTier === 'pro' ? (
+                      ) : subscription.tier === 'pro' ? (
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
@@ -522,11 +413,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 dark:text-white capitalize">
-                        {userInfo.subscriptionTier} Plan
+                        {subscription.tier} Plan
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {userInfo.subscriptionTier === 'free' ? 'Free tier' : 
-                         userInfo.subscriptionTier === 'pro' ? '$20 USDT/month' : 
+                        {subscription.tier === 'free' ? 'Free tier' : 
+                         subscription.tier === 'pro' ? '$20 USDT/month' : 
                          '$40 USDT/month'}
                       </p>
                     </div>
@@ -537,7 +428,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     onClick={() => setShowBillingModal(true)}
                     className="bg-white dark:bg-zinc-800 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                   >
-                    {userInfo.subscriptionTier === 'free' ? 'Upgrade' : 'Manage'}
+                    {subscription.tier === 'free' ? 'Upgrade' : 'Manage'}
                   </Button>
                 </div>
 
@@ -561,51 +452,125 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </p>
                   </div>
                 )}
-              </div>
 
-              {/* Account Details */}
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Account Details</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Member since</span>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
+                {/* Session Key Management */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Session Key
+                    </h3>
+                    <Badge variant="outline" className="text-xs">
+                      Auto-Sign
+                    </Badge>
                   </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Last login</span>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
+                  
+                  {(() => {
+                    const walletAddress = localStorage.getItem('wallet-public-key');
+                    const sessionInfo = walletAddress ? sessionKeyService.getSessionKeyInfo(walletAddress) : { hasSession: false };
+                    
+                    if (sessionInfo.hasSession && sessionInfo.expiresAt) {
+                      const daysLeft = Math.ceil((sessionInfo.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      
+                      return (
+                        <div className="space-y-3">
+                          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Shield className="w-4 h-4 text-green-600" />
+                              <span className="text-sm font-medium text-green-800 dark:text-green-400">
+                                Session Key Active
+                              </span>
+                            </div>
+                            <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                              <div>• Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</div>
+                              <div>• Automatic transaction signing enabled</div>
+                              <div>• No wallet popups for chat messages</div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (walletAddress) {
+                                  sessionKeyService.revokeSessionKey(walletAddress);
+                                  // Refresh the component
+                                  window.location.reload();
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            >
+                              <Shield className="w-4 h-4 mr-2" />
+                              Revoke Session Key
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="w-4 h-4 text-yellow-600" />
+                            <span className="text-sm font-medium text-yellow-800 dark:text-yellow-400">
+                              Session Key Required
+                            </span>
+                          </div>
+                          <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                            You need to authorize a session key to enable automatic transaction signing for chat messages.
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Redirect to login page to re-authorize
+                              window.location.href = '/auth/login';
+                            }}
+                          >
+                            <Shield className="w-4 h-4 mr-2" />
+                            Authorize Session Key
+                          </Button>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+
+                {/* Account Details */}
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">Account Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Member since</span>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {memberSince ? memberSince.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Last login</span>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {lastLogin ? lastLogin.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => setShowBillingModal(true)}
-                  className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Manage Billing
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Security
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => setShowBillingModal(true)}
+                    className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Manage Billing
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Security
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -633,13 +598,11 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     })}
                     className="mt-2 block w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                   >
-                    <option value="gpt-4o">🚀 Convocore Omni (Default)</option>
-                    <option value="claude-3-opus-20240229">🧠 Convocore Alpha</option>
-                    <option value="gpt-4-turbo">⚡ Convocore Turbo</option>
-                    <option value="claude-3-sonnet-20240229">✨ Convocore Nova</option>
-                    <option value="deepseek/deepseek-r1:free">🤏 ConvoMini</option>
-                    <option value="convoart">🎨 ConvoArt (Image Generation)</option>
-                    <option value="convoq">⚡ ConvoQ (Ultra-Fast Responses)</option>
+                    {getAvailableModelsForTier(userInfo.subscriptionTier as 'free' | 'pro' | 'premium').map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name} {model.id === getDefaultModelForTier(userInfo.subscriptionTier as 'free' | 'pro' | 'premium') ? '(Default)' : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -1098,22 +1061,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>
-                      {subscription?.tier === 'free' ? 'Requests today' : 'Requests this month'}
+                      {usage?.requestsLimit === 3 ? 'Requests today' : 'Requests this month'}
                     </span>
                     <span className="font-medium">
                       {usage?.requestsUsed || 0} / {usage?.requestsLimit || 3}
-                      {subscription?.tier === 'free' ? ' per day' : ' per month'}
+                      {usage?.requestsLimit === 3 ? ' per day' : ' per month'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Subscription Plan</span>
                     <span className="font-medium capitalize flex items-center gap-1">
-                      {subscription?.tier || 'free'}
-                      {subscription?.tier === 'pro' && <Crown className="w-3 h-3 text-yellow-500" />}
-                      {subscription?.tier === 'premium' && <Zap className="w-3 h-3 text-purple-500" />}
+                      {subscription.tier}
                     </span>
                   </div>
-                  {usage && usage.requestsUsed > 0 && (
+                  {usage && subscription && (
                     <div className="mt-2">
                       <div className="flex justify-between text-xs text-gray-500 mb-1">
                         <span>Usage Progress</span>
@@ -1137,44 +1098,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               </div>
               
               <div className="space-y-3 sm:space-y-4">
-                {user?.authType === 'wallet' && user.walletAddress && (
-                  <div className="flex items-center gap-2 sm:gap-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-green-900 dark:text-green-100 text-sm">
-                        {user.walletType || 'Crypto'} Wallet Connected
-                      </p>
-                      <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 truncate">
-                        {user.walletAddress}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {user?.authType === 'supabase' && (
-                  <div className="flex items-center gap-2 sm:gap-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-blue-900 dark:text-blue-100 text-sm">
-                        Google Account Connected
-                      </p>
-                      <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 truncate">
-                        {user.email}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
                 <Button 
                   variant="outline" 
                   className="w-full"
                   onClick={() => setShowBillingModal(true)}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
-                  {subscription?.tier === 'free' ? 'Upgrade Plan' : 'View Billing History'}
+                  {subscription.tier === 'free' ? 'Upgrade Plan' : 'View Billing History'}
                 </Button>
                 
-                {user?.authType === 'wallet' ? (
+                {userInfo.walletAddress && (
                   <Button 
                     variant="outline" 
                     className="w-full"
@@ -1182,15 +1115,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   >
                     <Wallet className="w-4 h-4 mr-2" />
                     Manage Wallet
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setShowBillingModal(true)}
-                  >
-                    <Star className="w-4 h-4 mr-2" />
-                    Payment Options
                   </Button>
                 )}
               </div>

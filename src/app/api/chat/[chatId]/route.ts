@@ -1,56 +1,55 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { headers } from 'next/headers';
 
 export async function GET(
   req: Request,
   { params }: { params: { chatId: string } }
 ) {
   const rawId = params.chatId;
-  const supabase = createRouteHandlerClient({ cookies });
+  const headersList = await headers();
+  const walletAddress = headersList.get('x-wallet-address');
 
-  // Utility to quickly check if a string is a valid UUID v4
-  const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-
-  // Resolve the actual conversation_id (UUID)
-  let conversationId = rawId;
-
-  if (!isUuid(rawId)) {
-    // Treat the param as a thread_id and look up the conversation
-    const { data: conv, error } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('thread_id', rawId)
-      .single();
-
-    if (error) {
-      console.error('❌ Failed to lookup conversation by thread_id:', error.message);
-      return NextResponse.json({ message: 'Conversation not found' }, { status: 404 });
-    }
-
-    conversationId = conv.id;
+  // Handle demo chats - return empty messages
+  if (rawId.startsWith('demo_')) {
+    console.log('📝 Demo chat detected, returning empty messages');
+    return NextResponse.json([]);
   }
 
-  try {
-    console.log('🔎 fetching messages for', conversationId);
-
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('❌ Supabase query failed:', error.message);
-      throw error;
-    }
-    
-    return NextResponse.json(data);
-  } catch (err: any) {
-    console.error('❌ GET /api/chat/[chatId] failed:', err.message);
-    return NextResponse.json(
-      { message: 'Failed to fetch messages', detail: err.message },
-      { status: 500 }
-    );
+  // Handle local chats - return empty messages (they're stored in localStorage)
+  if (rawId.startsWith('local_chat_')) {
+    console.log('📝 Local chat detected, returning empty messages');
+    return NextResponse.json([]);
   }
+
+  // Handle Solana wallet chats
+  if (walletAddress) {
+    try {
+      console.log('🔎 Fetching Solana messages for conversation:', rawId);
+      
+      // Fetch messages from Solana blockchain
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/wallet/messages?conversationId=${rawId}`, {
+        headers: {
+          'x-wallet-address': walletAddress,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return NextResponse.json(data.messages || []);
+      } else {
+        console.error('❌ Failed to fetch Solana messages:', response.statusText);
+        return NextResponse.json({ message: 'Failed to fetch messages' }, { status: 500 });
+      }
+    } catch (err: any) {
+      console.error('❌ GET /api/chat/[chatId] Solana fetch failed:', err.message);
+      return NextResponse.json(
+        { message: 'Failed to fetch messages', detail: err.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  // Fallback for unknown chat types
+  console.log('⚠️ Unknown chat type, returning empty messages');
+  return NextResponse.json([]);
 } 

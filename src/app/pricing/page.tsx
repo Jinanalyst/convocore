@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PricingSection } from "@/components/ui/pricing-section";
-import { ConvocoreLogo } from "@/components/ui/convocore-logo";
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -46,7 +46,7 @@ export default function PricingPage() {
       <nav className="bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
           <Link href="/">
-            <ConvocoreLogo />
+            <ConvoAILogo />
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">

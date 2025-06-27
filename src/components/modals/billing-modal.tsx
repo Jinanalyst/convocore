@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/auth-context';
 import { multiNetworkPaymentService, NetworkConfig, PaymentStatus } from '@/lib/multi-network-payment';
-import { usageService, type UserUsage, type SubscriptionInfo } from '@/lib/usage-service';
+import { usageService, type UserUsage, type Subscription } from '@/lib/usage-service';
 import { 
   CreditCard, 
   Wallet, 
@@ -25,6 +24,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
 interface BillingModalProps {
   open: boolean;
@@ -35,7 +35,6 @@ interface BillingModalProps {
 type ModalView = 'overview' | 'payment' | 'history' | 'success';
 
 export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalProps) {
-  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<ModalView>('overview');
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkConfig | null>(null);
   const [selectedPlanType, setSelectedPlanType] = useState<'pro' | 'premium'>(selectedPlan || 'pro');
@@ -46,10 +45,13 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
   const [paymentHistory, setPaymentHistory] = useState<PaymentStatus[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [usage, setUsage] = useState<UserUsage | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const networks = multiNetworkPaymentService.getSupportedNetworks();
+  const networks = multiNetworkPaymentService.getSupportedNetworks().filter(n => n.id === 'solana' || n.id === 'convoai');
   const planPrice = multiNetworkPaymentService.getPlanPrice(selectedPlanType);
+
+  // Helper to get wallet address or fallback userId
+  const getUserId = () => connectedWallet || 'local_wallet_user';
 
   useEffect(() => {
     if (open) {
@@ -65,13 +67,13 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
   }, [selectedPlan]);
 
   const loadPaymentHistory = () => {
-    if (user?.id) {
-      const history = multiNetworkPaymentService.getUserPayments(user.id);
+    const userId = getUserId();
+    if (userId) {
+      const history = multiNetworkPaymentService.getUserPayments(userId);
       setPaymentHistory(history);
-      
       // Load real usage data
-      const userUsage = usageService.getUserUsage(user.id);
-      const userSubscription = usageService.getUserSubscription(user.id);
+      const userUsage = usageService.getUserUsage(userId);
+      const userSubscription = usageService.getUserSubscription(userId);
       setUsage(userUsage);
       setSubscription(userSubscription);
     }
@@ -120,7 +122,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
   };
 
   const initiatePayment = async () => {
-    if (!selectedNetwork || !user?.id) {
+    if (!selectedNetwork) {
       setError('Please select a network');
       return;
     }
@@ -136,11 +138,12 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
     try {
       // Create payment request
       const userAddress = connectedWallet || 'paypal_user';
+      const userId = getUserId();
       const payment = multiNetworkPaymentService.createPaymentRequest({
         networkId: selectedNetwork.id,
         amount: planPrice,
         plan: selectedPlanType,
-        userId: user.id,
+        userId: userId,
         userAddress: userAddress
       });
 
@@ -151,8 +154,8 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
 
       if (result.success) {
         // Update subscription when payment is successful
-        if (user?.id) {
-          await usageService.updateSubscriptionAsync(user.id, selectedPlanType);
+        if (userId) {
+          await usageService.getUserSubscription(userId); // No async update needed for wallet-only
         }
         setCurrentView('success');
         loadPaymentHistory();
@@ -204,7 +207,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
   const renderOverview = () => (
     <div className="space-y-6">
       {/* User Info for Google Users */}
-      {user?.authType === 'supabase' && (
+      {/* {user?.authType === 'supabase' && (
         <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
@@ -222,10 +225,10 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Wallet User Info */}
-      {user?.authType === 'wallet' && (
+      {/* {user?.authType === 'wallet' && (
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
@@ -242,7 +245,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Current Subscription */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
@@ -258,7 +261,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
               </p>
             </div>
           </div>
-          <Badge variant="outline">{subscription?.status === 'active' ? 'Active' : 'Inactive'}</Badge>
+          <Badge variant="outline">{subscription?.tier === 'free' ? 'Free' : 'Active'}</Badge>
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -395,7 +398,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
       </div>
 
       {/* Google User Payment Info */}
-      {user?.authType === 'supabase' && (
+      {/* {user?.authType === 'supabase' && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -414,7 +417,7 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Network Selection */}
       <div className="space-y-4">
@@ -437,12 +440,18 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{network.icon}</span>
+                  {network.id === 'convoai' ? (
+                    <ConvoAILogo className="w-8 h-8" />
+                  ) : (
+                    <span className="text-2xl">{network.icon}</span>
+                  )}
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white">{network.name}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {network.type === 'paypal' 
                         ? `Pay $${planPrice} USD with PayPal`
+                        : network.id === 'convoai'
+                        ? `Pay with ConvoAI Token`
                         : `Pay with USDT on ${network.name}`
                       }
                     </p>
@@ -682,16 +691,16 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
         <p className="text-gray-600 dark:text-gray-400 mb-2">
           Your {selectedPlanType} plan subscription has been activated.
         </p>
-        {user?.authType === 'supabase' && (
+        {/* {user?.authType === 'supabase' && (
           <p className="text-sm text-blue-600 dark:text-blue-400">
             Subscription linked to your Google account: {user.email}
           </p>
-        )}
-        {user?.authType === 'wallet' && (
+        )} */}
+        {/* {user?.authType === 'wallet' && (
           <p className="text-sm text-purple-600 dark:text-purple-400">
             Subscription linked to your wallet: {user.walletAddress?.slice(0, 6)}...{user.walletAddress?.slice(-4)}
           </p>
-        )}
+        )} */}
       </div>
 
       {paymentStatus && (

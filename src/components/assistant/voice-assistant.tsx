@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { Mic, Loader2 } from "lucide-react";
 import { transcribeAudio } from "@/lib/assistant/stt";
-import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 interface VoiceAssistantProps {
@@ -16,16 +15,11 @@ interface VoiceAssistantProps {
  * Visible only for Pro / Premium users.
  */
 export function VoiceAssistant({ onSend }: VoiceAssistantProps) {
-  const { user } = useAuth();
-  const isAllowed = user && ["pro", "premium"].includes(user.subscriptionTier);
-
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [tooltip, setTooltip] = useState<string | null>(null);
-
-  if (!isAllowed) return null;
 
   const toggleRecording = async () => {
     if (recording) {

@@ -56,6 +56,18 @@ export function EnhancedChatMessage({
   const [isStreamingComplete, setIsStreamingComplete] = useState(!isTyping);
   const [showActions, setShowActions] = useState(false);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[EnhancedChatMessage] Message props:', {
+      id,
+      role,
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100),
+      isTyping,
+      hasContent: content.length > 0
+    });
+  }, [id, role, content, isTyping]);
+
   // Create document from AI response if it's substantial content
   useEffect(() => {
     if (role === 'assistant' && content.length > 200 && !isTyping) {
@@ -119,6 +131,13 @@ export function EnhancedChatMessage({
 
   const shouldShowTypingIndicator = isTyping && content.length === 0;
   const shouldStreamText = isTyping && content.length > 0;
+
+  console.log('[EnhancedChatMessage] Render state:', {
+    shouldShowTypingIndicator,
+    shouldStreamText,
+    contentLength: content.length,
+    hasContent: content.length > 0
+  });
 
   return (
     <motion.div

@@ -7,8 +7,15 @@ import { ChatArea } from "@/components/layout/chat-area";
 import { ResizablePanel } from "@/components/ui/resizable-panel";
 import { FloatingActionButton, ChatFocusMode } from "@/components/ui/floating-action-button";
 import { cn } from "@/lib/utils";
-import { chatStorageService, type Chat } from "@/lib/chat-storage-service";
-import { chatMigrationService } from "@/lib/chat-migration-service";
+import { getDefaultModelForTier } from "@/lib/ai-service";
+
+interface Chat {
+  id: string;
+  title: string;
+  lastMessage?: string;
+  timestamp: Date;
+  messageCount: number;
+}
 
 export function MainLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -18,8 +25,6 @@ export function MainLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(280);
   const [chats, setChats] = useState<Chat[]>([]);
-  const [showMigrationPrompt, setShowMigrationPrompt] = useState(false);
-  const [migrationInfo, setMigrationInfo] = useState<{ sessionCount: number; messageCount: number }>({ sessionCount: 0, messageCount: 0 });
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
 
@@ -51,80 +56,20 @@ export function MainLayout() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Load chat sessions using the chat storage service
-  useEffect(() => {
-    const loadChats = async () => {
-      try {
-        const sessions = await chatStorageService.loadChatSessions();
-        const formattedChats = chatStorageService.sessionsToChats(sessions);
-        setChats(formattedChats);
-      } catch (error) {
-        console.error('Failed to load chats for sidebar:', error);
-      }
-    };
-
-    // Load chats on mount
-    loadChats();
-
-    // Check for migration needs
-    const checkMigration = async () => {
-      try {
-        const shouldMigrate = await chatMigrationService.shouldPromptMigration();
-        if (shouldMigrate) {
-          const info = await chatMigrationService.getMigrationInfo();
-          setMigrationInfo(info);
-          setShowMigrationPrompt(true);
-        }
-      } catch (error) {
-        console.error('Failed to check migration needs:', error);
-      }
-    };
-
-    checkMigration();
-
-    // Listen for storage changes to update sidebar when chats are modified
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'convocore-chat-sessions') {
-        loadChats();
-      }
-    };
-
-    // Also listen for custom events from chat components
-    const handleChatUpdate = () => {
-      loadChats();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('chat-sessions-updated', handleChatUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('chat-sessions-updated', handleChatUpdate);
-    };
-  }, []);
-
   const handleNewChat = async () => {
     try {
       const newId = `chat_${Date.now()}`;
       const newTitle = `New Chat ${new Date().toLocaleDateString()}`;
 
-      const newSession = {
+      const newChat: Chat = {
         id: newId,
         title: newTitle,
-        messages: [] as import('@/lib/chat-storage-service').ChatMessage[],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        model: 'gpt-4o',
+        timestamp: new Date(),
         messageCount: 0,
-      } as import('@/lib/chat-storage-service').ChatSession;
+      };
 
-      await chatStorageService.saveChatSession(newSession);
-
+      setChats(prev => [newChat, ...prev]);
       setActiveChatId(newId);
-
-      // Reload chats to include the new one
-      const sessions = await chatStorageService.loadChatSessions();
-      setChats(chatStorageService.sessionsToChats(sessions));
     } catch (error) {
       console.error('Failed to create new chat:', error);
     }
@@ -141,13 +86,11 @@ export function MainLayout() {
     if (isMobile) {
       setShowMobileSidebar(false);
     }
-    // TODO: Load the selected chat session data and pass it to the chat area
-    // This will require updating the ChatArea component to accept session data
   };
 
   const handleDeleteChat = async (chatId: string) => {
     try {
-      await chatStorageService.deleteChatSession(chatId);
+      setChats(prev => prev.filter(chat => chat.id !== chatId));
     } catch (error) {
       console.error('Failed to delete chat:', error);
     }
@@ -177,29 +120,6 @@ export function MainLayout() {
 
   const handleSidebarResize = (newWidth: number) => {
     setSidebarWidth(newWidth);
-  };
-
-  const handleMigration = async () => {
-    try {
-      setShowMigrationPrompt(false);
-      const result = await chatMigrationService.migrateLocalDataToDatabase();
-      
-      if (result.success) {
-        console.log(`Successfully migrated ${result.migratedCount} chat sessions to database`);
-        // Reload chats from database
-        const sessions = await chatStorageService.loadChatSessions();
-        const formattedChats = chatStorageService.sessionsToChats(sessions);
-        setChats(formattedChats);
-      } else {
-        console.error('Migration failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Migration error:', error);
-    }
-  };
-
-  const handleSkipMigration = () => {
-    setShowMigrationPrompt(false);
   };
 
   return (
@@ -254,37 +174,19 @@ export function MainLayout() {
           <ChatArea
             chatId={activeChatId || undefined}
             className="h-full"
+            messages={[]}
+            onSendMessage={(message: string, model: string, includeWebSearch?: boolean) => {
+              console.log('Message sent:', { message, model, includeWebSearch });
+              // Handle message sending here
+            }}
+            usage={{
+              used: 0,
+              limit: 100,
+              plan: 'free'
+            }}
           />
         </div>
       </div>
-
-      {/* Migration Prompt */}
-      {showMigrationPrompt && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg shadow-lg max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-3">Migrate Your Chat History</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              We found {migrationInfo.sessionCount} chat sessions with {migrationInfo.messageCount} messages 
-              stored locally. Would you like to migrate them to your cloud account so they're 
-              saved across all your devices?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleMigration}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                Migrate Chats
-              </button>
-              <button
-                onClick={handleSkipMigration}
-                className="px-4 py-2 bg-gray-200 dark:bg-zinc-600 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-zinc-500 transition-colors"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
