@@ -134,6 +134,10 @@ export function PricingSection() {
                   )}
                 </div>
               ))}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full">
+                <ConvoAILogo className="w-6 h-6" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ConvoAI</span>
+              </div>
             </div>
           </div>
 
