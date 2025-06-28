@@ -178,7 +178,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-white dark:bg-zinc-900">
+      <DialogContent className="sm:max-w-lg w-full max-w-[90vw] bg-white dark:bg-zinc-900">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -263,7 +263,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             </div>
 
             {/* Subscription Status */}
-            <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-4 w-full">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   {getSubscriptionIcon(userProfile.subscription_tier)}
@@ -341,7 +341,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
+          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700 w-full">
             <Button 
               className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
               onClick={() => {
