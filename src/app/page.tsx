@@ -10,6 +10,7 @@ import { Hero } from "@/components/ui/hero";
 import { SplashScreen } from "@/components/ui/splash-screen";
 import { HomeFeaturesSection } from "@/components/ui/home-features-section";
 import { HomePricingSection } from "@/components/ui/home-pricing-section";
+import { ShieldCheck, Star } from "lucide-react";
 
 // Note: Since this is a client component, metadata should be in layout.tsx
 // This is just for reference - the actual metadata is in layout.tsx
@@ -18,6 +19,7 @@ export default function Home() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
+  const [variant, setVariant] = useState<'A' | 'B'>('A');
 
   // Mobile detection
   useEffect(() => {
@@ -43,7 +45,24 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    const storedVariant = localStorage.getItem('convocore-home-variant');
+    if (storedVariant === 'A' || storedVariant === 'B') {
+      setVariant(storedVariant as 'A' | 'B');
+    } else {
+      const newVariant = Math.random() < 0.5 ? 'A' : 'B';
+      localStorage.setItem('convocore-home-variant', newVariant);
+      setVariant(newVariant);
+    }
+  }, []);
+
   const handleStartChatting = () => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "start_chatting_click", {
+        event_category: "CTA",
+        event_label: "Home Hero",
+      });
+    }
     router.push('/auth/login');
   };
 
@@ -70,8 +89,12 @@ export default function Home() {
             ? 'text-2xl sm:text-3xl leading-tight' 
             : 'text-2xl sm:text-3xl md:text-5xl lg:text-7xl'
         }`}>
-          <span className="block">Where AI</span>
-          <span className="block text-blue-500 dark:text-blue-400">Meets Web3</span>
+          <span className="block">
+            Private AI Chat.
+          </span>
+          <span className="block text-blue-500 dark:text-blue-400">
+            Powered by Crypto.
+          </span>
         </div>
         
         {/* Subtitle - Enhanced for Mobile */}
@@ -80,8 +103,8 @@ export default function Home() {
             ? 'text-sm px-6 leading-relaxed' 
             : 'text-sm sm:text-base md:text-xl lg:text-2xl py-4'
         }`}>
-          <span className="block">AI chat with secure</span>
-                          <span className="block">USDT payments on multiple blockchains.</span>
+          <span className="block">Launch private AI conversations in seconds</span>
+          <span className="block">and pay seamlessly with USDT across top blockchains.</span>
         </div>
         
         {/* CTA Button - Enhanced for Mobile */}
@@ -90,19 +113,18 @@ export default function Home() {
           whileHover={{ scale: isMobile ? 1 : 1.05 }}
           whileTap={{ scale: 0.95 }}
           className={`
-            bg-black dark:bg-white rounded-full w-fit text-white dark:text-black 
+            rounded-full w-fit text-white dark:text-black 
             font-medium transition-all duration-200 shadow-lg hover:shadow-xl
             touch-feedback mobile-transition
             ${isMobile 
-              ? 'px-8 py-4 text-base min-h-[48px] min-w-[200px]' 
-              : 'px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base'
-            }
+              ? 'px-8 py-4 text-base min-h-[48px] min-w-[200px] bg-gradient-to-r from-blue-600 to-blue-800' 
+              : 'px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-blue-600 to-blue-700'}
             hover:bg-gray-800 dark:hover:bg-gray-200 
             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
             active:transform active:scale-95
           `}
         >
-          Start Chatting Now
+          Start Secure Chat
         </motion.button>
 
         {/* Additional Mobile Features */}
@@ -138,6 +160,20 @@ export default function Home() {
 
         {/* PWA Install Component */}
         <PWAInstall />
+
+        {/* Trust Indicators */}
+        {!isMobile && (
+          <div className="flex items-center gap-6 mt-6">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-green-500" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">SSL 256-bit Encrypted</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-500" />
+              <span className="text-xs text-gray-600 dark:text-gray-400">Rated 4.9/5 by 5K+ users</span>
+            </div>
+          </div>
+        )}
       </motion.div>
       <Hero />
 
