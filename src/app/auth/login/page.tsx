@@ -51,8 +51,19 @@ export default function LoginPage() {
     setConnectionStep('connecting');
 
     try {
+      // Helper to get Phantom provider (supports mobile where provider is under window.phantom.solana)
+      const getPhantomProvider = () => {
+        if (typeof window === 'undefined') return null;
+        const anyWindow = window as any;
+        if (anyWindow.solana?.isPhantom) return anyWindow.solana;
+        if (anyWindow.phantom?.solana?.isPhantom) return anyWindow.phantom.solana;
+        return null;
+      };
+
+      const phantom = getPhantomProvider();
+
       // Check if Phantom is installed
-      if (!window.solana || !window.solana.isPhantom) {
+      if (!phantom) {
         console.error('[Login] Phantom wallet not installed');
         throw new Error('Phantom wallet is not installed. Please install it from https://phantom.app/');
       }
@@ -60,7 +71,7 @@ export default function LoginPage() {
 
       // Connect to wallet
       console.log('[Login] Connecting to wallet...');
-      const response = await window.solana.connect();
+      const response = await phantom.connect();
       const publicKey = response.publicKey.toString();
 
       console.log('[Login] Wallet connected successfully:', publicKey);
@@ -114,8 +125,19 @@ export default function LoginPage() {
 
       console.log('[Login] Requesting session key authorization for:', address);
 
+      // Helper to get Phantom provider (supports mobile where provider is under window.phantom.solana)
+      const getPhantomProvider = () => {
+        if (typeof window === 'undefined') return null;
+        const anyWindow = window as any;
+        if (anyWindow.solana?.isPhantom) return anyWindow.solana;
+        if (anyWindow.phantom?.solana?.isPhantom) return anyWindow.phantom.solana;
+        return null;
+      };
+
+      const phantom = getPhantomProvider();
+
       // Check if solana is available
-      if (!window.solana) {
+      if (!phantom) {
         console.error('[Login] Phantom wallet not available');
         throw new Error('Phantom wallet not available');
       }
@@ -126,7 +148,7 @@ export default function LoginPage() {
       console.log('[Login] Requesting signature for message...');
       let signedMessage;
       try {
-        signedMessage = await (window.solana as any).signMessage(encodedMessage, 'utf8');
+        signedMessage = await phantom.signMessage(encodedMessage, 'utf8');
         console.log('[Login] Message signed successfully:', signedMessage.signature);
       } catch (signError) {
         console.error('[Login] User rejected signature or error:', signError);
