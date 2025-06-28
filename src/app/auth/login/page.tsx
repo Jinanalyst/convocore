@@ -241,20 +241,20 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <ConvoAILogo className="w-16 h-16 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="w-full max-w-md flex flex-col items-center justify-center mx-auto">
+        {/* Logo and Welcome Message */}
+        <div className="flex flex-col items-center justify-center mb-8 w-full">
+          <ConvoAILogo className="mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 text-center">
             Welcome to ConvoAI
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-300 text-center">
             Connect your wallet to start chatting
           </p>
         </div>
 
         {/* Connection Card */}
-        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm w-full">
           <CardHeader className="text-center pb-4">
             <CardTitle className="flex items-center justify-center gap-2">
               {getStepIcon(connectionStep)}
