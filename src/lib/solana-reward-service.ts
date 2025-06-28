@@ -435,7 +435,4 @@ export function getSolanaRewardService(): SolanaRewardService {
     rewardServiceInstance = new SolanaRewardService();
   }
   return rewardServiceInstance;
-}
-
-// Export configuration for external use
-export { REWARD_CONFIG, SOLANA_NETWORK, SOLANA_RPC_URL }; 
+} 
