@@ -1,8 +1,21 @@
 import * as React from "react";
 
-export function ConvoAILogo({ className = "" }: { className?: string }) {
+interface ConvoAILogoProps {
+  className?: string;
+  orientation?: 'horizontal' | 'vertical';
+}
+
+export function ConvoAILogo({ className = "", orientation = 'horizontal' }: ConvoAILogoProps) {
+  const isVertical = orientation === 'vertical';
   return (
-    <div className={`flex flex-col items-center justify-center ${className}`} style={{ minWidth: 0 }}>
+    <div
+      className={
+        isVertical
+          ? `flex flex-col items-center justify-center ${className}`
+          : `flex items-center gap-3 ${className}`
+      }
+      style={{ minWidth: 0 }}
+    >
       {/* SVG Speech Bubble Logo */}
       <svg
         width="44"
@@ -10,7 +23,7 @@ export function ConvoAILogo({ className = "" }: { className?: string }) {
         viewBox="0 0 44 44"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-10 h-10 md:w-12 md:h-12 mb-2"
+        className={isVertical ? "w-10 h-10 md:w-12 md:h-12 mb-2" : "w-10 h-10 md:w-12 md:h-12"}
       >
         <rect x="2" y="2" width="40" height="32" rx="8" fill="url(#bubbleGradient)" />
         <rect x="2" y="2" width="40" height="32" rx="8" stroke="#E5E7EB" strokeWidth="2" />

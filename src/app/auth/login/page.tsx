@@ -244,7 +244,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md flex flex-col items-center justify-center mx-auto">
         {/* Logo and Welcome Message */}
         <div className="flex flex-col items-center justify-center mb-8 w-full">
-          <ConvoAILogo className="mb-4" />
+          <ConvoAILogo className="mb-4" orientation="vertical" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 text-center">
             Welcome to ConvoAI
           </h1>
