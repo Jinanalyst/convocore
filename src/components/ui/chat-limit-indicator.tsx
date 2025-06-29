@@ -29,7 +29,7 @@ export function ChatLimitIndicator({
   const isNearLimit = remaining === 1;
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full', className, 'text-lg p-4 md:text-base md:p-2')}>
       <div
         className={cn(
           'flex items-center justify-between p-3 sm:p-4 rounded-lg border transition-all duration-200',
@@ -111,7 +111,7 @@ export function ChatLimitIndicator({
           <Button
             size="sm"
             className={cn(
-              'h-8 sm:h-9 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-all duration-200',
+              'h-12 sm:h-9 px-4 text-lg sm:text-sm font-medium transition-all duration-200',
               isLimitReached
                 ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md'
                 : 'bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 text-white dark:text-black'

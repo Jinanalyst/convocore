@@ -152,7 +152,8 @@ export function Header({
 
   return (
     <header className={cn(
-      "flex items-center px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-black border-b border-gray-200 dark:border-zinc-800",
+      "sticky top-0 z-50 flex items-center px-4 py-4 bg-white dark:bg-black border-b w-full",
+      "md:px-6 md:py-4",
       className
     )}>
       {/* Mobile Layout */}
@@ -162,7 +163,7 @@ export function Header({
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          className="shrink-0 touch-feedback h-10 w-10"
+          className="shrink-0 touch-feedback h-12 w-12 text-xl md:h-10 md:w-10"
           aria-label={showMobileMenu ? "Close menu" : "Open menu"}
         >
           {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
