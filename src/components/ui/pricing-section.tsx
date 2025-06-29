@@ -34,8 +34,6 @@ const pricingPlans = [
     features: [
       "Unlimited AI requests",
       "Fast response times",
-      "API access & keys",
-      "Advanced AI models",
       "Email support",
       "Usage statistics",
       "Multi-network USDT payments"
@@ -116,7 +114,7 @@ export function PricingSection() {
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">ConvoAI Token</span>
               </div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                or USDT on:
+                or Solana on:
               </span>
               {supportedNetworks.map((network) => (
                 <div

@@ -85,4 +85,6 @@ export function ensureInitialized() {
 // Auto-initialize
 if (typeof window !== 'undefined') {
   ensureInitialized();
-} 
+}
+
+// Only initialize advanced AI agent tools for Pro and Premium plans. Not for free plan. 

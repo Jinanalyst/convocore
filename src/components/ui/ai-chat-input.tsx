@@ -325,6 +325,8 @@ const AIChatInput = ({
     },
   };
 
+  // Only show AI agent selection and features if usage.plan is 'pro' or 'premium'. Hide or disable for 'free'.
+
   return (
     <div className={`w-full flex justify-center items-end text-black dark:text-white ${className}`}>
       <motion.div
