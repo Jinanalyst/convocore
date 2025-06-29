@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Wallet, ExternalLink, Copy, Check, ChevronDown, ChevronUp, Smartphone, Monitor, AlertCircle, X, CheckCircle } from "lucide-react";
 import { tronPaymentService, formatTronAddress, CONVO_AI_RECIPIENT_ADDRESS } from "@/lib/blockchain";
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
+import { 
+  checkMobileWalletInstalledEnhanced,
+  openMobileWalletAppEnhanced,
+  getMobileWalletBrowserStatusEnhanced,
+  initializeAndroidWalletDetection,
+  setupAndroidWalletListener,
+  isAndroid
+} from "@/lib/mobile-utils";
 
 interface WalletOption {
   id: string;
@@ -335,6 +343,17 @@ export function WalletConnector({
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log('🔍 Starting wallet detection...');
+      
+      // Initialize Android wallet detection if on Android
+      if (isAndroid()) {
+        try {
+          await initializeAndroidWalletDetection();
+          console.log('✅ Android wallet detection initialized');
+        } catch (error) {
+          console.log('⚠️ Android wallet detection not available:', error);
+        }
+      }
+      
       if (typeof window !== 'undefined') {
         console.log('Window object keys:', Object.keys(window).filter(key => 
           key.toLowerCase().includes('wallet') || 
@@ -346,77 +365,82 @@ export function WalletConnector({
         ));
       }
       
-      // Check for each wallet with improved detection
-      walletOptions.forEach(wallet => {
+      // Check for each wallet with enhanced detection
+      for (const wallet of walletOptions) {
         try {
           let isInstalled = false;
           
-          // Enhanced detection based on wallet type
-          switch (wallet.id) {
-            case 'tronlink':
-              isInstalled = !!(window as any).tronLink || 
-                           !!(window as any).tronWeb || 
-                           !!(window as any).tron;
-              if (isInstalled) {
-                console.log('TronLink detection details:', {
-                  tronLink: !!(window as any).tronLink,
-                  tronWeb: !!(window as any).tronWeb,
-                  tron: !!(window as any).tron,
-                  ready: (window as any).tronLink?.ready
-                });
-              }
-              break;
-              
-            case 'metamask':
-              isInstalled = !!(window as any).ethereum?.isMetaMask ||
-                           !!(window as any).web3?.currentProvider?.isMetaMask;
-              if (isInstalled) {
-                console.log('MetaMask detection details:', {
-                  ethereum: !!(window as any).ethereum,
-                  isMetaMask: (window as any).ethereum?.isMetaMask,
-                  web3: !!(window as any).web3
-                });
-              }
-              break;
-              
-            case 'phantom':
-              isInstalled = !!(window as any).solana?.isPhantom ||
-                           !!(window as any).phantom?.solana ||
-                           !!(window as any).phantom;
-              if (isInstalled) {
-                console.log('Phantom detection details:', {
-                  solana: !!(window as any).solana,
-                  isPhantom: (window as any).solana?.isPhantom,
-                  phantom: !!(window as any).phantom
-                });
-              }
-              break;
-              
-            case 'coinbase':
-              isInstalled = !!(window as any).ethereum?.isCoinbaseWallet ||
-                           !!(window as any).coinbaseWalletExtension ||
-                           !!(window as any).ethereum?.selectedProvider?.isCoinbaseWallet;
-              break;
-              
-            case 'trust':
-              isInstalled = !!(window as any).ethereum?.isTrust ||
-                           !!(window as any).trustwallet ||
-                           !!(window as any).ethereum?.isTrustWallet;
-              break;
-              
-            case 'okx':
-              isInstalled = !!(window as any).okxwallet ||
-                           !!(window as any).okexchain ||
-                           !!(window as any).ethereum?.isOKExWallet;
-              break;
-              
-            case 'walletconnect':
-              // WalletConnect is always available as it's a protocol
-              isInstalled = true;
-              break;
-              
-            default:
-              isInstalled = wallet.isInstalled();
+          // Use enhanced detection for Android
+          if (isAndroid()) {
+            isInstalled = await checkMobileWalletInstalledEnhanced(wallet.id);
+          } else {
+            // Enhanced detection based on wallet type for web
+            switch (wallet.id) {
+              case 'tronlink':
+                isInstalled = !!(window as any).tronLink || 
+                             !!(window as any).tronWeb || 
+                             !!(window as any).tron;
+                if (isInstalled) {
+                  console.log('TronLink detection details:', {
+                    tronLink: !!(window as any).tronLink,
+                    tronWeb: !!(window as any).tronWeb,
+                    tron: !!(window as any).tron,
+                    ready: (window as any).tronLink?.ready
+                  });
+                }
+                break;
+                
+              case 'metamask':
+                isInstalled = !!(window as any).ethereum?.isMetaMask ||
+                             !!(window as any).web3?.currentProvider?.isMetaMask;
+                if (isInstalled) {
+                  console.log('MetaMask detection details:', {
+                    ethereum: !!(window as any).ethereum,
+                    isMetaMask: (window as any).ethereum?.isMetaMask,
+                    web3: !!(window as any).web3
+                  });
+                }
+                break;
+                
+              case 'phantom':
+                isInstalled = !!(window as any).solana?.isPhantom ||
+                             !!(window as any).phantom?.solana ||
+                             !!(window as any).phantom;
+                if (isInstalled) {
+                  console.log('Phantom detection details:', {
+                    solana: !!(window as any).solana,
+                    isPhantom: (window as any).solana?.isPhantom,
+                    phantom: !!(window as any).phantom
+                  });
+                }
+                break;
+                
+              case 'coinbase':
+                isInstalled = !!(window as any).ethereum?.isCoinbaseWallet ||
+                             !!(window as any).coinbaseWalletExtension ||
+                             !!(window as any).ethereum?.selectedProvider?.isCoinbaseWallet;
+                break;
+                
+              case 'trust':
+                isInstalled = !!(window as any).ethereum?.isTrust ||
+                             !!(window as any).trustwallet ||
+                             !!(window as any).ethereum?.isTrustWallet;
+                break;
+                
+              case 'okx':
+                isInstalled = !!(window as any).okxwallet ||
+                             !!(window as any).okexchain ||
+                             !!(window as any).ethereum?.isOKExWallet;
+                break;
+                
+              case 'walletconnect':
+                // WalletConnect is always available as it's a protocol
+                isInstalled = true;
+                break;
+                
+              default:
+                isInstalled = wallet.isInstalled();
+            }
           }
           
           if (isInstalled) {
@@ -428,7 +452,7 @@ export function WalletConnector({
         } catch (error) {
           console.log(`❌ Error detecting ${wallet.name}:`, error);
         }
-      });
+      }
       
       // Additional global detection check
       if (typeof window !== 'undefined') {
@@ -466,12 +490,32 @@ export function WalletConnector({
       window.addEventListener('load', handleWalletEvents);
     }
     
+    // Setup Android wallet listener
+    const cleanupAndroidListener = setupAndroidWalletListener((event) => {
+      console.log('📱 Android wallet event:', event);
+      if (event.type === 'WALLET_CONNECTED') {
+        // Handle wallet connection from Android
+        const walletType = event.wallet;
+        const address = event.address;
+        if (walletType && address) {
+          setWalletAddress(address);
+          setWalletType(walletType);
+          const wallet = walletOptions.find(w => w.id === walletType);
+          setSelectedWallet(wallet || null);
+          onWalletConnected?.(address, walletType);
+        }
+      }
+    });
+    
     return () => {
       clearInterval(interval);
       if (typeof window !== 'undefined') {
         window.removeEventListener('ethereum#initialized', handleWalletEvents);
         window.removeEventListener('tronLink#initialized', handleWalletEvents);
         window.removeEventListener('load', handleWalletEvents);
+      }
+      if (cleanupAndroidListener) {
+        cleanupAndroidListener();
       }
     };
   }, [isMounted]);
@@ -526,7 +570,12 @@ export function WalletConnector({
   const handleWalletSelect = async (wallet: WalletOption) => {
     setIsDropdownOpen(false);
     
-    if (!wallet.isInstalled()) {
+    // Check if wallet is installed using enhanced detection
+    const isInstalled = isAndroid() 
+      ? await checkMobileWalletInstalledEnhanced(wallet.id)
+      : wallet.isInstalled();
+    
+    if (!isInstalled) {
       if (isMobile && wallet.mobileInstallUrl) {
         setError(`${wallet.name} is not installed. Redirecting to mobile app store...`);
         setTimeout(() => {
@@ -545,7 +594,29 @@ export function WalletConnector({
     setSelectedWallet(wallet);
     
     try {
-      const address = await wallet.connect();
+      let address: string | null = null;
+      
+      // Use enhanced wallet opening for Android
+      if (isAndroid()) {
+        try {
+          // Try to open the wallet app first
+          await openMobileWalletAppEnhanced(wallet.id, 'connect');
+          
+          // Wait a bit for the wallet to respond
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Try to connect using the wallet's connect method
+          address = await wallet.connect();
+        } catch (error) {
+          console.log('Android wallet opening failed, trying direct connection:', error);
+          // Fallback to direct connection
+          address = await wallet.connect();
+        }
+      } else {
+        // Web-based connection
+        address = await wallet.connect();
+      }
+      
       if (address) {
         setWalletAddress(address);
         setWalletType(wallet.id);

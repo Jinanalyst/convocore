@@ -1,5 +1,7 @@
 "use client";
 
+
+import { DownloadSection } from "@/components/ui/download-section";
 import type { Metadata } from "next";
 import { motion } from "framer-motion";
 import { useRouter } from 'next/navigation';
@@ -367,6 +369,8 @@ export default function Home() {
               </div>
             </motion.div>
           </section>
+
+          <DownloadSection />
 
           {/* Features Section */}
           <HomeFeaturesSection />

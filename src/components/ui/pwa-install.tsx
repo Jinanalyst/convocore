@@ -193,8 +193,7 @@ export function PWAInstall() {
             <X className="w-4 h-4" />
           </button>
         </div>
-        
-        <div className="flex gap-2 mt-3">
+        <div className="flex gap-2 mt-4">
           <button 
             onClick={handleInstallClick}
             disabled={!deferredPrompt}
@@ -209,6 +208,20 @@ export function PWAInstall() {
           >
             Later
           </button>
+          {/* Android APK Download Button */}
+          {isMobile && navigator.userAgent.toLowerCase().includes('android') && (
+            <a
+              href="/downloads/convocore-android.apk"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-2"
+              style={{ textAlign: 'center' }}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Download className="w-4 h-4" />
+              Download Android App
+            </a>
+          )}
         </div>
       </div>
     </div>

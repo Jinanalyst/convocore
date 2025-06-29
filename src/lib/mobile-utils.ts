@@ -12,6 +12,51 @@ export const BREAKPOINTS = {
   large: 1200,
 } as const;
 
+// Android wallet detection plugin interface
+interface WalletDetectionPlugin {
+  checkInstalledWallets(): Promise<{
+    installedWallets: string[];
+    count: number;
+  }>;
+  
+  openWalletApp(options: {
+    walletType: string;
+    action?: string;
+  }): Promise<void>;
+  
+  isWalletBrowser(): Promise<{
+    isWallet: boolean;
+    walletName?: string;
+  }>;
+  
+  getWalletConnectionStatus(): Promise<{
+    status: string;
+    address: string | null;
+    walletType: string | null;
+  }>;
+  
+  handleDeepLink(options: {
+    url: string;
+  }): Promise<{
+    type: string;
+    walletType?: string;
+    action?: string;
+    address?: string;
+    path?: string;
+  }>;
+}
+
+// Try to get the Android wallet detection plugin
+let WalletDetection: WalletDetectionPlugin | null = null;
+if (typeof window !== 'undefined' && (window as any).Capacitor) {
+  try {
+    const { registerPlugin } = require('@capacitor/core');
+    WalletDetection = registerPlugin('WalletDetection');
+  } catch (error) {
+    console.log('WalletDetection plugin not available:', error);
+  }
+}
+
 // Hook for mobile detection
 export function useIsMobile(breakpoint: number = BREAKPOINTS.tablet) {
   const [isMobile, setIsMobile] = useState(false);
@@ -280,12 +325,11 @@ export const getDeviceType = (): 'mobile' | 'tablet' | 'desktop' => {
 // Wallet deep link helpers
 export const getWalletDeepLink = (walletId: string, action: string = 'connect'): string | null => {
   const deepLinks: Record<string, string> = {
-    tronlink: 'tronlinkoutside://pull.activity',
-    metamask: 'https://metamask.app.link/dapp/',
-    trust: 'trust://open_url',
-    phantom: 'phantom://browse/',
-    coinbase: 'https://go.cb-w.com/dapp',
-    okx: 'okx://wallet/dapp/url',
+    phantom: 'phantom://browse/', // Phantom - Primary Solana wallet
+    solflare: 'solflare://browse/', // Solflare
+    coinbase: 'https://go.cb-w.com/dapp', // Coinbase Wallet (supports Solana)
+    trust: 'trust://open_url', // Trust Wallet (supports Solana)
+    okx: 'okx://wallet/dapp/url', // OKX Wallet (supports Solana)
   };
 
   return deepLinks[walletId] || null;
@@ -315,16 +359,16 @@ export const checkMobileWalletInstalled = async (walletId: string): Promise<bool
   if (!isMobileDevice()) return false;
   
   switch (walletId) {
-    case 'metamask':
-      return !!(window as any).ethereum?.isMetaMask;
-    case 'trust':
-      return !!(window as any).ethereum?.isTrust;
+    case 'phantom':
+      return !!(window as any).solana?.isPhantom || !!(window as any).phantom?.solana?.isPhantom;
+    case 'solflare':
+      return !!(window as any).solana?.isSolflare || !!(window as any).solflare?.isSolflare;
     case 'coinbase':
       return !!(window as any).ethereum?.isCoinbaseWallet;
-    case 'phantom':
-      return !!(window as any).solana?.isPhantom;
-    case 'tronlink':
-      return !!(window as any).tronLink;
+    case 'trust':
+      return !!(window as any).ethereum?.isTrust;
+    case 'okx':
+      return !!(window as any).okxwallet || !!(window as any).ethereum?.isOKExWallet;
     default:
       return false;
   }
@@ -364,7 +408,7 @@ export const addTouchSupport = (element: HTMLElement): void => {
   element.style.touchAction = 'manipulation';
   element.style.userSelect = 'none';
   element.style.webkitUserSelect = 'none';
-  element.style.webkitTapHighlightColor = 'transparent';
+  (element.style as any).webkitTapHighlightColor = 'transparent';
 };
 
 // Responsive breakpoint utilities
@@ -397,28 +441,32 @@ export const isWalletBrowser = (): { isWallet: boolean; walletName?: string } =>
   
   const userAgent = navigator.userAgent.toLowerCase();
   
-  if (userAgent.includes('metamask')) {
-    return { isWallet: true, walletName: 'MetaMask' };
+  if (userAgent.includes('phantom')) {
+    return { isWallet: true, walletName: 'Phantom' };
   }
   
-  if (userAgent.includes('trust')) {
-    return { isWallet: true, walletName: 'Trust Wallet' };
+  if (userAgent.includes('solflare')) {
+    return { isWallet: true, walletName: 'Solflare' };
   }
   
   if (userAgent.includes('coinbase')) {
     return { isWallet: true, walletName: 'Coinbase Wallet' };
   }
   
-  if (userAgent.includes('tronlink')) {
-    return { isWallet: true, walletName: 'TronLink' };
+  if (userAgent.includes('trust')) {
+    return { isWallet: true, walletName: 'Trust Wallet' };
   }
   
-  if ((window as any).ethereum?.isMetaMask) {
-    return { isWallet: true, walletName: 'MetaMask' };
+  if (userAgent.includes('okx')) {
+    return { isWallet: true, walletName: 'OKX Wallet' };
   }
   
-  if ((window as any).tronLink) {
-    return { isWallet: true, walletName: 'TronLink' };
+  if ((window as any).solana?.isPhantom) {
+    return { isWallet: true, walletName: 'Phantom' };
+  }
+  
+  if ((window as any).solana?.isSolflare) {
+    return { isWallet: true, walletName: 'Solflare' };
   }
   
   return { isWallet: false };
@@ -451,4 +499,166 @@ export const getSafeAreaInsets = (): { top: number; bottom: number; left: number
     left: parseInt(computedStyle.getPropertyValue('--safe-area-inset-left') || '0'),
     right: parseInt(computedStyle.getPropertyValue('--safe-area-inset-right') || '0'),
   };
+};
+
+// Enhanced Android wallet detection functions
+export const checkAndroidWalletInstalled = async (walletId: string): Promise<boolean> => {
+  if (!isAndroid() || !WalletDetection) return false;
+  
+  try {
+    const result = await WalletDetection.checkInstalledWallets();
+    const walletPackages: Record<string, string> = {
+      phantom: 'app.phantom', // Phantom - Primary Solana wallet
+      solflare: 'com.solflare.wallet', // Solflare
+      coinbase: 'com.coinbase.wallet', // Coinbase Wallet (supports Solana)
+      trust: 'com.trustwallet.app', // Trust Wallet (supports Solana)
+      okx: 'com.okinc.okex.gp', // OKX Wallet (supports Solana)
+    };
+    
+    const packageName = walletPackages[walletId];
+    return packageName ? result.installedWallets.includes(packageName) : false;
+  } catch (error) {
+    console.error('Error checking Android wallet installation:', error);
+    return false;
+  }
+};
+
+export const openAndroidWalletApp = async (walletId: string, action: string = 'connect'): Promise<void> => {
+  if (!isAndroid() || !WalletDetection) {
+    // Fallback to web-based deep link
+    openWalletApp(walletId);
+    return;
+  }
+  
+  try {
+    await WalletDetection.openWalletApp({ walletType: walletId, action });
+  } catch (error) {
+    console.error('Error opening Android wallet app:', error);
+    // Fallback to web-based deep link
+    openWalletApp(walletId);
+  }
+};
+
+export const getAndroidWalletBrowserStatus = async (): Promise<{ isWallet: boolean; walletName?: string }> => {
+  if (!isAndroid() || !WalletDetection) {
+    return isWalletBrowser();
+  }
+  
+  try {
+    return await WalletDetection.isWalletBrowser();
+  } catch (error) {
+    console.error('Error checking Android wallet browser status:', error);
+    return isWalletBrowser();
+  }
+};
+
+export const getAndroidWalletConnectionStatus = async (): Promise<{
+  status: string;
+  address: string | null;
+  walletType: string | null;
+}> => {
+  if (!isAndroid() || !WalletDetection) {
+    return {
+      status: 'disconnected',
+      address: null,
+      walletType: null
+    };
+  }
+  
+  try {
+    return await WalletDetection.getWalletConnectionStatus();
+  } catch (error) {
+    console.error('Error getting Android wallet connection status:', error);
+    return {
+      status: 'disconnected',
+      address: null,
+      walletType: null
+    };
+  }
+};
+
+export const handleAndroidDeepLink = async (url: string): Promise<{
+  type: string;
+  walletType?: string;
+  action?: string;
+  address?: string;
+  path?: string;
+}> => {
+  if (!isAndroid() || !WalletDetection) {
+    return { type: 'unknown' };
+  }
+  
+  try {
+    return await WalletDetection.handleDeepLink({ url });
+  } catch (error) {
+    console.error('Error handling Android deep link:', error);
+    return { type: 'unknown' };
+  }
+};
+
+// Enhanced mobile wallet detection that works with both web and Android
+export const checkMobileWalletInstalledEnhanced = async (walletId: string): Promise<boolean> => {
+  if (isAndroid()) {
+    return await checkAndroidWalletInstalled(walletId);
+  } else {
+    return await checkMobileWalletInstalled(walletId);
+  }
+};
+
+export const openMobileWalletAppEnhanced = async (walletId: string, action: string = 'connect'): Promise<void> => {
+  if (isAndroid()) {
+    await openAndroidWalletApp(walletId, action);
+  } else {
+    openWalletApp(walletId);
+  }
+};
+
+export const getMobileWalletBrowserStatusEnhanced = async (): Promise<{ isWallet: boolean; walletName?: string }> => {
+  if (isAndroid()) {
+    return await getAndroidWalletBrowserStatus();
+  } else {
+    return isWalletBrowser();
+  }
+};
+
+// Listen for wallet connection events from Android
+export const setupAndroidWalletListener = (callback: (event: any) => void): (() => void) => {
+  if (!isAndroid() || typeof window === 'undefined') {
+    return () => {}; // Return empty cleanup function
+  }
+  
+  const handleMessage = (event: MessageEvent) => {
+    if (event.data && event.data.type === 'WALLET_CONNECTED') {
+      callback(event.data);
+    }
+  };
+  
+  window.addEventListener('message', handleMessage);
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
+};
+
+// Initialize Android wallet detection on app start
+export const initializeAndroidWalletDetection = async (): Promise<void> => {
+  if (!isAndroid() || !WalletDetection) return;
+  
+  try {
+    // Check installed wallets
+    const result = await WalletDetection.checkInstalledWallets();
+    console.log('Android installed Solana wallets:', result);
+    
+    // Check if running in wallet browser
+    const browserStatus = await WalletDetection.isWalletBrowser();
+    console.log('Android Solana wallet browser status:', browserStatus);
+    
+    // Check connection status
+    const connectionStatus = await WalletDetection.getWalletConnectionStatus();
+    console.log('Android Solana wallet connection status:', connectionStatus);
+    
+  } catch (error) {
+    console.error('Error initializing Android Solana wallet detection:', error);
+  }
 }; 
