@@ -185,15 +185,16 @@ export function Sidebar({
         {/* Header: Logo + Toggle (clean, single row, no duplicate text) */}
         <div className="flex items-center p-4 border-b border-gray-100 dark:border-zinc-800 gap-2">
           {isCollapsed ? (
-            <span className="block">
+            <span className="block flex items-center justify-center w-full overflow-hidden">
               {/* Only the SVG icon part of ConvoAILogo */}
               <svg
-                width="44"
-                height="44"
+                width="32"
+                height="32"
                 viewBox="0 0 44 44"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-10 h-10 md:w-12 md:h-12"
+                className="w-8 h-8"
+                style={{ display: 'block' }}
               >
                 <rect x="2" y="2" width="40" height="32" rx="8" fill="url(#bubbleGradient)" />
                 <rect x="2" y="2" width="40" height="32" rx="8" stroke="#E5E7EB" strokeWidth="2" />

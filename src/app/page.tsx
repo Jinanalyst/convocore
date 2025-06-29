@@ -10,7 +10,7 @@ import { Hero } from "@/components/ui/hero";
 import { SplashScreen } from "@/components/ui/splash-screen";
 import { HomeFeaturesSection } from "@/components/ui/home-features-section";
 import { HomePricingSection } from "@/components/ui/home-pricing-section";
-import { ShieldCheck, Star } from "lucide-react";
+import { ShieldCheck, Star, ArrowRight, CheckCircle, Zap, Lock, Globe } from "lucide-react";
 
 // Note: Since this is a client component, metadata should be in layout.tsx
 // This is just for reference - the actual metadata is in layout.tsx
@@ -19,7 +19,6 @@ export default function Home() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
-  const [variant, setVariant] = useState<'A' | 'B'>('A');
 
   // Mobile detection
   useEffect(() => {
@@ -45,17 +44,6 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    const storedVariant = localStorage.getItem('convocore-home-variant');
-    if (storedVariant === 'A' || storedVariant === 'B') {
-      setVariant(storedVariant as 'A' | 'B');
-    } else {
-      const newVariant = Math.random() < 0.5 ? 'A' : 'B';
-      localStorage.setItem('convocore-home-variant', newVariant);
-      setVariant(newVariant);
-    }
-  }, []);
-
   const handleStartChatting = () => {
     if (typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "start_chatting_click", {
@@ -73,213 +61,327 @@ export default function Home() {
   return (
     <>
       <BackgroundPaths>
-      <motion.div
-        initial={{ opacity: 0.0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{
-          delay: 0.3,
-          duration: 0.8,
-          ease: "easeInOut",
-        }}
-        className="relative flex flex-col gap-4 sm:gap-6 items-center justify-center px-4 sm:px-6 lg:px-8 text-center min-h-[70vh] safe-area-top safe-area-bottom"
-      >
-        {/* Main Title - Enhanced for Mobile */}
-        <div className={`font-bold dark:text-white text-center max-w-4xl mx-auto leading-tight ${
-          isMobile 
-            ? 'text-2xl sm:text-3xl leading-tight' 
-            : 'text-2xl sm:text-3xl md:text-5xl lg:text-7xl'
-        }`}>
-          <span className="block">
-            Private AI Chat.
-          </span>
-          <span className="block text-blue-500 dark:text-blue-400">
-            Powered by Crypto.
-          </span>
-        </div>
-        
-        {/* Subtitle - Enhanced for Mobile */}
-        <div className={`font-extralight dark:text-neutral-200 max-w-3xl mx-auto leading-relaxed ${
-          isMobile 
-            ? 'text-sm px-6 leading-relaxed' 
-            : 'text-sm sm:text-base md:text-xl lg:text-2xl py-4'
-        }`}>
-          <span className="block">Launch private AI conversations in seconds</span>
-          <span className="block">and pay seamlessly with USDT across top blockchains.</span>
-        </div>
-        
-        {/* CTA Button - Enhanced for Mobile */}
-        <motion.button 
-          onClick={handleStartChatting}
-          whileHover={{ scale: isMobile ? 1 : 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className={`
-            rounded-full w-fit text-white dark:text-black 
-            font-medium transition-all duration-200 shadow-lg hover:shadow-xl
-            touch-feedback mobile-transition
-            ${isMobile 
-              ? 'px-8 py-4 text-base min-h-[48px] min-w-[200px] bg-gradient-to-r from-blue-600 to-blue-800' 
-              : 'px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base bg-gradient-to-r from-blue-600 to-blue-700'}
-            hover:bg-gray-800 dark:hover:bg-gray-200 
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-            active:transform active:scale-95
-          `}
-        >
-          Start Secure Chat
-        </motion.button>
+        {/* Hero Section */}
+        <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center">
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 mb-8"
+            >
+              <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                New: Multi-chain USDT payments
+              </span>
+            </motion.div>
 
-        {/* Additional Mobile Features */}
-        {isMobile && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mt-8 space-y-4 px-6 max-w-sm mx-auto"
-          >
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Free to start • 3 chats daily</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-white/10 dark:bg-black/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-center">
-                  <div className="text-blue-500 dark:text-blue-400 font-semibold">AI Models</div>
-                  <div className="text-gray-600 dark:text-gray-400 mt-1">GPT-4, Claude 3</div>
-                </div>
+            {/* Main Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 dark:text-white mb-6"
+            >
+              Private AI Chat.
+              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Powered by Crypto.
+              </span>
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-lg sm:text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed"
+            >
+              Launch private AI conversations in seconds and pay seamlessly with USDT across top blockchains.
+            </motion.p>
+
+            {/* CTA Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12"
+            >
+              <button
+                onClick={handleStartChatting}
+                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                Start Secure Chat
+                <ArrowRight className="inline-block ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button
+                onClick={() => router.push('/pricing')}
+                className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300"
+              >
+                View Pricing
+              </button>
+            </motion.div>
+
+            {/* Trust Indicators */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-green-500" />
+                <span>SSL 256-bit Encrypted</span>
               </div>
-              
-              <div className="bg-white/10 dark:bg-black/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-center">
-                  <div className="text-green-500 dark:text-green-400 font-semibold">Payments</div>
-                  <div className="text-gray-600 dark:text-gray-400 mt-1">PayPal & USDT</div>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                <span>Rated 4.9/5 by 5K+ users</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-blue-500" />
+                <span>Zero-knowledge privacy</span>
+              </div>
+            </motion.div>
+
+            {/* PWA Install Component */}
+            <PWAInstall />
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-24 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+                Why Choose Convocore?
+              </h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Experience the future of AI chat with blockchain-powered payments and enterprise-grade security.
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Feature 1 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mb-6">
+                  <Lock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Private & Secure
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  End-to-end encryption ensures your conversations stay private. No data mining or tracking.
+                </p>
+              </motion.div>
+
+              {/* Feature 2 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center mb-6">
+                  <Globe className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Multi-Chain Payments
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Pay with USDT across Ethereum, Polygon, BSC, and more. Instant settlements, no intermediaries.
+                </p>
+              </motion.div>
+
+              {/* Feature 3 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center mb-6">
+                  <Zap className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Lightning Fast
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Powered by GPT-4 and Claude 3. Get instant responses with context-aware conversations.
+                </p>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* Social Proof Section */}
+        <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900/50">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+                Trusted by Developers Worldwide
+              </h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Join thousands of satisfied users who've made Convocore their go-to AI chat platform.
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Testimonial 1 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                  "Convocore seamlessly bridges AI and crypto. The chat quality is top-notch and the on-chain payments just work."
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    AK
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Alice K.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Solana Developer</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Testimonial 2 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                  "The pay-as-you-go model is perfect for our team. We can top-up with USDT and keep building without worrying about API limits."
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    BL
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Brian L.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Full-Stack Engineer</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Testimonial 3 */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                  "I love the minimal UI and the fact that I can pay with my crypto wallet. It feels futuristic and secure."
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    CW
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Chen W.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Crypto Enthusiast</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-24 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="max-w-4xl mx-auto text-center"
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+              Ready to Experience the Future?
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+              Join thousands of developers and crypto enthusiasts who've already made Convocore their preferred AI chat platform.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+              <button
+                onClick={handleStartChatting}
+                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                Start Your Free Trial
+                <ArrowRight className="inline-block ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button
+                onClick={() => router.push('/pricing')}
+                className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300"
+              >
+                View Pricing Plans
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span>3 free chats daily</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span>Cancel anytime</span>
               </div>
             </div>
           </motion.div>
-        )}
+        </section>
 
-        {/* PWA Install Component */}
-        <PWAInstall />
-
-        {/* Trust Indicators */}
-        {!isMobile && (
-          <div className="flex items-center gap-6 mt-6">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-green-500" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">SSL 256-bit Encrypted</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-500" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Rated 4.9/5 by 5K+ users</span>
-            </div>
-          </div>
-        )}
-      </motion.div>
-      <Hero />
-
-      {/* Features Section */}
-      <HomeFeaturesSection />
-      <HomePricingSection />
-
-      {/* Testimonials Section */}
-      <section className="w-full py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-zinc-900 dark:text-zinc-100 mb-12">
-            What our users are saying
-          </h2>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {/* Testimonial Card 1 */}
-            <div className="bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-lg p-6 flex flex-col justify-between h-full">
-              <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
-                "Convocore seamlessly bridges AI and crypto. The chat quality is top-notch and the on-chain payments just work."
-              </p>
-              <div className="flex items-center gap-3">
-                <img
-                  src="/convocore-logo.svg"
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-600"
-                />
-                <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Alice K.</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Solana Developer</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Testimonial Card 2 */}
-            <div className="bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-lg p-6 flex flex-col justify-between h-full">
-              <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
-                "The pay-as-you-go model is perfect for our team. We can top-up with USDT and keep building without worrying about API limits."
-              </p>
-              <div className="flex items-center gap-3">
-                <img
-                  src="/convocore-logo.svg"
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-600"
-                />
-                <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Brian L.</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Full-Stack Engineer</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Testimonial Card 3 */}
-            <div className="bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-lg p-6 flex flex-col justify-between h-full">
-              <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
-                "I love the minimal UI and the fact that I can pay with my crypto wallet. It feels futuristic and secure."
-              </p>
-              <div className="flex items-center gap-3">
-                <img
-                  src="/convocore-logo.svg"
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-600"
-                />
-                <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Chen W.</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Crypto Enthusiast</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Call to Action Section */}
-      <section className="w-full py-24">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: 'easeInOut' }}
-          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center rounded-2xl shadow-xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/10"
-        >
-          <div className="py-12 sm:py-16 lg:py-20">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-zinc-900 dark:text-white">
-              Ready to Get Started?
-            </h2>
-            <p className="mt-4 max-w-2xl mx-auto text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-              Join thousands of satisfied customers using Convocore to power seamless AI-driven conversations.
-            </p>
-
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                onClick={() => router.push('/pricing')}
-                className="inline-flex items-center justify-center rounded-full border border-zinc-300 dark:border-zinc-600 bg-transparent px-8 py-3 text-sm font-medium text-zinc-900 dark:text-white transition hover:bg-zinc-50 dark:hover:bg-zinc-700/40"
-              >
-                Learn More
-              </button>
-              <button
-                onClick={() => router.push('/auth/login')}
-                className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-8 py-3 text-sm font-medium text-white dark:text-black shadow-lg transition hover:scale-105 hover:shadow-xl"
-              >
-                Get Started
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </section>
+        {/* Features Section */}
+        <HomeFeaturesSection />
+        <HomePricingSection />
       </BackgroundPaths>
     </>
   );

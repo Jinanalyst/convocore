@@ -178,7 +178,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg w-full max-w-[90vw] bg-white dark:bg-zinc-900">
+      <DialogContent className="sm:max-w-lg w-full max-w-[90vw] bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-xl border-none">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -186,15 +186,15 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Profile Section */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Avatar and Basic Info */}
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center">
+            <div className="flex items-start gap-6">
+              <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-full flex items-center justify-center shadow-md">
                 <User className="w-8 h-8 text-white dark:text-gray-900" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {isEditing ? (
                   <div className="space-y-3">
                     <input
@@ -253,7 +253,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                         <Edit3 className="w-3 h-3" />
                       </Button>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-1">
+                    <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-1 break-all overflow-wrap">
                       <Mail className="w-3 h-3" />
                       {(userProfile.email || 'wallet@wallet')}
                     </p>
@@ -263,8 +263,8 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             </div>
 
             {/* Subscription Status */}
-            <div className="bg-gray-50 dark:bg-zinc-800 rounded-lg p-4 w-full">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-gray-50 dark:bg-zinc-800 rounded-xl p-5 w-full shadow-sm">
+              <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   {getSubscriptionIcon(userProfile.subscription_tier)}
                   Subscription
@@ -289,14 +289,12 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     {(userProfile.subscription_status || 'expired').charAt(0).toUpperCase() + (userProfile.subscription_status || 'expired').slice(1)}
                   </span>
                 </div>
-                
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-300">API Usage:</span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {(userProfile.api_requests_used || 0).toLocaleString()} / {(userProfile.api_requests_limit || 0).toLocaleString()}
                   </span>
                 </div>
-                
                 {/* Usage Bar */}
                 <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
                   <div 
@@ -317,7 +315,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             {/* Account Details */}
             <div className="space-y-3">
               <h4 className="font-medium text-gray-900 dark:text-white">Account Details</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-6 text-sm">
                 <div>
                   <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
@@ -341,9 +339,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700 w-full">
+          <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-zinc-700 w-full">
             <Button 
-              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
+              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white py-3 text-base rounded-lg"
               onClick={() => {
                 // Navigate to billing page
                 console.log('Navigate to billing');
@@ -354,7 +352,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             </Button>
             <Button 
               variant="outline" 
-              className="flex-1"
+              className="flex-1 py-3 text-base rounded-lg"
               onClick={() => {
                 // Navigate to security settings
                 console.log('Navigate to security');

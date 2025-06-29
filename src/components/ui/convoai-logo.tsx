@@ -12,18 +12,18 @@ export function ConvoAILogo({ className = "", orientation = 'horizontal' }: Conv
       className={
         isVertical
           ? `flex flex-col items-center justify-center ${className}`
-          : `flex items-center gap-3 ${className}`
+          : `flex items-center justify-center gap-2 sm:gap-3 ${className}`
       }
       style={{ minWidth: 0 }}
     >
       {/* SVG Speech Bubble Logo */}
       <svg
-        width="44"
-        height="44"
+        width="36"
+        height="36"
         viewBox="0 0 44 44"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={isVertical ? "w-10 h-10 md:w-12 md:h-12 mb-2" : "w-10 h-10 md:w-12 md:h-12"}
+        className={isVertical ? "w-8 h-8 md:w-10 md:h-10 mb-2" : "w-8 h-8 md:w-10 md:h-10"}
       >
         <rect x="2" y="2" width="40" height="32" rx="8" fill="url(#bubbleGradient)" />
         <rect x="2" y="2" width="40" height="32" rx="8" stroke="#E5E7EB" strokeWidth="2" />
@@ -39,7 +39,7 @@ export function ConvoAILogo({ className = "", orientation = 'horizontal' }: Conv
         </defs>
       </svg>
       {/* Logo Text */}
-      <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent whitespace-nowrap select-none">
+      <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-500 to-cyan-400 bg-clip-text text-transparent whitespace-nowrap select-none flex items-center" style={{lineHeight: 1}}>
         ConvoAI
       </span>
     </div>
