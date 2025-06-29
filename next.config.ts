@@ -14,7 +14,11 @@ const nextConfig: NextConfig = {
   },
   // Add page extensions to handle static files properly
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  webpack(config) {
+  // Disable static generation for problematic pages
+  trailingSlash: false,
+  // Disable static generation
+  output: 'standalone',
+  webpack(config, { isServer }) {
     // Silence "Critical dependency: the request of a dependency is an expression" warnings
     // (e.g., from @supabase/realtime-js)
     config.module.exprContextCritical = false;
@@ -45,19 +49,11 @@ const nextConfig: NextConfig = {
       },
     });
     
-    // Handle the specific SPL token module issue
+    // Handle the specific SPL token module issue with proper aliasing
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@solana/spl-token/lib/esm/extensions/pausable/actions.js': false,
+      '@solana/spl-token/lib/esm/extensions/pausable/actions.js': '@solana/spl-token/lib/esm/extensions/pausable/index.js',
     };
-    
-    // Add a plugin to handle missing modules
-    config.plugins.push(
-      new (require('webpack')).IgnorePlugin({
-        resourceRegExp: /^\.\/actions\.js$/,
-        contextRegExp: /@solana\/spl-token\/lib\/esm\/extensions\/pausable$/,
-      })
-    );
     
     return config;
   },
