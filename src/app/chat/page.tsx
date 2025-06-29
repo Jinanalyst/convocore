@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { ChatArea } from "@/components/layout/chat-area";
 import { SettingsModal } from "@/components/modals/settings-modal";
 import { ShareModal } from "@/components/modals/share-modal";
+import { OnboardingModal } from "@/components/ui/onboarding-modal";
 import { PWAInstall } from "@/components/ui/pwa-install";
 import { VoiceAssistant } from "@/components/assistant/voice-assistant";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ function ChatPageContent() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [usage, setUsage] = useState({
     used: 0,
     limit: 3,
@@ -81,6 +83,13 @@ function ChatPageContent() {
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    
+    // Show onboarding for new mobile users
+    const hasSeenOnboarding = localStorage.getItem('has-seen-onboarding');
+    if (isMobile && !hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+    
     return () => {
       window.removeEventListener('resize', checkMobile);
       window.removeEventListener('usageUpdated', loadUsage);
@@ -105,8 +114,16 @@ function ChatPageContent() {
     }
   }, [chats, queryChatId]);
 
+  const handleOnboardingComplete = (prefs: any) => {
+    localStorage.setItem('has-seen-onboarding', 'true');
+    localStorage.setItem('user-consent-prefs', JSON.stringify(prefs));
+    setShowOnboarding(false);
+    console.log('✅ Onboarding completed with preferences:', prefs);
+  };
+
   const loadUsage = () => {
-    const userId = localStorage.getItem('wallet_connected') === 'true' ? localStorage.getItem('wallet_address') : 'local';
+    const userId = localStorage.getItem('wallet_connected') === 'true' ? 
+      (localStorage.getItem('wallet_address') || 'local') : 'local';
     try {
       const userUsage = usageService.getUserUsage(userId);
       const subscription = usageService.getUserSubscription(userId);
@@ -259,7 +276,8 @@ function ChatPageContent() {
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
 
-    usageService.incrementUsage(localStorage.getItem('wallet_connected') === 'true' ? localStorage.getItem('wallet_address') : 'local');
+    usageService.incrementUsage(localStorage.getItem('wallet_connected') === 'true' ? 
+      (localStorage.getItem('wallet_address') || 'local') : 'local');
 
     let reply = "Assistant is thinking...";
     try {
@@ -589,6 +607,12 @@ function ChatPageContent() {
       />
 
       <PWAInstall />
+
+      <OnboardingModal
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 }

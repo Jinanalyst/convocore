@@ -64,7 +64,7 @@ const generateTitle = (firstMessage: string): string => {
   return title + '...';
 };
 
-// Sidebar Component
+// Sidebar Component with enhanced mobile support
 const ChatSidebar: React.FC<{
   sessions: any[];
   currentSession: any | null;
@@ -111,18 +111,18 @@ const ChatSidebar: React.FC<{
     <AnimatePresence>
       {(isOpen || !isMobile) && (
         <>
-          {/* Mobile backdrop */}
+          {/* Mobile backdrop with enhanced touch area */}
           {isMobile && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden touch-none"
               onClick={onClose}
             />
           )}
           
-          {/* Sidebar */}
+          {/* Sidebar with improved mobile styling */}
           <motion.aside
             initial={isMobile ? { x: -320 } : { x: 0 }}
             animate={{ x: 0 }}
@@ -130,45 +130,51 @@ const ChatSidebar: React.FC<{
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className={cn(
               "fixed lg:relative top-0 left-0 h-full w-80 bg-gray-50 dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 flex flex-col z-50",
-              isMobile && "shadow-xl"
+              isMobile && "shadow-xl max-w-[85vw]"
             )}
           >
-            {/* Header */}
+            {/* Header with better mobile spacing */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chats</h2>
               {isMobile && (
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  <X className="w-4 h-4" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onClose}
+                  className="h-10 w-10 p-0 touch-manipulation"
+                >
+                  <X className="w-5 h-5" />
                 </Button>
               )}
             </div>
             
-            {/* New Chat Button */}
+            {/* New Chat Button with enhanced touch target */}
             <div className="p-4">
               <Button 
                 onClick={onNewChat}
-                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-medium touch-manipulation"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-5 h-5 mr-2" />
                 New Chat
               </Button>
             </div>
             
-            {/* Chat Sessions */}
-            <div className="flex-1 overflow-y-auto px-2">
+            {/* Chat Sessions with improved mobile interaction */}
+            <div className="flex-1 overflow-y-auto px-2 pb-4">
               <div className="space-y-1">
                 {sessions.map((session) => (
                   <div
                     key={session.id}
                     className={cn(
-                      "group relative flex items-center p-3 rounded-lg cursor-pointer transition-all",
+                      "group relative flex items-center p-3 rounded-lg cursor-pointer transition-all touch-manipulation",
+                      "min-h-[60px]", // Enhanced touch target
                       currentSession?.id === session.id
                         ? "bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-                        : "hover:bg-gray-100 dark:hover:bg-zinc-800"
+                        : "hover:bg-gray-100 dark:hover:bg-zinc-800 active:bg-gray-200 dark:active:bg-zinc-700"
                     )}
                     onClick={() => onSessionSelect(session)}
                   >
-                    <MessageSquare className="w-4 h-4 mr-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                    <MessageSquare className="w-5 h-5 mr-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                     
                     {editingId === session.id ? (
                       <input
@@ -183,7 +189,7 @@ const ChatSidebar: React.FC<{
                             setEditTitle('');
                           }
                         }}
-                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white min-h-[44px] px-2 rounded"
                         autoFocus
                       />
                     ) : (
@@ -191,16 +197,16 @@ const ChatSidebar: React.FC<{
                         <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {session.title}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
                           <span>{session.messageCount} messages</span>
                           <span>•</span>
                           <span>{getRelativeTime(session.updatedAt)}</span>
                         </div>
                       </div>
                     )}
-                    
-                    {/* Action Buttons */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-2">
+
+                    {/* Action buttons with enhanced touch targets */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -208,9 +214,9 @@ const ChatSidebar: React.FC<{
                           e.stopPropagation();
                           startEditing(session);
                         }}
-                        className="h-6 w-6 p-0"
+                        className="h-8 w-8 p-0 touch-manipulation"
                       >
-                        <Edit3 className="w-3 h-3" />
+                        <Edit3 className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -219,28 +225,13 @@ const ChatSidebar: React.FC<{
                           e.stopPropagation();
                           handleDelete(session.id);
                         }}
-                        className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
+                        className="h-8 w-8 p-0 touch-manipulation text-red-500 hover:text-red-600"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
-                
-                {sessions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No conversations yet</p>
-                    <p className="text-xs">Start a new chat to begin</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-200 dark:border-zinc-700">
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Convocore AI Chat
               </div>
             </div>
           </motion.aside>
@@ -506,7 +497,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
         setSidebarOpen(false);
       }
     },
-  });
+  } as any); // Type assertion to fix linter error
 
   const createNewSession = useCallback(() => {
     const newSession: any = {
@@ -607,7 +598,7 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: updatedSession.messages.map(m => ({
+          messages: updatedSession.messages.map((m: any) => ({
             role: m.role,
             content: m.content
           })),
@@ -750,27 +741,28 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main Content */}
+      {/* Main Content with enhanced mobile layout */}
       <div className="flex-1 flex flex-col relative">
-        {/* Header */}
-        <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950">
+        {/* Header with improved mobile spacing */}
+        <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 min-h-[60px]">
           <div className="flex items-center gap-3">
             {isMobile && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarOpen(true)}
+                className="h-10 w-10 p-0 touch-manipulation"
               >
-                <Menu className="w-4 h-4" />
+                <Menu className="w-5 h-5" />
               </Button>
             )}
             
-            <div>
-              <h1 className="font-semibold text-gray-900 dark:text-white">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-semibold text-gray-900 dark:text-white truncate">
                 {currentSession?.title || 'New Chat'}
               </h1>
               {currentSession && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {currentSession.messageCount} messages • {currentSession.model}
                 </div>
               )}
@@ -783,8 +775,9 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowShareModal(true)}
+                className="h-10 w-10 p-0 touch-manipulation"
               >
-                <Share className="w-4 h-4" />
+                <Share className="w-5 h-5" />
               </Button>
             )}
             
@@ -792,19 +785,20 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
               variant="ghost"
               size="sm"
               onClick={() => setShowSettingsModal(true)}
+              className="h-10 w-10 p-0 touch-manipulation"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
             </Button>
           </div>
         </header>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Messages Area with mobile-optimized scrolling */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {!currentSession ? (
             <WelcomeScreen onNewChat={createNewSession} />
           ) : (
-            <div className="space-y-0">
-              {currentSession.messages.map((message, index) => (
+            <div className="space-y-0 pb-4">
+              {currentSession.messages.map((message: any, index: number) => (
                 <MessageComponent
                   key={message.id}
                   message={message}
@@ -839,10 +833,10 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
           )}
         </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-4">
+        {/* Input Area with enhanced mobile experience */}
+        <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-4 safe-area-bottom">
           <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Model Selector & Options */}
+            {/* Model Selector & Options with mobile-friendly layout */}
             <div className="flex items-center gap-2 flex-wrap">
               <ModelSelector
                 selectedModel={selectedModel}
@@ -854,14 +848,15 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
                 variant={includeWebSearch ? "default" : "outline"}
                 size="sm"
                 onClick={() => setIncludeWebSearch(!includeWebSearch)}
-                className="h-8"
+                className="h-10 px-3 touch-manipulation"
               >
                 <Globe className="w-4 h-4 mr-1" />
-                Web Search
+                <span className="hidden sm:inline">Web Search</span>
+                <span className="sm:hidden">Web</span>
               </Button>
             </div>
 
-            {/* Input Row */}
+            {/* Input Row with improved mobile input */}
             <div className="flex items-end gap-2">
               <div className="flex-1 relative">
                 <textarea
@@ -872,12 +867,13 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
                   placeholder="Type your message..."
                   className={cn(
                     "w-full resize-none rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none",
-                    "min-h-[44px] max-h-32 overflow-y-auto"
+                    "min-h-[48px] max-h-32 overflow-y-auto text-base", // Enhanced mobile input
+                    "touch-manipulation"
                   )}
                   rows={1}
                   style={{
                     height: 'auto',
-                    minHeight: '44px'
+                    minHeight: '48px'
                   }}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
@@ -888,37 +884,36 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
                 />
               </div>
 
-              {/* Voice Button */}
+              {/* Voice Button with enhanced touch target */}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowVoiceModal(true)}
-                className="h-11 w-11 p-0"
+                className="h-12 w-12 p-0 touch-manipulation"
                 disabled={isLoading}
               >
-                <Mic className="w-4 h-4" />
+                <Mic className="w-5 h-5" />
               </Button>
 
-              {/* Send Button */}
+              {/* Send Button with enhanced touch target */}
               <Button
                 type="submit"
                 disabled={!input.trim() || isLoading}
-                className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white"
+                className="h-12 px-4 bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
               </Button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals with corrected props */}
       <VoiceModal
-        isOpen={showVoiceModal}
-        onClose={() => setShowVoiceModal(false)}
-        onSubmit={handleVoiceSubmit}
-        selectedModel={selectedModel}
+        open={showVoiceModal}
+        onOpenChange={setShowVoiceModal}
+        onTranscriptComplete={handleVoiceSubmit}
       />
 
       <SettingsModal
@@ -930,7 +925,8 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
         <ShareModal
           open={showShareModal}
           onOpenChange={setShowShareModal}
-          chatSession={currentSession}
+          chatId={currentSession.id}
+          chatTitle={currentSession.title}
         />
       )}
     </div>
