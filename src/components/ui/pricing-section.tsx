@@ -18,12 +18,12 @@ const pricingPlans = [
       "Standard response time",
       "Basic chat interface",
       "Community support",
-      "Usage analytics"
+      "Usage analytics",
     ],
     buttonText: "Get Started",
     buttonVariant: "outline" as const,
     popular: false,
-    plan: undefined
+    plan: undefined,
   },
   {
     name: "Pro",
@@ -35,13 +35,11 @@ const pricingPlans = [
       "Unlimited AI requests",
       "Fast response times",
       "Email support",
-      "Usage statistics",
-      "Multi-network USDT payments"
     ],
     buttonText: "Subscribe with USDT",
     buttonVariant: "default" as const,
     popular: true,
-    plan: "pro" as const
+    plan: "pro" as const,
   },
   {
     name: "Premium",
@@ -57,13 +55,12 @@ const pricingPlans = [
       "Advanced analytics",
       "Team collaboration",
       "Priority processing",
-      "Smart contract automation"
     ],
     buttonText: "Subscribe with USDT",
     buttonVariant: "default" as const,
     popular: false,
-    plan: "premium" as const
-  }
+    plan: "premium" as const,
+  },
 ];
 
 interface NetworkInfo {
