@@ -551,10 +551,23 @@ export function WalletConnector({
         setWalletType(wallet.id);
         onWalletConnected?.(address, wallet.id);
         
-        // Redirect to convocore page after successful connection
-        console.log('Wallet connected successfully, redirecting to /convocore');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/convocore';
+        // Store wallet connection info
+        localStorage.setItem('wallet-connected', 'true');
+        localStorage.setItem('wallet-public-key', address);
+        localStorage.setItem('wallet-type', wallet.id);
+        
+        // Mobile-specific flow: skip session key, go directly to chat
+        if (isMobile) {
+          console.log('Mobile wallet connected, redirecting directly to chat interface');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/chat';
+          }
+        } else {
+          // Desktop flow: redirect to convocore for session key setup
+          console.log('Desktop wallet connected, redirecting to /convocore for session key setup');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/convocore';
+          }
         }
       } else {
         setError(`Failed to connect ${wallet.name}. Please try again.`);
@@ -851,12 +864,35 @@ export function WalletConnector({
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                         No wallets detected
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
                         {isMobile 
-                          ? 'Install a wallet app and refresh this page'
+                          ? 'Install a wallet app to get started. Choose one below:'
                           : 'Install a wallet extension to get started'
                         }
                       </p>
+                      {isMobile && (
+                        <div className="space-y-3">
+                          {walletOptions.filter(w => w.supportsMobile).map(wallet => (
+                            <div key={wallet.id} className="flex items-center justify-between bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 mb-1">
+                              <div className="flex items-center gap-2">
+                                {wallet.id === 'convoai' ? (
+                                  <ConvoAILogo className="w-7 h-7" />
+                                ) : (
+                                  <span className="text-2xl">{wallet.icon}</span>
+                                )}
+                                <span className="font-medium text-gray-900 dark:text-white text-sm">{wallet.name}</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded"
+                                onClick={() => installWallet(wallet)}
+                              >
+                                Install
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

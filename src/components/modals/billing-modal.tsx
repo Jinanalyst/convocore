@@ -21,7 +21,8 @@ import {
   RefreshCw,
   History,
   Network,
-  DollarSign
+  DollarSign,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
@@ -441,13 +442,13 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {network.id === 'convoai' ? (
-                    <ConvoAILogo className="w-8 h-8" />
+                    <MessageSquare className="w-5 h-5 text-blue-500 mr-2" />
                   ) : (
                     <span className="text-2xl">{network.icon}</span>
                   )}
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white">{network.name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-col justify-center ml-1">
+                    <h4 className="font-medium text-gray-900 dark:text-white leading-tight">{network.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
                       {network.type === 'paypal' 
                         ? `Pay $${planPrice} USD with PayPal`
                         : network.id === 'convoai'

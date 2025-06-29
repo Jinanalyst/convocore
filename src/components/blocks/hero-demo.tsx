@@ -15,7 +15,7 @@ function HeroDemo() {
     <>
       <Hero
         title="Where AI Meets Web3"
-        subtitle="AI chat with secure USDT payments on multiple blockchains."
+        subtitle="Pay with Convoai."
         actions={[
           {
             label: "Start Chatting Now",

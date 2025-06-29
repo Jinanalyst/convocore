@@ -24,6 +24,20 @@ export default function LoginPage() {
   const [connectionStep, setConnectionStep] = useState<'idle' | 'connecting' | 'authorizing' | 'complete'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Mobile detection
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(isMobileDevice || isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Check if already connected
@@ -32,17 +46,22 @@ export default function LoginPage() {
       const address = localStorage.getItem('wallet-public-key');
       if (address) {
         setWalletAddress(address);
-        // Check if session key exists
-        const hasSession = sessionKeyService.hasValidSessionKey(address);
-        console.log('[Login] Checking for valid session key:', hasSession, address);
-        if (hasSession) {
-          setConnectionStep('complete');
+        // Check if session key exists (only for desktop)
+        if (!isMobile) {
+          const hasSession = sessionKeyService.hasValidSessionKey(address);
+          console.log('[Login] Checking for valid session key:', hasSession, address);
+          if (hasSession) {
+            setConnectionStep('complete');
+          } else {
+            setConnectionStep('authorizing');
+          }
         } else {
-          setConnectionStep('authorizing');
+          // Mobile: skip session key check, go directly to complete
+          setConnectionStep('complete');
         }
       }
     }
-  }, []);
+  }, [isMobile]);
 
   const connectWallet = async () => {
     console.log('[Login] Starting wallet connection...');
@@ -89,7 +108,17 @@ export default function LoginPage() {
       setWalletAddress(publicKey);
       setConnectionStep('authorizing');
 
-      // Check if session key already exists
+      // Mobile: skip session key, go directly to chat
+      if (isMobile) {
+        console.log('[Login] Mobile wallet connected, skipping session key, redirecting to chat');
+        setConnectionStep('complete');
+        setTimeout(() => {
+          router.push('/chat');
+        }, 1000);
+        return;
+      }
+
+      // Desktop: Check if session key already exists
       console.log('[Login] Checking for existing session key...');
       const hasSession = sessionKeyService.hasValidSessionKey(publicKey);
       console.log('[Login] Session key exists after connect:', hasSession);
@@ -99,7 +128,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Request session key authorization
+      // Request session key authorization (desktop only)
       console.log('[Login] No valid session key found, requesting authorization...');
       await requestSessionKeyAuthorization(publicKey);
 
@@ -202,9 +231,13 @@ export default function LoginPage() {
       console.log('[Login] Authorization completed successfully');
       setConnectionStep('complete');
 
-      // Redirect to convocore after a short delay
+      // Redirect based on device type
       setTimeout(() => {
-        router.push('/convocore');
+        if (isMobile) {
+          router.push('/chat');
+        } else {
+          router.push('/convocore');
+        }
       }, 2000);
 
     } catch (err) {
@@ -218,7 +251,11 @@ export default function LoginPage() {
 
   const handleContinue = () => {
     if (connectionStep === 'complete') {
-      router.push('/convocore');
+      if (isMobile) {
+        router.push('/chat');
+      } else {
+        router.push('/convocore');
+      }
     }
   };
 
@@ -253,9 +290,9 @@ export default function LoginPage() {
       case 'connecting':
         return 'Establishing secure connection to your Phantom wallet';
       case 'authorizing':
-        return 'Signing authorization for automatic chat storage (one-time only)';
+        return isMobile ? 'Setting up mobile chat access...' : 'Signing authorization for automatic chat storage (one-time only)';
       case 'complete':
-        return 'Your wallet is connected and authorized for seamless chat experience';
+        return isMobile ? 'Your wallet is connected and ready for mobile chat' : 'Your wallet is connected and authorized for seamless chat experience';
       default:
         return 'Connect your Solana wallet to start chatting with AI';
     }
@@ -337,11 +374,16 @@ export default function LoginPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-sm">Authorize Chat Access</div>
+                  <div className="font-medium text-sm">
+                    {isMobile ? 'Setup Mobile Access' : 'Authorize Chat Access'}
+                  </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {connectionStep === 'authorizing' ? 'Signing authorization message...' :
-                     connectionStep === 'complete' ? 'Authorized for 7 days' :
-                     'One-time authorization for seamless chat'}
+                    {connectionStep === 'authorizing' ? 
+                      (isMobile ? 'Configuring mobile chat interface...' : 'Signing authorization message...') :
+                     connectionStep === 'complete' ? 
+                      (isMobile ? 'Ready for mobile chat' : 'Authorized for 7 days') :
+                     (isMobile ? 'Configure mobile chat access' : 'One-time authorization for seamless chat')
+                    }
                   </div>
                 </div>
               </div>
@@ -394,7 +436,7 @@ export default function LoginPage() {
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                 >
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Authorizing...
+                  {isMobile ? 'Setting up...' : 'Authorizing...'}
                 </Button>
               )}
 
@@ -404,7 +446,7 @@ export default function LoginPage() {
                   className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
                 >
                   <ArrowRight className="w-4 h-4 mr-2" />
-                  Start Chatting
+                  {isMobile ? 'Start Mobile Chat' : 'Continue to Chat'}
                 </Button>
               )}
             </div>
