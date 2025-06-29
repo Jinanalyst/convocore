@@ -1,6 +1,5 @@
 import { pricingPlans } from './pricing-data';
 import { Button } from './button';
-import { Check } from 'lucide-react';
 
 export function MobilePricingSection() {
   return (
@@ -16,7 +15,7 @@ export function MobilePricingSection() {
           <ul className="mb-4">
             {plan.features.map(f => (
               <li key={f} className="flex items-center gap-2 text-base mb-1">
-                <Check className="w-5 h-5 text-green-500" /> {f}
+                <span role="img" aria-label="check">✅</span> {f}
               </li>
             ))}
           </ul>
