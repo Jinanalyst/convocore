@@ -44,64 +44,6 @@ export const PAYPAL_URLS = {
 // Network configurations with your provided addresses
 export const SUPPORTED_NETWORKS: NetworkConfig[] = [
   {
-    id: 'paypal',
-    name: 'PayPal',
-    symbol: 'USD',
-    icon: '💳',
-    recipientAddress: 'PayPal Checkout',
-    rpcUrl: '',
-    blockExplorer: '',
-    type: 'paypal',
-    paypalUrl: PAYPAL_URLS.pro // Default to pro, will be dynamically selected in payment processing
-  },
-  {
-    id: 'tron',
-    name: 'TRON',
-    symbol: 'TRX',
-    icon: '🔗',
-    recipientAddress: 'TCUMVPmaTXfk4Xk9vHeyHED1DLAkw6DEAQ',
-    usdtContractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-    rpcUrl: 'https://api.trongrid.io',
-    blockExplorer: 'https://tronscan.org',
-    type: 'tron'
-  },
-  {
-    id: 'ethereum',
-    name: 'Ethereum',
-    symbol: 'ETH',
-    icon: '⟠',
-    recipientAddress: '0x7a459149d910087d358cb46a9f70fd650738f446',
-    usdtContractAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-    rpcUrl: 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
-    chainId: 1,
-    blockExplorer: 'https://etherscan.io',
-    type: 'evm'
-  },
-  {
-    id: 'bsc',
-    name: 'BNB Smart Chain',
-    symbol: 'BNB',
-    icon: '🟡',
-    recipientAddress: '0x7a459149d910087d358cb46a9f70fd650738f446',
-    usdtContractAddress: '0x55d398326f99059fF775485246999027B3197955',
-    rpcUrl: 'https://bsc-dataseed1.binance.org',
-    chainId: 56,
-    blockExplorer: 'https://bscscan.com',
-    type: 'evm'
-  },
-  {
-    id: 'polygon',
-    name: 'Polygon',
-    symbol: 'MATIC',
-    icon: '🟣',
-    recipientAddress: '0x7a459149d910087d358cb46a9f70fd650738f446',
-    usdtContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-    rpcUrl: 'https://polygon-rpc.com',
-    chainId: 137,
-    blockExplorer: 'https://polygonscan.com',
-    type: 'evm'
-  },
-  {
     id: 'solana',
     name: 'Solana',
     symbol: 'SOL',
@@ -187,16 +129,8 @@ export class MultiNetworkPaymentService {
 
     try {
       let txHash: string | null = null;
-
+      // Only allow solana-type networks
       switch (network.type) {
-        case 'paypal':
-          return await this.processPayPalPayment(payment, network);
-        case 'tron':
-          txHash = await this.processTronPayment(payment, userAddress, network);
-          break;
-        case 'evm':
-          txHash = await this.processEVMPayment(payment, userAddress, network);
-          break;
         case 'solana':
           txHash = await this.processSolanaPayment(payment, userAddress, network);
           break;
@@ -218,93 +152,6 @@ export class MultiNetworkPaymentService {
       payment.status = 'failed';
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-  }
-
-  // Process PayPal payment
-  private async processPayPalPayment(payment: PaymentStatus, network: NetworkConfig): Promise<{ success: boolean; txHash?: string; error?: string }> {
-    try {
-      const paypalUrl = payment.plan === 'pro' ? PAYPAL_URLS.pro : PAYPAL_URLS.premium;
-      
-      if (!paypalUrl) {
-        return { success: false, error: 'PayPal URL not configured for this plan' };
-      }
-
-      // Open PayPal checkout in a new window
-      const paypalWindow = window.open(paypalUrl, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
-      
-      if (!paypalWindow) {
-        return { success: false, error: 'Please allow popups for PayPal checkout' };
-      }
-
-      // Set payment as pending - it will be confirmed manually or via webhook
-      payment.status = 'pending';
-      payment.txHash = `paypal_${payment.id}_${Date.now()}`;
-      
-      return { 
-        success: true, 
-        txHash: payment.txHash,
-        error: 'PayPal checkout opened. Please complete your payment and return to this page.'
-      };
-    } catch (error) {
-      console.error('PayPal payment error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'PayPal payment failed' };
-    }
-  }
-
-  // Process TRON payment
-  private async processTronPayment(payment: PaymentStatus, userAddress: string, network: NetworkConfig): Promise<string | null> {
-    if (typeof window === 'undefined' || !(window as any).tronLink) {
-      throw new Error('TronLink wallet not available');
-    }
-
-    const tronWeb = (window as any).tronLink.tronWeb;
-    if (!tronWeb) {
-      throw new Error('TronWeb not initialized');
-    }
-
-    const contract = await tronWeb.contract().at(network.usdtContractAddress);
-    const amountInUnits = payment.amount * 1000000; // USDT has 6 decimals
-
-    const transaction = await contract.transfer(network.recipientAddress, amountInUnits).send({
-      from: userAddress,
-      shouldPollResponse: true
-    });
-
-    return transaction;
-  }
-
-  // Process EVM payment (Ethereum, BSC, Polygon)
-  private async processEVMPayment(payment: PaymentStatus, userAddress: string, network: NetworkConfig): Promise<string | null> {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
-      throw new Error('Ethereum wallet not available');
-    }
-
-    // Switch to correct network if needed
-    if (network.chainId) {
-      await this.switchEVMNetwork(network.chainId);
-    }
-
-    const ethereum = (window as any).ethereum;
-    
-    // USDT transfer function signature and data
-    const transferFunction = '0xa9059cbb'; // transfer(address,uint256)
-    const recipientAddress = network.recipientAddress.slice(2).padStart(64, '0');
-    const amountInUnits = (payment.amount * 1000000).toString(16).padStart(64, '0'); // USDT has 6 decimals
-    const data = transferFunction + recipientAddress + amountInUnits;
-
-    const transactionParameters = {
-      from: userAddress,
-      to: network.usdtContractAddress,
-      data: data,
-      gas: '0x15F90', // 90000 gas limit
-    };
-
-    const txHash = await ethereum.request({
-      method: 'eth_sendTransaction',
-      params: [transactionParameters],
-    });
-
-    return txHash;
   }
 
   // Process Solana payment
@@ -349,58 +196,6 @@ export class MultiNetworkPaymentService {
     return signed.signature as string;
   }
 
-  // Switch EVM network
-  private async switchEVMNetwork(chainId: number): Promise<void> {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
-      throw new Error('Ethereum wallet not available');
-    }
-
-    const ethereum = (window as any).ethereum;
-    const chainIdHex = '0x' + chainId.toString(16);
-
-    try {
-      await ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: chainIdHex }],
-      });
-    } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask
-      if (switchError.code === 4902) {
-        const network = SUPPORTED_NETWORKS.find(n => n.chainId === chainId);
-        if (network) {
-          await this.addEVMNetwork(network);
-        }
-      } else {
-        throw switchError;
-      }
-    }
-  }
-
-  // Add EVM network to wallet
-  private async addEVMNetwork(network: NetworkConfig): Promise<void> {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
-      throw new Error('Ethereum wallet not available');
-    }
-
-    const ethereum = (window as any).ethereum;
-    const chainIdHex = '0x' + network.chainId!.toString(16);
-
-    await ethereum.request({
-      method: 'wallet_addEthereumChain',
-      params: [{
-        chainId: chainIdHex,
-        chainName: network.name,
-        nativeCurrency: {
-          name: network.symbol,
-          symbol: network.symbol,
-          decimals: 18
-        },
-        rpcUrls: [network.rpcUrl],
-        blockExplorerUrls: [network.blockExplorer]
-      }],
-    });
-  }
-
   // Verify payment on blockchain
   async verifyPayment(paymentId: string): Promise<{ verified: boolean; confirmations?: number }> {
     const payment = this.payments.get(paymentId);
@@ -415,10 +210,6 @@ export class MultiNetworkPaymentService {
 
     try {
       switch (network.type) {
-        case 'tron':
-          return await this.verifyTronTransaction(payment.txHash);
-        case 'evm':
-          return await this.verifyEVMTransaction(payment.txHash, network);
         case 'solana':
           return await this.verifySolanaTransaction(payment.txHash);
         default:
@@ -428,31 +219,6 @@ export class MultiNetworkPaymentService {
       console.error('Payment verification error:', error);
       return { verified: false };
     }
-  }
-
-  // Verify TRON transaction
-  private async verifyTronTransaction(txHash: string): Promise<{ verified: boolean; confirmations?: number }> {
-    try {
-      const response = await fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${txHash}`);
-      const data = await response.json();
-      
-      if (data.contractRet === 'SUCCESS' && data.confirmed) {
-        return { verified: true, confirmations: data.block ? 1 : 0 };
-      }
-      
-      return { verified: false };
-    } catch (error) {
-      console.error('TRON verification error:', error);
-      return { verified: false };
-    }
-  }
-
-  // Verify EVM transaction
-  private async verifyEVMTransaction(txHash: string, network: NetworkConfig): Promise<{ verified: boolean; confirmations?: number }> {
-    // This would require API keys for different networks
-    // For now, return a basic verification
-    console.log('EVM transaction verification for', network.name, txHash);
-    return { verified: false }; // Implement with proper RPC calls
   }
 
   // Verify Solana transaction
@@ -512,10 +278,6 @@ export class MultiNetworkPaymentService {
   // Get transaction URL
   getTransactionUrl(txHash: string, network: NetworkConfig): string {
     switch (network.type) {
-      case 'tron':
-        return `${network.blockExplorer}/#/transaction/${txHash}`;
-      case 'evm':
-        return `${network.blockExplorer}/tx/${txHash}`;
       case 'solana':
         return `${network.blockExplorer}/tx/${txHash}`;
       default:
