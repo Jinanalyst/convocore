@@ -313,8 +313,9 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">20 USDT</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">per month</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">150 USDT</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">one-time fee</div>
+                <div className="text-blue-600 font-semibold">or 10,000 CONVOAI Token</div>
               </div>
             </div>
           </div>
@@ -337,8 +338,9 @@ export function BillingModal({ open, onOpenChange, selectedPlan }: BillingModalP
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">40 USDT</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">per month</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">200 USDT</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">one-time fee</div>
+                <div className="text-blue-600 font-semibold">or 100,000 CONVOAI Token</div>
               </div>
             </div>
           </div>
