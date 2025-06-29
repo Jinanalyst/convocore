@@ -169,9 +169,9 @@ export function Header({
         </Button>
 
         {/* Center: Logo */}
-        <div className="flex-1 flex items-center justify-center gap-2 px-2">
+        {/* <div className="flex-1 flex items-center justify-center gap-2 px-2">
           <ConvoAILogo className="h-8" />
-        </div>
+        </div> */}
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-1">
