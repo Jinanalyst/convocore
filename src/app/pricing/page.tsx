@@ -3,6 +3,7 @@ import { PricingSection } from "@/components/ui/pricing-section";
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import MobilePricingPage from '@/components/mobile/MobilePricingPage';
 
 export const metadata: Metadata = {
   title: "Pricing Plans - Affordable AI Chat with USDT Payments | Convocore",
@@ -64,6 +65,13 @@ export default function PricingPage() {
 
       {/* Pricing Section */}
       <PricingSection />
+
+      <MobilePricingPage />
+
+      {/* Existing desktop pricing page content below, wrapped in hidden md:block if not already */}
+      <div className="hidden md:block">
+        {/* ...existing desktop pricing page content... */}
+      </div>
     </div>
   );
 } 
