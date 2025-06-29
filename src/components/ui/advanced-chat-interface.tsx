@@ -82,16 +82,6 @@ export default function AdvancedChatInterface({
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || !currentAgent || isProcessing) return;
 
-    // Usage tracking for free plan (per message)
-    if (!usageService.canMakeRequest(userId)) {
-      notificationService.notifyError(
-        'Daily Limit Reached',
-        'You have used all of your free daily chats. Upgrade to Pro for unlimited usage.'
-      );
-      return;
-    }
-    usageService.incrementUsage(userId);
-
     const userMessage: ChatMessage = {
       id: nanoid(),
       role: 'user',

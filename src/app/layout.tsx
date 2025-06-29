@@ -1,12 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { NotificationContainer } from "@/components/ui/notification-toast";
-import { LanguageProvider } from "@/lib/language-context";
-import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { Analytics } from "@vercel/analytics/react";
-
-const inter = Inter({ subsets: ["latin"] });
+import ClientRootLayout from './client-root-layout';
 
 export const metadata: Metadata = {
   title: {
@@ -98,101 +91,6 @@ export const viewport: Viewport = {
   themeColor: '#764ba2',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" className="h-full">
-      <head>
-        {/* Preconnect to external domains for performance */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://api.trongrid.io" />
-        <link rel="preconnect" href="https://apilist.tronscan.org" />
-        
-        {/* DNS prefetch for better performance */}
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-        
-        {/* Structured Data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebApplication",
-              "name": "Convocore",
-              "description": "AI chat with blockchain payments",
-              "url": "https://convocore.site",
-              "applicationCategory": "BusinessApplication",
-              "operatingSystem": "Web Browser",
-              "offers": [
-                {
-                  "@type": "Offer",
-                  "name": "Free Plan",
-                  "price": "0",
-                  "priceCurrency": "USD",
-                  "description": "3 chats per day"
-                },
-                {
-                  "@type": "Offer", 
-                  "name": "Pro Plan",
-                  "price": "20",
-                  "priceCurrency": "USDT",
-                  "description": "Unlimited chats"
-                },
-                {
-                  "@type": "Offer",
-                  "name": "Premium Plan", 
-                  "price": "40",
-                  "priceCurrency": "USDT",
-                  "description": "All features plus priority support"
-                }
-              ],
-              "featureList": [
-                "AI conversations",
-                "Code generation", 
-                "Blockchain payments",
-                "USDT payments",
-                "Real-time responses",
-                "Secure and private"
-              ]
-            })
-          }}
-        />
-        
-        {/* Service Worker Registration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
-                    });
-                });
-              }
-            `
-          }}
-        />
-      </head>
-      <body className={`${inter.className} h-full bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white antialiased`}>
-        <div className="min-h-full flex flex-col">
-          <ErrorBoundary>
-            <LanguageProvider>
-              {children}
-              <NotificationContainer />
-              <Analytics />
-            </LanguageProvider>
-          </ErrorBoundary>
-        </div>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <ClientRootLayout>{children}</ClientRootLayout>;
 }

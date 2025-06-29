@@ -5,63 +5,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BillingModal } from "@/components/modals/billing-modal";
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
-
-const pricingPlans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for trying out ConvoAI",
-    dailyLimit: "3 requests per day",
-    features: [
-      "Basic AI features",
-      "Standard response time",
-      "Basic chat interface",
-      "Community support",
-      "Usage analytics",
-    ],
-    buttonText: "Get Started",
-    buttonVariant: "outline" as const,
-    popular: false,
-    plan: undefined,
-  },
-  {
-    name: "Pro",
-    price: "20 USDT",
-    period: "per month",
-    description: "For developers and power users",
-    dailyLimit: "Unlimited requests",
-    features: [
-      "Unlimited AI requests",
-      "Fast response times",
-      "Email support",
-    ],
-    buttonText: "Subscribe with USDT",
-    buttonVariant: "default" as const,
-    popular: true,
-    plan: "pro" as const,
-  },
-  {
-    name: "Premium",
-    price: "40 USDT",
-    period: "per month",
-    description: "For businesses and advanced users",
-    dailyLimit: "Unlimited requests",
-    features: [
-      "Everything in Pro",
-      "Advanced AI capabilities",
-      "Priority support",
-      "Custom AI agent creation",
-      "Advanced analytics",
-      "Team collaboration",
-      "Priority processing",
-    ],
-    buttonText: "Subscribe with USDT",
-    buttonVariant: "default" as const,
-    popular: false,
-    plan: "premium" as const,
-  },
-];
+import { pricingPlans } from './pricing-data';
 
 interface NetworkInfo {
   name: string;
@@ -156,8 +100,8 @@ export function PricingSection() {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
-            {pricingPlans.map((plan) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto justify-center items-center">
+            {pricingPlans.filter(plan => plan.plan === 'pro' || plan.plan === 'premium').map((plan) => (
               <div
                 key={plan.name}
                 className={`relative bg-white dark:bg-zinc-800 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${

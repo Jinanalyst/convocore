@@ -8,7 +8,6 @@ import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useLanguage } from '@/lib/language-context';
 import { cn } from "@/lib/utils";
 import type { Message } from "@/app/convocore/page";
-import { ChatLimitIndicator } from '@/components/ui/chat-limit-indicator';
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
@@ -18,11 +17,6 @@ interface ChatAreaProps {
   messages: Message[];
   isLoading?: boolean;
   onSendMessage: (message: string, model: string, includeWebSearch?: boolean) => void;
-  usage: {
-    used: number;
-    limit: number;
-    plan: 'free' | 'pro' | 'premium';
-  };
 }
 
 export function ChatArea({ 
@@ -30,8 +24,7 @@ export function ChatArea({
   chatId, 
   messages,
   isLoading = false,
-  onSendMessage,
-  usage
+  onSendMessage
 }: ChatAreaProps) {
   const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,9 +44,8 @@ export function ChatArea({
       chatId,
       isLoading,
       messagesCount: messages.length,
-      usage
     });
-  }, [chatId, isLoading, messages.length, usage]);
+  }, [chatId, isLoading, messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,7 +118,6 @@ export function ChatArea({
       </div>
       <div className="p-4 md:p-6 border-t bg-white dark:bg-gray-800">
         <div className="max-w-4xl mx-auto">
-          <ChatLimitIndicator usage={usage} className="mb-4" />
           <AIChatInput
             value={inputValue}
             onChange={setInputValue}

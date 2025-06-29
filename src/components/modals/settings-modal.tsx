@@ -416,9 +416,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         {subscription.tier} Plan
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {subscription.tier === 'free' ? 'Free tier' : 
-                         subscription.tier === 'pro' ? '$20 USDT/month' : 
-                         '$40 USDT/month'}
+                        {subscription.tier === 'pro' ? '$150 USDT one-time' :
+                         subscription.tier === 'premium' ? '$200 USDT one-time' : ''}
                       </p>
                     </div>
                   </div>
@@ -427,29 +426,19 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     size="sm"
                     onClick={() => setShowBillingModal(true)}
                     className="bg-white dark:bg-zinc-800 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    style={{ display: subscription.tier === 'pro' || subscription.tier === 'premium' ? 'none' : undefined }}
                   >
-                    {subscription.tier === 'free' ? 'Upgrade' : 'Manage'}
+                    Upgrade
                   </Button>
                 </div>
 
                 {/* Usage Stats */}
-                {usage && subscription && (
+                {(subscription.tier === 'pro' || subscription.tier === 'premium') && (
                   <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">API Usage</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {usage.requestsUsed} / {usage.requestsLimit}
-                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">Unlimited</span>
                     </div>
-                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full" 
-                        style={{ width: `${Math.round((usage.requestsUsed / usage.requestsLimit) * 100)}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {Math.round((usage.requestsUsed / usage.requestsLimit) * 100)}% used this {subscription.tier === 'free' ? 'day' : 'month'}
-                    </p>
                   </div>
                 )}
 

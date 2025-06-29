@@ -544,14 +544,6 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
 
-    // Usage enforcement for free plan
-    const walletAddress = localStorage.getItem('wallet-public-key') || 'local_user';
-    const usage = usageService.getUserUsage(walletAddress);
-    if (usage.requestsUsed >= usage.requestsLimit) {
-      alert('You have reached your daily free chat limit. Please upgrade your plan for unlimited access.');
-      return;
-    }
-
     let session = currentSession;
     
     // Create new session if none exists
@@ -635,8 +627,6 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
 
       // Call external callback if provided
       onSendMessage?.(content, selectedModel, includeWebSearch);
-      // Increment usage after successful send
-      usageService.incrementUsage(walletAddress);
 
     } catch (error) {
       console.error('Failed to send message:', error);

@@ -42,11 +42,6 @@ function ChatPageContent() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [usage, setUsage] = useState({
-    used: 0,
-    limit: 3,
-    plan: 'free' as 'free' | 'pro' | 'premium',
-  });
 
   const searchParams = useSearchParams();
   const queryChatId = searchParams.get('chatId');
@@ -67,10 +62,6 @@ function ChatPageContent() {
   // Load chats and usage on component mount
   useEffect(() => {
     loadChats();
-    loadUsage();
-    
-    // Listen for usage updates from other tabs/windows
-    window.addEventListener('usageUpdated', loadUsage);
     
     // Mobile detection
     const checkMobile = () => {
@@ -93,7 +84,6 @@ function ChatPageContent() {
     
     return () => {
       window.removeEventListener('resize', checkMobile);
-      window.removeEventListener('usageUpdated', loadUsage);
     };
   }, []);
 
@@ -128,11 +118,6 @@ function ChatPageContent() {
     try {
       const userUsage = usageService.getUserUsage(userId);
       const subscription = usageService.getUserSubscription(userId);
-      setUsage({
-        used: userUsage.requestsUsed,
-        limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1,
-        plan: subscription.tier,
-      });
     } catch (error) {
       console.error('Error loading usage:', error);
     }
@@ -276,9 +261,6 @@ function ChatPageContent() {
 
     const userMessage: Message = { id: `user-${Date.now()}`, role: 'user', content: message };
     setMessages(prev => [...prev, userMessage]);
-
-    usageService.incrementUsage(localStorage.getItem('wallet_connected') === 'true' ? 
-      (localStorage.getItem('wallet_address') || 'local') : 'local');
 
     let reply = "Assistant is thinking...";
     try {
@@ -585,7 +567,6 @@ function ChatPageContent() {
               chatId={activeChatId || undefined}
               onSendMessage={handleSendMessage}
               messages={messages}
-              usage={usage}
               isLoading={isChatLoading}
             />
           </div>
@@ -614,6 +595,8 @@ function ChatPageContent() {
     </div>
   );
 }
+
+export { ChatPageContent };
 
 export default function ChatPage() {
   return (

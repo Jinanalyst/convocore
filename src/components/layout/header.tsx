@@ -40,6 +40,7 @@ import { notificationService } from "@/lib/notification-service";
 import { useLanguage } from "@/lib/language-context";
 import Link from "next/link";
 import { ConvoAILogo } from "@/components/ui/convoai-logo";
+import { PartnerModal } from '@/components/modals/partner-modal';
 
 interface HeaderProps {
   className?: string;
@@ -77,6 +78,7 @@ export function Header({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showBillingModal, setShowBillingModal] = useState(false);
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
 
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -235,6 +237,14 @@ export function Header({
                 <span>Settings</span>
               </DropdownMenuItem>
               
+              <DropdownMenuItem 
+                onClick={() => setShowPartnerModal(true)}
+                className="flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer touch-feedback"
+              >
+                <Wallet className="h-4 w-4" />
+                <span>Partner</span>
+              </DropdownMenuItem>
+              
               <DropdownMenuSeparator className="my-1 bg-gray-200 dark:bg-zinc-700" />
               
               <DropdownMenuItem 
@@ -330,6 +340,14 @@ export function Header({
                 <span>Settings</span>
               </DropdownMenuItem>
               
+              <DropdownMenuItem 
+                onClick={() => setShowPartnerModal(true)}
+                className="flex items-center gap-2 p-3 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <Wallet className="h-4 w-4" />
+                <span>Partner</span>
+              </DropdownMenuItem>
+              
               <DropdownMenuSeparator className="my-1 bg-gray-200 dark:bg-zinc-700" />
               
               <DropdownMenuItem 
@@ -358,6 +376,11 @@ export function Header({
       <BillingModal 
         open={showBillingModal} 
         onOpenChange={setShowBillingModal}
+      />
+      
+      <PartnerModal 
+        open={showPartnerModal} 
+        onOpenChange={setShowPartnerModal} 
       />
     </header>
   );

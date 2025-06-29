@@ -260,7 +260,7 @@ export class MultiNetworkPaymentService {
 
   // Get plan price
   getPlanPrice(plan: 'pro' | 'premium'): number {
-    return plan === 'pro' ? 20 : 40;
+    return plan === 'pro' ? 150 : 200;
   }
 
   getPayPalUrl(plan: 'pro' | 'premium'): string | null {

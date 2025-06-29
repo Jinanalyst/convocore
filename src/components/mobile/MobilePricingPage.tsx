@@ -1,4 +1,4 @@
-import { MobilePricingSection } from '@/components/ui/MobilePricingSection';
+import { MobilePricingSection } from '../../components/ui/MobilePricingSection';
 
 export default function MobilePricingPage() {
   return (

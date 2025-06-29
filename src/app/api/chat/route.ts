@@ -10,8 +10,6 @@ function detectLanguage(text: string): string {
   return koreanRegex.test(text) ? 'ko' : 'en';
 }
 
-const FREE_PLAN_LIMIT = 3;
-
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Chat API called');
@@ -39,18 +37,6 @@ export async function POST(request: NextRequest) {
     if (walletConnected && walletAddress) {
       userId = `wallet_${walletAddress.toLowerCase()}`;
       console.log('🔗 Wallet user detected:', userId);
-    }
-
-    // Check usage limits for authenticated users
-    if (userId !== 'anonymous') {
-      const usage = usageService.getUserUsage(userId);
-      if (usage.requestsUsed >= FREE_PLAN_LIMIT) {
-        return NextResponse.json({
-          error: 'Usage limit exceeded',
-          details: 'Daily limit of 3 chats reached. Upgrade to Pro for unlimited chats.',
-          upgradeUrl: '/pricing',
-        }, { status: 429 });
-      }
     }
 
     // Determine user plan
@@ -121,9 +107,6 @@ export async function POST(request: NextRequest) {
     let aiResponse: string;
     try {
       aiResponse = await aiService.generateResponse(chatMessages, selectedModel);
-      if (userId !== 'anonymous') {
-        usageService.incrementUsage(userId);
-      }
     } catch (aiError) {
       const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown AI service error';
       if (errorMessage.includes('API key not configured')) {

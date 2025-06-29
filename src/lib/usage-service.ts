@@ -7,7 +7,7 @@ export interface UserUsage {
 }
 
 export interface Subscription {
-  tier: 'free' | 'pro' | 'premium';
+  tier: 'pro' | 'premium' | 'none';
 }
 
 export const usageService = {
@@ -34,9 +34,21 @@ export const usageService = {
     }
   },
 
+  // Enforce payment before AI service usage
   getUserSubscription(userId: string): Subscription {
-    // For wallet-only, default to 'free'.
-    // You can extend this to check wallet NFT or on-chain status for pro/premium.
-    return { tier: 'free' };
+    // Allow admin/test Solana address to always have premium
+    if (userId === 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2') {
+      return { tier: 'premium' };
+    }
+    // Check for payment record in localStorage (or replace with API call)
+    if (typeof window !== 'undefined') {
+      const payment = localStorage.getItem(`payment_${userId}`);
+      if (payment) {
+        const parsed = JSON.parse(payment);
+        if (parsed.amount === 150) return { tier: 'pro' };
+        if (parsed.amount === 200) return { tier: 'premium' };
+      }
+    }
+    return { tier: 'none' };
   },
 }; 

@@ -65,24 +65,6 @@ export function ChatLimitIndicator({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className={cn(
-                  'text-xs sm:text-sm font-medium',
-                  isLimitReached
-                    ? 'text-red-700 dark:text-red-300'
-                    : isNearLimit
-                    ? 'text-yellow-700 dark:text-yellow-300'
-                    : 'text-blue-700 dark:text-blue-300'
-                )}
-              >
-                Free Plan
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-                Daily Limit
-              </span>
-            </div>
-
             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {isLimitReached ? (
                 <span className="font-medium text-red-600 dark:text-red-400">

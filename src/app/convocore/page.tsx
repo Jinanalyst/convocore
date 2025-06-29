@@ -42,11 +42,6 @@ function ConvocorePageContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [usage, setUsage] = useState({
-    used: 0,
-    limit: 3,
-    plan: 'free' as 'free' | 'pro' | 'premium',
-  });
 
   // Persist chats locally whenever they change
   useEffect(() => {
@@ -64,10 +59,6 @@ function ConvocorePageContent() {
   // Load chats and usage on component mount
   useEffect(() => {
     loadChats();
-    loadUsage();
-    
-    // Listen for usage updates from other tabs/windows
-    window.addEventListener('usageUpdated', loadUsage);
     
     // Mobile detection
     const checkMobile = () => {
@@ -83,7 +74,6 @@ function ConvocorePageContent() {
     window.addEventListener('resize', checkMobile);
     return () => {
       window.removeEventListener('resize', checkMobile);
-      window.removeEventListener('usageUpdated', loadUsage);
     };
   }, []);
 
@@ -104,21 +94,6 @@ function ConvocorePageContent() {
       }
     }
   }, [chats, queryChatId]);
-
-  const loadUsage = () => {
-    const userId = localStorage.getItem('wallet_connected') === 'true' ? localStorage.getItem('wallet_address') : 'local';
-    try {
-      const userUsage = usageService.getUserUsage(userId);
-      const subscription = usageService.getUserSubscription(userId);
-      setUsage({
-        used: userUsage.requestsUsed,
-        limit: subscription.tier === 'free' ? userUsage.requestsLimit : -1,
-        plan: subscription.tier,
-      });
-    } catch (error) {
-      console.error('Error loading usage:', error);
-    }
-  };
 
   const loadChats = async () => {
     try {
@@ -512,7 +487,6 @@ function ConvocorePageContent() {
             chatId={activeChatId || undefined}
             onSendMessage={handleSendMessage}
             messages={messages}
-            usage={usage}
             isLoading={isChatLoading}
           />
         </div>

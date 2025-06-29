@@ -4,63 +4,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BillingModal } from "@/components/modals/billing-modal";
-
-const pricingPlans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for trying out ConvoAI",
-    dailyLimit: "3 requests per day",
-    features: [
-      "Basic AI features",
-      "Standard response time",
-      "Basic chat interface",
-      "Community support",
-      "Usage analytics",
-    ],
-    buttonText: "Get Started",
-    buttonVariant: "outline" as const,
-    popular: false,
-    plan: undefined,
-  },
-  {
-    name: "Pro",
-    price: "20 USDT",
-    period: "per month",
-    description: "For developers and power users",
-    dailyLimit: "Unlimited requests",
-    features: [
-      "Unlimited AI requests",
-      "Fast response times",
-      "Email support",
-    ],
-    buttonText: "Subscribe with USDT",
-    buttonVariant: "default" as const,
-    popular: true,
-    plan: "pro" as const,
-  },
-  {
-    name: "Premium",
-    price: "40 USDT",
-    period: "per month",
-    description: "For businesses and advanced users",
-    dailyLimit: "Unlimited requests",
-    features: [
-      "Everything in Pro",
-      "Advanced AI capabilities",
-      "Priority support",
-      "Custom AI agent creation",
-      "Advanced analytics",
-      "Team collaboration",
-      "Priority processing",
-    ],
-    buttonText: "Subscribe with USDT",
-    buttonVariant: "default" as const,
-    popular: false,
-    plan: "premium" as const,
-  },
-];
+import { pricingPlans } from './pricing-data';
 
 export function HomePricingSection() {
   const [showBillingModal, setShowBillingModal] = useState(false);
@@ -89,8 +33,8 @@ export function HomePricingSection() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {pricingPlans.map((plan) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto justify-center items-center">
+            {pricingPlans.filter(plan => plan.plan === 'pro' || plan.plan === 'premium').map((plan) => (
               <div
                 key={plan.name}
                 className={`relative rounded-2xl border transition-all backdrop-blur-sm bg-white/70 dark:bg-zinc-800/60 p-8 hover:shadow-xl ${
@@ -104,7 +48,6 @@ export function HomePricingSection() {
                     </span>
                   </div>
                 )}
-
                 <h3 className="text-2xl font-bold mb-2 text-zinc-900 dark:text-white">
                   {plan.name}
                 </h3>
@@ -117,7 +60,6 @@ export function HomePricingSection() {
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
                   {plan.description}
                 </p>
-
                 <ul className="space-y-2 mb-8">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -126,7 +68,6 @@ export function HomePricingSection() {
                     </li>
                   ))}
                 </ul>
-
                 <Button
                   className="w-full"
                   variant={plan.buttonVariant}
