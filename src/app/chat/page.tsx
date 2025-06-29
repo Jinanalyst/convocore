@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { Suspense, useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -538,9 +539,6 @@ function ChatPageContent() {
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-black relative">
-      <div className="flex justify-center py-4">
-        <ConvoAILogo />
-      </div>
       <div className="flex flex-1">
         {isMobile && !sidebarCollapsed && (
           <div 
