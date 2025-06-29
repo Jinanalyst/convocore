@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-service';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { token, email } = await request.json();
@@ -18,13 +21,13 @@ export async function POST(request: NextRequest) {
 
     if (verificationResult.success) {
       // Create user session
-      const sessionData = await authService.createUserSession(email);
+      const sessionResult = await authService.createUserSession(email);
 
       return NextResponse.json({
         success: true,
-        userId: sessionData.userId,
-        sessionToken: sessionData.sessionToken,
-        redirectTo: verificationResult.redirectTo || '/convocore',
+        userId: sessionResult.data?.session?.id,
+        sessionToken: sessionResult.data?.session?.id,
+        redirectTo: '/convocore',
         message: 'Successfully verified magic link'
       });
     } else {

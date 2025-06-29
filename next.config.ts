@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
     // This allows deployment while maintaining development type checking
     ignoreBuildErrors: true,
   },
+  // Add page extensions to handle static files properly
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   webpack(config) {
     // Silence "Critical dependency: the request of a dependency is an expression" warnings
     // (e.g., from @supabase/realtime-js)
@@ -32,6 +34,7 @@ const nextConfig: NextConfig = {
       assert: false,
       os: false,
       path: false,
+      'pino-pretty': false,
     };
     
     // Add module resolution rules for Solana packages

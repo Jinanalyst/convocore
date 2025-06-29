@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { Suspense, useState, useEffect } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { ChatArea } from "@/components/layout/chat-area";
+import dynamic from 'next/dynamic';
 import { SettingsModal } from "@/components/modals/settings-modal";
 import { ShareModal } from "@/components/modals/share-modal";
 import { OnboardingModal } from "@/components/ui/onboarding-modal";
@@ -15,6 +13,22 @@ import { invokeAssistant } from '@/lib/assistant/openai-assistant-service';
 import { usageService } from '@/lib/usage-service';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ConvoAILogo } from "@/components/ui/convo-ai-logo";
+
+// Dynamic imports to prevent SSR issues with context
+const SidebarDynamic = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.Sidebar })), {
+  ssr: false,
+  loading: () => <div className="w-80 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800" />
+});
+
+const HeaderDynamic = dynamic(() => import("@/components/layout/header").then(mod => ({ default: mod.Header })), {
+  ssr: false,
+  loading: () => <div className="h-16 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700" />
+});
+
+const ChatAreaDynamic = dynamic(() => import("@/components/layout/chat-area").then(mod => ({ default: mod.ChatArea })), {
+  ssr: false,
+  loading: () => <div className="flex-1 bg-white dark:bg-zinc-900" />
+});
 
 export interface Message {
   id: string;
@@ -535,7 +549,7 @@ function ChatPageContent() {
             ? cn("fixed left-0 top-0 h-full transform", sidebarCollapsed ? "-translate-x-full" : "translate-x-0 w-80")
             : cn("flex-shrink-0", sidebarCollapsed ? "w-16" : "w-80")
         )}>
-          <Sidebar
+          <SidebarDynamic
             className="h-full"
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -551,7 +565,7 @@ function ChatPageContent() {
         </div>
 
         <div className={cn("flex-1 flex flex-col min-w-0", isMobile ? "w-full" : "")}>
-          <Header
+          <HeaderDynamic
             currentChatTitle={getCurrentChatTitle()}
             currentChatId={activeChatId || undefined}
             onShare={handleShare}
@@ -563,7 +577,7 @@ function ChatPageContent() {
           />
 
           <div className="flex-1 min-h-0">
-            <ChatArea
+            <ChatAreaDynamic
               chatId={activeChatId || undefined}
               onSendMessage={handleSendMessage}
               messages={messages}

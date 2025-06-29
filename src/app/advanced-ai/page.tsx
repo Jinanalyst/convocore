@@ -23,6 +23,7 @@ export default function AdvancedAIPage() {
   const [selectedAgent, setSelectedAgent] = useState<string>('general-assistant');
   const [isLoading, setIsLoading] = useState(true);
   const [systemStats, setSystemStats] = useState<any>(null);
+  const [userId, setUserId] = useState<string>('anonymous');
 
   useEffect(() => {
     // Initialize the AI system and load agents
@@ -35,6 +36,11 @@ export default function AdvancedAIPage() {
         // Get system statistics
         const stats = await fetch('/api/chat').then(res => res.json());
         setSystemStats(stats);
+        
+        // Get user ID from localStorage or use anonymous
+        const walletAddress = localStorage.getItem('wallet_address');
+        const localUserId = localStorage.getItem('user_id');
+        setUserId(walletAddress || localUserId || 'anonymous');
         
         setIsLoading(false);
       } catch (error) {
@@ -168,7 +174,7 @@ export default function AdvancedAIPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
           <AdvancedChatInterface
             sessionId={`advanced-ai-${Date.now()}`}
-            userId={user?.id || 'anonymous'}
+            userId={userId}
             initialAgent={selectedAgent}
           />
         </div>
