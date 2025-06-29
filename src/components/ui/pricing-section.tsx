@@ -112,8 +112,8 @@ export function PricingSection() {
                 Payment options:
               </span>
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                <span className="text-lg">💳</span>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">PayPal</span>
+                <span className="text-lg">🤖</span>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">ConvoAI Token</span>
               </div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 or USDT on:
@@ -134,8 +134,28 @@ export function PricingSection() {
                   )}
                 </div>
               ))}
-              <div className="flex items-center justify-center px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full min-w-[64px] min-h-[44px] sm:min-w-[80px] sm:min-h-[48px]">
-                <ConvoAILogo className="w-24 h-8 sm:w-28 sm:h-10 mx-auto" />
+              <div className="flex items-center justify-center px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[48px]">
+                {/* Only the chat bubble SVG icon from ConvoAILogo */}
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 44 44"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-8 h-8 md:w-10 md:h-10"
+                >
+                  <rect x="2" y="2" width="40" height="32" rx="8" fill="url(#bubbleGradient)" />
+                  <rect x="2" y="2" width="40" height="32" rx="8" stroke="#E5E7EB" strokeWidth="2" />
+                  <rect x="10" y="12" width="24" height="3" rx="1.5" fill="#fff" />
+                  <rect x="10" y="19" width="16" height="3" rx="1.5" fill="#fff" />
+                  <path d="M18 34C18 36.2091 19.7909 38 22 38C24.2091 38 26 36.2091 26 34H18Z" fill="url(#bubbleGradient)" />
+                  <defs>
+                    <linearGradient id="bubbleGradient" x1="2" y1="2" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#8B5CF6" />
+                      <stop offset="1" stopColor="#06B6D4" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
             </div>
           </div>

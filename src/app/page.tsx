@@ -61,7 +61,7 @@ export default function Home() {
             >
               <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                Pay with Convoai
+                Pay with ConvoAI Token
               </span>
             </motion.div>
 
@@ -74,7 +74,7 @@ export default function Home() {
             >
               Private AI Chat.
               <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Powered by Crypto.
+                Powered by ConvoAI Token.
               </span>
             </motion.h1>
 
@@ -85,7 +85,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="text-lg sm:text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed"
             >
-              Launch private AI conversations in seconds and pay seamlessly with Convoai.
+              Launch private AI conversations in seconds and pay seamlessly with ConvoAI Token across top blockchains.
             </motion.p>
 
             {/* CTA Buttons */}

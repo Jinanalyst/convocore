@@ -14,8 +14,8 @@ function HeroDemo() {
   return (
     <>
       <Hero
-        title="Where AI Meets Web3"
-        subtitle="Pay with Convoai."
+        title="Private AI Chat. Powered by ConvoAI Token."
+        subtitle="Launch private AI conversations in seconds and pay seamlessly with ConvoAI Token across top blockchains."
         actions={[
           {
             label: "Start Chatting Now",

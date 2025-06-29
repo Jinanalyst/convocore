@@ -39,6 +39,7 @@ import { BillingModal } from "@/components/modals/billing-modal";
 import { notificationService } from "@/lib/notification-service";
 import { useLanguage } from "@/lib/language-context";
 import Link from "next/link";
+import { ConvoAILogo } from "@/components/ui/convoai-logo";
 
 interface HeaderProps {
   className?: string;
@@ -169,7 +170,7 @@ export function Header({
 
         {/* Center: Logo */}
         <div className="flex-1 flex items-center justify-center gap-2 px-2">
-          {/* Logo */}
+          <ConvoAILogo className="h-8" />
         </div>
 
         {/* Right: Action Buttons */}
@@ -252,6 +253,7 @@ export function Header({
         {/* Left Section - Logo */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Logo */}
+          <ConvoAILogo className="h-8" />
         </div>
 
         {/* Center - Upgrade Button */}

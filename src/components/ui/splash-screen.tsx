@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ConvocoreLogo } from './convocore-logo';
+import { ConvoAILogo } from './convoai-logo';
 
 interface SplashScreenProps {
   onComplete?: () => void;
@@ -31,7 +31,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         {/* Logo with animation */}
         <div className="relative">
           <div className="animate-bounce">
-            <ConvocoreLogo className="w-24 h-24 text-white drop-shadow-2xl" />
+            <ConvoAILogo className="w-24 h-24 text-white drop-shadow-2xl" />
           </div>
           
           {/* Pulsing ring effect */}
@@ -42,7 +42,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         {/* App name */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-white drop-shadow-lg">
-            Convocore
+            ConvoAI
           </h1>
           <p className="text-white/80 text-lg font-medium">
             AI Conversations
