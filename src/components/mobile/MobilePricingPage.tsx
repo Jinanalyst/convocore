@@ -1,3 +1,5 @@
+"use client";
+
 import { MobilePricingSection } from '../../components/ui/MobilePricingSection';
 import { ConvoAILogo } from '@/components/ui/convoai-logo';
 import { Button } from '@/components/ui/button';
