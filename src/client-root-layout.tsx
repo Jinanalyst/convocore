@@ -5,31 +5,11 @@ import { NotificationContainer } from "@/components/ui/notification-toast";
 import { LanguageProvider } from "@/lib/language-context";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Analytics } from "@vercel/analytics/react";
-import { BillingModal } from '@/components/modals/billing-modal';
-import { usageService } from '@/lib/usage-service';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
 
 const inter = Inter({ subsets: ["latin"] });
 
 export default function ClientRootLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [showBilling, setShowBilling] = useState(false);
-
-  useEffect(() => {
-    // Show billing modal if not paid
-    const userId = localStorage.getItem('wallet_address') || localStorage.getItem('user_id') || 'local';
-    const sub = usageService.getUserSubscription(userId);
-    if (sub.tier === 'none') {
-      setShowBilling(true);
-    }
-  }, []);
-
-  const handleBillingClose = () => {
-    setShowBilling(false);
-    router.replace('/pricing');
-  };
-
   return (
     <html lang="en" className="h-full">
       <head>
@@ -111,7 +91,6 @@ export default function ClientRootLayout({ children }: { children: React.ReactNo
           <ErrorBoundary>
             <LanguageProvider>
               {children}
-              <BillingModal open={showBilling} onOpenChange={open => { if (!open) handleBillingClose(); }} />
               <NotificationContainer />
               <Analytics />
             </LanguageProvider>
