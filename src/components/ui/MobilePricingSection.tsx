@@ -1,3 +1,5 @@
+"use client";
+
 import { pricingPlans } from './pricing-data';
 import { Button } from './button';
 import { CheckCircle, Zap, Crown } from 'lucide-react';
@@ -34,6 +36,10 @@ export function MobilePricingSection() {
       default:
         return null;
     }
+  };
+
+  const handlePlanClick = () => {
+    window.location.href = '/auth/login';
   };
 
   return (
@@ -92,9 +98,7 @@ export function MobilePricingSection() {
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
                   : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800'
               }`}
-              onClick={() => {
-                window.location.href = '/auth/login';
-              }}
+              onClick={handlePlanClick}
             >
               {plan.buttonText}
             </Button>

@@ -48,14 +48,22 @@ interface WalletDetectionPlugin {
 
 // Try to get the Android wallet detection plugin
 let WalletDetection: WalletDetectionPlugin | null = null;
-if (typeof window !== 'undefined' && (window as any).Capacitor) {
-  try {
-    const { registerPlugin } = require('@capacitor/core');
-    WalletDetection = registerPlugin('WalletDetection');
-  } catch (error) {
-    console.log('WalletDetection plugin not available:', error);
-  }
-}
+// Temporarily disabled to fix build issues - @capacitor/core not available in web build
+// if (typeof window !== 'undefined' && (window as any).Capacitor) {
+//   try {
+//     // Dynamic import to avoid build issues when @capacitor/core is not available
+//     (async () => {
+//       try {
+//         const capacitorCore = await import('@capacitor/core');
+//         WalletDetection = capacitorCore.registerPlugin('WalletDetection');
+//       } catch (error) {
+//         console.log('WalletDetection plugin not available:', error);
+//       }
+//     })();
+//   } catch (error) {
+//     console.log('WalletDetection plugin not available:', error);
+//   }
+// }
 
 // Hook for mobile detection
 export function useIsMobile(breakpoint: number = BREAKPOINTS.tablet) {
