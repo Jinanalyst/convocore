@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getRelativeTime } from '@/lib/date-utils';
 import { getDefaultModelForTier } from "@/lib/ai-service";
 import { usageService } from '@/lib/usage-service';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface ChatInterfaceProps {
   className?: string;
@@ -471,12 +472,28 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
   const vh = useViewportHeight();
   const isKeyboardOpen = useKeyboardOpen();
+
+  // Detect wallet connection for user ID (same logic as ProfileModal)
+  let walletAddress: string | null = null;
+  if (typeof window !== 'undefined') {
+    walletAddress = localStorage.getItem('wallet-public-key') || localStorage.getItem('wallet_address');
+    if (!walletAddress && (window as any).solana?.isConnected) {
+      walletAddress = (window as any).solana.publicKey?.toString();
+    }
+  }
+  const userId = walletAddress || 'guest';
+  const subscription = usageService.getUserSubscription(userId);
+
+  useEffect(() => {
+    setShowPaymentModal(subscription.tier === 'none');
+  }, [subscription.tier]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -715,209 +732,235 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   };
 
   return (
-    <div 
-      className={cn("flex h-full bg-white dark:bg-zinc-950", className)}
-      style={{ height: isMobile ? `${vh}px` : '100vh' }}
-    >
-      {/* Sidebar */}
-      <ChatSidebar
-        sessions={sessions}
-        currentSession={currentSession}
-        onSessionSelect={selectSession}
-        onNewChat={createNewSession}
-        onDeleteSession={deleteSession}
-        onRenameSession={renameSession}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main Content with enhanced mobile layout */}
-      <div className="flex-1 flex flex-col relative">
-        {/* Header with improved mobile spacing */}
-        <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 min-h-[60px]">
-          <div className="flex items-center gap-3">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-                className="h-10 w-10 p-0 touch-manipulation"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-            )}
-            
-            <div className="min-w-0 flex-1">
-              <h1 className="font-semibold text-gray-900 dark:text-white truncate">
-                {currentSession?.title || 'New Chat'}
-              </h1>
-              {currentSession && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {currentSession.messageCount} messages • {currentSession.model}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {currentSession && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowShareModal(true)}
-                className="h-10 w-10 p-0 touch-manipulation"
-              >
-                <Share className="w-5 h-5" />
-              </Button>
-            )}
-            
+    <div className={cn('relative flex flex-col h-full', className)}>
+      {/* Payment Required Modal */}
+      <Dialog open={showPaymentModal} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              Payment Required
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center">
+            <p className="text-gray-700 dark:text-gray-200 mb-4">
+              You need to pay before you can use the chat. Please upgrade your plan to access AI chat features.
+            </p>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSettingsModal(true)}
-              className="h-10 w-10 p-0 touch-manipulation"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-2"
+              onClick={() => window.location.href = '/pricing'}
             >
-              <Settings className="w-5 h-5" />
+              Go to Pricing
             </Button>
           </div>
-        </header>
+        </DialogContent>
+      </Dialog>
+      {/* Block chat UI if unpaid */}
+      {subscription.tier !== 'none' && (
+        <div 
+          className={cn("flex h-full bg-white dark:bg-zinc-950", className)}
+          style={{ height: isMobile ? `${vh}px` : '100vh' }}
+        >
+          {/* Sidebar */}
+          <ChatSidebar
+            sessions={sessions}
+            currentSession={currentSession}
+            onSessionSelect={selectSession}
+            onNewChat={createNewSession}
+            onDeleteSession={deleteSession}
+            onRenameSession={renameSession}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          />
 
-        {/* Messages Area with mobile-optimized scrolling */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          {!currentSession ? (
-            <WelcomeScreen onNewChat={createNewSession} />
-          ) : (
-            <div className="space-y-0 pb-4">
-              {currentSession.messages.map((message: any, index: number) => (
-                <MessageComponent
-                  key={message.id}
-                  message={message}
-                  onCopy={handleCopyMessage}
-                  onRegenerate={
-                    message.role === 'assistant' && 
-                    index === currentSession.messages.length - 1 
-                      ? handleRegenerateResponse 
-                      : undefined
-                  }
-                  isLast={index === currentSession.messages.length - 1}
-                />
-              ))}
-              
-              {isLoading && (
-                <div className="flex gap-4 p-6 bg-gray-50 dark:bg-zinc-900/50">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+          {/* Main Content with enhanced mobile layout */}
+          <div className="flex-1 flex flex-col relative">
+            {/* Header with improved mobile spacing */}
+            <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 min-h-[60px]">
+              <div className="flex items-center gap-3">
+                {isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(true)}
+                    className="h-10 w-10 p-0 touch-manipulation"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                )}
+                
+                <div className="min-w-0 flex-1">
+                  <h1 className="font-semibold text-gray-900 dark:text-white truncate">
+                    {currentSession?.title || 'New Chat'}
+                  </h1>
+                  {currentSession && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {currentSession.messageCount} messages • {currentSession.model}
                     </div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Input Area with enhanced mobile experience */}
-        <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-4 safe-area-bottom">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Model Selector & Options with mobile-friendly layout */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <ModelSelector
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-              />
-              
-              <Button
-                type="button"
-                variant={includeWebSearch ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIncludeWebSearch(!includeWebSearch)}
-                className="h-10 px-3 touch-manipulation"
-              >
-                <Globe className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Web Search</span>
-                <span className="sm:hidden">Web</span>
-              </Button>
-            </div>
-
-            {/* Input Row with improved mobile input */}
-            <div className="flex items-end gap-2">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className={cn(
-                    "w-full resize-none rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none",
-                    "min-h-[48px] max-h-32 overflow-y-auto text-base", // Enhanced mobile input
-                    "touch-manipulation"
                   )}
-                  rows={1}
-                  style={{
-                    height: 'auto',
-                    minHeight: '48px'
-                  }}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = 'auto';
-                    target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
-                  }}
-                  disabled={isLoading}
-                />
+                </div>
               </div>
 
-              {/* Voice Button with enhanced touch target */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowVoiceModal(true)}
-                className="h-12 w-12 p-0 touch-manipulation"
-                disabled={isLoading}
-              >
-                <Mic className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {currentSession && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowShareModal(true)}
+                    className="h-10 w-10 p-0 touch-manipulation"
+                  >
+                    <Share className="w-5 h-5" />
+                  </Button>
+                )}
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSettingsModal(true)}
+                  className="h-10 w-10 p-0 touch-manipulation"
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </div>
+            </header>
 
-              {/* Send Button with enhanced touch target */}
-              <Button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className="h-12 px-4 bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
+            {/* Messages Area with mobile-optimized scrolling */}
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              {!currentSession ? (
+                <WelcomeScreen onNewChat={createNewSession} />
+              ) : (
+                <div className="space-y-0 pb-4">
+                  {currentSession.messages.map((message: any, index: number) => (
+                    <MessageComponent
+                      key={message.id}
+                      message={message}
+                      onCopy={handleCopyMessage}
+                      onRegenerate={
+                        message.role === 'assistant' && 
+                        index === currentSession.messages.length - 1 
+                          ? handleRegenerateResponse 
+                          : undefined
+                      }
+                      isLast={index === currentSession.messages.length - 1}
+                    />
+                  ))}
+                  
+                  {isLoading && (
+                    <div className="flex gap-4 p-6 bg-gray-50 dark:bg-zinc-900/50">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
-          </form>
+
+            {/* Input Area with enhanced mobile experience */}
+            <div className="border-t border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 p-4 safe-area-bottom">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {/* Model Selector & Options with mobile-friendly layout */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ModelSelector
+                    selectedModel={selectedModel}
+                    onModelChange={setSelectedModel}
+                  />
+                  
+                  <Button
+                    type="button"
+                    variant={includeWebSearch ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIncludeWebSearch(!includeWebSearch)}
+                    className="h-10 px-3 touch-manipulation"
+                  >
+                    <Globe className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Web Search</span>
+                    <span className="sm:hidden">Web</span>
+                  </Button>
+                </div>
+
+                {/* Input Row with improved mobile input */}
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 relative">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type your message..."
+                      className={cn(
+                        "w-full resize-none rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none",
+                        "min-h-[48px] max-h-32 overflow-y-auto text-base", // Enhanced mobile input
+                        "touch-manipulation"
+                      )}
+                      rows={1}
+                      style={{
+                        height: 'auto',
+                        minHeight: '48px'
+                      }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                      }}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  {/* Voice Button with enhanced touch target */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowVoiceModal(true)}
+                    className="h-12 w-12 p-0 touch-manipulation"
+                    disabled={isLoading}
+                  >
+                    <Mic className="w-5 h-5" />
+                  </Button>
+
+                  {/* Send Button with enhanced touch target */}
+                  <Button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    className="h-12 px-4 bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
+                  >
+                    <Send className="w-5 h-5" />
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Modals with corrected props */}
+          <VoiceModal
+            open={showVoiceModal}
+            onOpenChange={setShowVoiceModal}
+            onTranscriptComplete={handleVoiceSubmit}
+          />
+
+          <SettingsModal
+            open={showSettingsModal}
+            onOpenChange={setShowSettingsModal}
+          />
+
+          {currentSession && (
+            <ShareModal
+              open={showShareModal}
+              onOpenChange={setShowShareModal}
+              chatId={currentSession.id}
+              chatTitle={currentSession.title}
+            />
+          )}
         </div>
-      </div>
-
-      {/* Modals with corrected props */}
-      <VoiceModal
-        open={showVoiceModal}
-        onOpenChange={setShowVoiceModal}
-        onTranscriptComplete={handleVoiceSubmit}
-      />
-
-      <SettingsModal
-        open={showSettingsModal}
-        onOpenChange={setShowSettingsModal}
-      />
-
-      {currentSession && (
-        <ShareModal
-          open={showShareModal}
-          onOpenChange={setShowShareModal}
-          chatId={currentSession.id}
-          chatTitle={currentSession.title}
-        />
       )}
     </div>
   );
