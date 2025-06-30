@@ -19,6 +19,8 @@ import {
   Account,
   TOKEN_2022_PROGRAM_ID,
 } from '@solana/spl-token';
+import * as bip39 from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
 
 // ConvoAI Token Configuration
 export const CONVOAI_TOKEN_CONFIG = {
@@ -44,12 +46,22 @@ export const REWARD_DISTRIBUTION = {
   BURN_PERCENTAGE: 0.10, // 10% burned
 };
 
+// Helper function to derive keypair from seed phrase (same as solana-reward-service.ts)
+function deriveKeypairFromSeedPhrase(seedPhrase: string, derivationPath: string = "m/44'/501'/0'/0'"): Keypair {
+  try {
+    const seed = bip39.mnemonicToSeedSync(seedPhrase);
+    const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
+    return Keypair.fromSeed(derivedSeed);
+  } catch (error) {
+    throw new Error('Invalid seed phrase provided');
+  }
+}
+
 // Types
 export interface RewardPayoutRequest {
   userWalletAddress: PublicKey;
   totalRewardAmount: number; // Amount in base units (considering decimals)
   conversationId: string;
-  treasuryWallet: Keypair;
   rpcUrl?: string;
 }
 
@@ -80,7 +92,7 @@ export interface TokenAccountInfo {
  * 4. Burning 10% of tokens by sending to null address
  * 5. Confirming transaction on Solana mainnet
  * 
- * @param request - Reward payout request containing user wallet, amount, and treasury keypair
+ * @param request - Reward payout request containing user wallet and amount
  * @returns Promise<RewardPayoutResult> - Result of the payout operation
  */
 export async function processConvoAIRewardPayout(
@@ -93,7 +105,6 @@ export async function processConvoAIRewardPayout(
     logs.push(`🚀 Starting ConvoAI reward payout process`);
     logs.push(`📊 Total reward amount: ${request.totalRewardAmount} CONVO (${request.totalRewardAmount / Math.pow(10, CONVOAI_TOKEN_CONFIG.DECIMALS)} tokens)`);
     logs.push(`👤 User wallet: ${request.userWalletAddress.toString()}`);
-    logs.push(`🏦 Treasury wallet: ${request.treasuryWallet.publicKey.toString()}`);
 
     // Step 1: Validate request parameters
     logs.push(`\n🔍 Step 1: Validating request parameters`);
@@ -109,8 +120,8 @@ export async function processConvoAIRewardPayout(
     }
     logs.push(`✅ Request validation passed`);
 
-    // Step 2: Initialize Solana connection
-    logs.push(`\n🔗 Step 2: Initializing Solana connection`);
+    // Step 2: Initialize Solana connection and treasury wallet
+    logs.push(`\n🔗 Step 2: Initializing Solana connection and treasury wallet`);
     const connection = new Connection(
       request.rpcUrl || SOLANA_CONFIG.MAINNET_RPC_URL,
       SOLANA_CONFIG.COMMITMENT
@@ -124,9 +135,23 @@ export async function processConvoAIRewardPayout(
       throw new Error(`Failed to connect to Solana: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
+    // Initialize treasury wallet from seed phrase
+    const treasurySeedPhrase = process.env.TREASURY_SEED_PHRASE;
+    if (!treasurySeedPhrase) {
+      throw new Error('TREASURY_SEED_PHRASE environment variable is required');
+    }
+    
+    let treasuryWallet: Keypair;
+    try {
+      treasuryWallet = deriveKeypairFromSeedPhrase(treasurySeedPhrase);
+      logs.push(`🏦 Treasury wallet: ${treasuryWallet.publicKey.toString()}`);
+    } catch (error) {
+      throw new Error('Invalid TREASURY_SEED_PHRASE provided');
+    }
+
     // Step 3: Validate treasury wallet
     logs.push(`\n🏦 Step 3: Validating treasury wallet`);
-    const treasuryValidation = await validateTreasuryWallet(connection, request.treasuryWallet);
+    const treasuryValidation = await validateTreasuryWallet(connection, treasuryWallet);
     if (!treasuryValidation.valid) {
       return {
         success: false,
@@ -153,7 +178,7 @@ export async function processConvoAIRewardPayout(
     const userTokenAccountInfo = await setupUserTokenAccount(
       connection,
       request.userWalletAddress,
-      request.treasuryWallet
+      treasuryWallet
     );
     
     if (!userTokenAccountInfo.success) {
@@ -175,7 +200,7 @@ export async function processConvoAIRewardPayout(
     logs.push(`\n📝 Step 6: Executing reward transaction`);
     const transactionResult = await executeRewardTransaction(
       connection,
-      request.treasuryWallet,
+      treasuryWallet,
       userTokenAccountInfo.address,
       userRewardAmount,
       burnAmount
@@ -193,15 +218,19 @@ export async function processConvoAIRewardPayout(
 
     logs.push(`✅ Transaction executed successfully`);
     logs.push(`   Transaction signature: ${transactionResult.signature}`);
-    logs.push(`   Block time: ${new Date(transactionResult.blockTime * 1000).toISOString()}`);
+    if (transactionResult.blockTime) {
+      logs.push(`   Block time: ${new Date(transactionResult.blockTime * 1000).toISOString()}`);
+    }
 
     // Step 7: Verify transaction
     logs.push(`\n🔍 Step 7: Verifying transaction`);
-    const verificationResult = await verifyTransaction(connection, transactionResult.signature);
-    if (!verificationResult.success) {
-      logs.push(`⚠️ Transaction verification warning: ${verificationResult.warning}`);
-    } else {
-      logs.push(`✅ Transaction verified successfully`);
+    if (transactionResult.signature) {
+      const verificationResult = await verifyTransaction(connection, transactionResult.signature);
+      if (!verificationResult.success) {
+        logs.push(`⚠️ Transaction verification warning: ${verificationResult.warning}`);
+      } else {
+        logs.push(`✅ Transaction verified successfully`);
+      }
     }
 
     // Step 8: Final balance check
@@ -237,28 +266,16 @@ export async function processConvoAIRewardPayout(
   }
 }
 
-/**
- * Validates the reward payout request
- */
 function validateRewardRequest(request: RewardPayoutRequest): { valid: boolean; error?: string } {
-  // Check required parameters
   if (!request.userWalletAddress) {
     return { valid: false, error: 'User wallet address is required' };
   }
 
-  if (!request.treasuryWallet) {
-    return { valid: false, error: 'Treasury wallet keypair is required' };
-  }
-
   if (request.totalRewardAmount <= 0) {
-    return { valid: false, error: 'Reward amount must be greater than 0' };
+    return { valid: false, error: 'Total reward amount must be greater than 0' };
   }
 
-  if (request.totalRewardAmount > 1000000000) { // 1 billion CONVO max
-    return { valid: false, error: 'Reward amount exceeds maximum limit' };
-  }
-
-  if (!request.conversationId || request.conversationId.trim() === '') {
+  if (!request.conversationId) {
     return { valid: false, error: 'Conversation ID is required' };
   }
 
@@ -314,7 +331,7 @@ async function validateTreasuryWallet(
 }
 
 /**
- * Sets up the user's associated token account
+ * Sets up user's associated token account
  */
 async function setupUserTokenAccount(
   connection: Connection,
@@ -322,32 +339,41 @@ async function setupUserTokenAccount(
   treasuryWallet: Keypair
 ): Promise<{ success: boolean; address: PublicKey; created: boolean; error?: string }> {
   try {
-    // Get the associated token account address
     const userTokenAccount = await getAssociatedTokenAddress(
       CONVOAI_TOKEN_CONFIG.MINT_ADDRESS,
       userWalletAddress
     );
 
-    // Check if the account already exists
     try {
       await getAccount(connection, userTokenAccount);
-      return {
-        success: true,
-        address: userTokenAccount,
-        created: false
-      };
+      return { success: true, address: userTokenAccount, created: false };
     } catch (error) {
-      // Account doesn't exist, we'll create it in the transaction
-      return {
-        success: true,
-        address: userTokenAccount,
-        created: true
-      };
+      // Account doesn't exist, create it
+      const transaction = new Transaction();
+      const createAtaInstruction = createAssociatedTokenAccountInstruction(
+        treasuryWallet.publicKey, // payer
+        userTokenAccount, // associated token account
+        userWalletAddress, // owner
+        CONVOAI_TOKEN_CONFIG.MINT_ADDRESS // mint
+      );
+      transaction.add(createAtaInstruction);
+
+      const signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [treasuryWallet],
+        {
+          commitment: SOLANA_CONFIG.COMMITMENT,
+          preflightCommitment: SOLANA_CONFIG.PREFLIGHT_COMMITMENT,
+        }
+      );
+
+      return { success: true, address: userTokenAccount, created: true };
     }
   } catch (error) {
     return {
       success: false,
-      address: PublicKey.default,
+      address: new PublicKey('11111111111111111111111111111111'),
       created: false,
       error: `Failed to setup user token account: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
@@ -355,7 +381,7 @@ async function setupUserTokenAccount(
 }
 
 /**
- * Executes the reward transaction with user payout and token burning
+ * Executes the reward transaction
  */
 async function executeRewardTransaction(
   connection: Connection,
@@ -374,21 +400,7 @@ async function executeRewardTransaction(
     // Create transaction
     const transaction = new Transaction();
 
-    // Add instruction to create user's associated token account if needed
-    try {
-      await getAccount(connection, userTokenAccount);
-    } catch (error) {
-      // Account doesn't exist, add creation instruction
-      const createAtaInstruction = createAssociatedTokenAccountInstruction(
-        treasuryWallet.publicKey, // payer
-        userTokenAccount, // associated token account
-        userTokenAccount, // owner (same as user wallet)
-        CONVOAI_TOKEN_CONFIG.MINT_ADDRESS // mint
-      );
-      transaction.add(createAtaInstruction);
-    }
-
-    // Add instruction to transfer tokens to user (90%)
+    // Transfer tokens to user (90%)
     if (userRewardAmount > 0) {
       const userTransferInstruction = createTransferInstruction(
         treasuryTokenAccount, // source
@@ -399,7 +411,7 @@ async function executeRewardTransaction(
       transaction.add(userTransferInstruction);
     }
 
-    // Add instruction to burn tokens (10%) by sending to null address
+    // Transfer tokens to burn address (10%)
     if (burnAmount > 0) {
       const burnTransferInstruction = createTransferInstruction(
         treasuryTokenAccount, // source
@@ -422,20 +434,20 @@ async function executeRewardTransaction(
     );
 
     // Get transaction details
-    const transactionInfo = await connection.getTransaction(signature, {
-      commitment: SOLANA_CONFIG.COMMITMENT
+    const transactionDetails = await connection.getTransaction(signature, {
+      commitment: SOLANA_CONFIG.COMMITMENT,
     });
 
     return {
       success: true,
       signature,
-      blockTime: transactionInfo?.blockTime
+      blockTime: transactionDetails?.blockTime || undefined
     };
 
   } catch (error) {
     return {
       success: false,
-      error: `Transaction execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      error: `Transaction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }
@@ -498,9 +510,6 @@ export function getTransactionUrl(signature: string, network: 'mainnet' | 'devne
 export async function exampleConvoAIRewardPayout(): Promise<void> {
   console.log('🎯 ConvoAI Premium Plan Reward Payout Example\n');
 
-  // Example treasury wallet (replace with your actual keypair)
-  const treasuryWallet = Keypair.generate(); // In production, load from secure storage
-  
   // Example user wallet
   const userWallet = new PublicKey('6U7WS5pGJX6DGHdR8RC5QbXBx1n3Q6HupaeQtZEpsCoM');
   
@@ -511,7 +520,6 @@ export async function exampleConvoAIRewardPayout(): Promise<void> {
     userWalletAddress: userWallet,
     totalRewardAmount,
     conversationId: 'premium-conversation-123',
-    treasuryWallet,
     rpcUrl: SOLANA_CONFIG.MAINNET_RPC_URL
   };
 
@@ -523,7 +531,9 @@ export async function exampleConvoAIRewardPayout(): Promise<void> {
       console.log('✅ Reward payout successful!');
       console.log(`User received: ${result.userRewardAmount / Math.pow(10, CONVOAI_TOKEN_CONFIG.DECIMALS)} CONVO`);
       console.log(`Burned: ${result.burnAmount / Math.pow(10, CONVOAI_TOKEN_CONFIG.DECIMALS)} CONVO`);
-      console.log(`Transaction: ${getTransactionUrl(result.userRewardTx!)}`);
+      if (result.userRewardTx) {
+        console.log(`Transaction: ${getTransactionUrl(result.userRewardTx)}`);
+      }
       console.log(`User token account: ${result.userTokenAccount}`);
     } else {
       console.log('❌ Reward payout failed:', result.error);
@@ -538,4 +548,4 @@ export async function exampleConvoAIRewardPayout(): Promise<void> {
 }
 
 // Export configuration for external use
-export { CONVOAI_TOKEN_CONFIG, SOLANA_CONFIG, REWARD_DISTRIBUTION, BURN_ADDRESS }; 
+export { CONVOAI_TOKEN_CONFIG, SOLANA_CONFIG, REWARD_DISTRIBUTION, BURN_ADDRESS };

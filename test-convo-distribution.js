@@ -20,7 +20,7 @@ async function testConvoRewardDistribution() {
 
   try {
     // Configuration
-    const USER_WALLET_ADDRESS = 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2';
+    const USER_WALLET_ADDRESS = process.env.TREASURY_WALLET_ADDRESS || 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2';
     const TOTAL_REWARD_AMOUNT = 100000; // 100,000 CONVO tokens
     const DECIMALS = 6;
     const TOTAL_REWARD_BASE_UNITS = TOTAL_REWARD_AMOUNT * Math.pow(10, DECIMALS);

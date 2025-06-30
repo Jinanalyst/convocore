@@ -24,9 +24,9 @@ const CONVO_TOKEN_CONFIG = {
 // Solana Network Configuration
 const SOLANA_CONFIG = {
   MAINNET_RPC_URL: 'https://api.mainnet-beta.solana.com',
-  COMMITMENT: 'confirmed',
-  PREFLIGHT_COMMITMENT: 'confirmed',
-  FINALITY: 'confirmed',
+  COMMITMENT: 'confirmed' as const,
+  PREFLIGHT_COMMITMENT: 'confirmed' as const,
+  FINALITY: 'confirmed' as const,
 };
 
 // Burn Address (Solana null address)
@@ -102,7 +102,6 @@ export async function distributeConvoReward(
 
     // Step 2: Initialize Solana connection
     logs.push(`\n🔗 Step 2: Initializing Solana connection`);
-    // @ts-ignore
     const connection = new Connection(
       request.rpcUrl || SOLANA_CONFIG.MAINNET_RPC_URL,
       SOLANA_CONFIG.COMMITMENT
@@ -409,24 +408,18 @@ async function executeRewardTransaction(
     }
 
     // Send and confirm the transaction on Solana mainnet
-    logs.push(`\n📝 Step 6: Executing reward distribution transaction`);
-    // @ts-ignore
     const signature = await sendAndConfirmTransaction(
       connection,
       transaction,
       [treasuryWallet], // signers (treasury wallet)
       {
-        // @ts-ignore
         commitment: SOLANA_CONFIG.COMMITMENT,
-        // @ts-ignore
         preflightCommitment: SOLANA_CONFIG.PREFLIGHT_COMMITMENT,
       }
     );
 
     // Get transaction details for logging
-    // @ts-ignore
     const transactionInfo = await connection.getTransaction(signature, {
-      // @ts-ignore
       commitment: SOLANA_CONFIG.FINALITY
     });
 
@@ -452,9 +445,7 @@ async function verifyTransaction(
   signature: string
 ): Promise<{ success: boolean; warning?: string }> {
   try {
-    // @ts-ignore
     const transaction = await connection.getTransaction(signature, {
-      // @ts-ignore
       commitment: SOLANA_CONFIG.FINALITY
     });
 
@@ -507,8 +498,9 @@ export async function exampleConvoRewardDistribution(): Promise<void> {
   // Create a treasury wallet (in production, load from secure storage)
   const treasuryWallet = Keypair.generate();
   
-  // User wallet from the requirements
-  const userWallet = new PublicKey('DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2');
+  // User wallet from environment variable or fallback
+  const userWalletAddress = process.env.TREASURY_WALLET_ADDRESS || 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2';
+  const userWallet = new PublicKey(userWalletAddress);
   
   // 100,000 CONVO tokens (in base units with 6 decimals)
   const totalRewardAmount = 100000 * Math.pow(10, CONVO_TOKEN_CONFIG.DECIMALS);
