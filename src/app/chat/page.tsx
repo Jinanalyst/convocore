@@ -17,17 +17,49 @@ import { ConvoAILogo } from "@/components/ui/convo-ai-logo";
 // Dynamic imports to prevent SSR issues with context
 const SidebarDynamic = dynamic(() => import("@/components/layout/sidebar").then(mod => ({ default: mod.Sidebar })), {
   ssr: false,
-  loading: () => <div className="w-80 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800" />
+  loading: () => (
+    <div className="w-80 bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800">
+      <div className="p-4">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 });
 
 const HeaderDynamic = dynamic(() => import("@/components/layout/header").then(mod => ({ default: mod.Header })), {
   ssr: false,
-  loading: () => <div className="h-16 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700" />
+  loading: () => (
+    <div className="h-16 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
+      <div className="flex items-center justify-between h-full px-4">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+        </div>
+        <div className="flex space-x-2">
+          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+  )
 });
 
 const ChatAreaDynamic = dynamic(() => import("@/components/layout/chat-area").then(mod => ({ default: mod.ChatArea })), {
   ssr: false,
-  loading: () => <div className="flex-1 bg-white dark:bg-zinc-900" />
+  loading: () => (
+    <div className="flex-1 bg-white dark:bg-zinc-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-500 dark:text-gray-400">Loading chat...</p>
+      </div>
+    </div>
+  )
 });
 
 export interface Message {

@@ -8,18 +8,13 @@ import solflareLogo from '/solflare.svg';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
-const { publicKey, connected } = useWallet();
-
-// In your UI:
-<WalletMultiButton />
-// Use publicKey?.toBase58() as the wallet address
-
 interface PartnerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function PartnerModal({ open, onOpenChange }: PartnerModalProps) {
+  const { publicKey, connected } = useWallet();
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [copied, setCopied] = useState(false);
@@ -28,11 +23,21 @@ export function PartnerModal({ open, onOpenChange }: PartnerModalProps) {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutStatus, setPayoutStatus] = useState<string | null>(null);
 
+  // Update wallet state when wallet connection changes
+  useEffect(() => {
+    if (connected && publicKey) {
+      setWalletConnected(true);
+      setWalletAddress(publicKey.toBase58());
+    } else {
+      setWalletConnected(false);
+      setWalletAddress('');
+    }
+  }, [connected, publicKey]);
+
   // Placeholder: Solana wallet connect logic
   const handleConnectWallet = () => {
-    // TODO: Integrate Phantom, Solflare, or other Solana wallets
-    setWalletConnected(true);
-    setWalletAddress('DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2'); // Example Solana address
+    // The wallet connection is now handled by the WalletMultiButton
+    // This function is kept for backward compatibility
   };
 
   const handleCopy = () => {
@@ -91,9 +96,7 @@ export function PartnerModal({ open, onOpenChange }: PartnerModalProps) {
               <Wallet className="w-12 h-12 text-blue-600 mb-4" />
               <h3 className="text-lg font-semibold mb-2">Connect Your Solana Wallet</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4 text-center">Login as a partner using your Solana wallet to access your affiliate dashboard.</p>
-              <Button onClick={handleConnectWallet} className="w-full max-w-xs bg-black text-white hover:bg-gray-800 flex items-center gap-2">
-                <LogIn className="w-4 h-4" /> Connect Solana Wallet
-              </Button>
+              <WalletMultiButton className="w-full max-w-xs bg-black text-white hover:bg-gray-800 flex items-center gap-2" />
               <div className="flex gap-4 mt-4">
                 <img src="/phantom.svg" alt="Phantom" className="w-8 h-8" />
                 <img src="/solflare.svg" alt="Solflare" className="w-8 h-8" />
@@ -114,7 +117,7 @@ export function PartnerModal({ open, onOpenChange }: PartnerModalProps) {
                 </div>
                 <div className="flex flex-col gap-2">
                   <Badge variant="outline">Wallet: {walletAddress}</Badge>
-                  <Button size="sm" variant="outline" onClick={handleConnectWallet} className="mt-2">Switch Wallet</Button>
+                  <WalletMultiButton className="mt-2" />
                 </div>
               </div>
 

@@ -18,6 +18,8 @@ import {
   getAccount,
   Account,
 } from '@solana/spl-token';
+import * as bip39 from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
 
 // ConvoAI Token Configuration
 export const CONVOAI_TOKEN_MINT = new PublicKey('DHyRK8gue96rB8QxAg7d16ghDjxvRERJramcGCFNmoon');
@@ -63,6 +65,17 @@ export interface DailyRewardLimit {
   totalRewarded: number;
   lastRewardTime: number;
   dailyLimit: number;
+}
+
+// Helper function to derive keypair from seed phrase
+function deriveKeypairFromSeedPhrase(seedPhrase: string, derivationPath: string = "m/44'/501'/0'/0'"): Keypair {
+  try {
+    const seed = bip39.mnemonicToSeedSync(seedPhrase);
+    const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
+    return Keypair.fromSeed(derivedSeed);
+  } catch (error) {
+    throw new Error('Invalid seed phrase provided');
+  }
 }
 
 // Rate limiting and abuse prevention
@@ -126,17 +139,17 @@ export class SolanaRewardService {
     this.connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     this.rateLimiter = new RateLimiter();
     
-    // Initialize treasury wallet from environment
-    const treasuryPrivateKey = process.env.TREASURY_PRIVATE_KEY;
-    if (!treasuryPrivateKey) {
-      throw new Error('TREASURY_PRIVATE_KEY environment variable is required');
+    // Initialize treasury wallet from seed phrase
+    const treasurySeedPhrase = process.env.TREASURY_SEED_PHRASE;
+    if (!treasurySeedPhrase) {
+      throw new Error('TREASURY_SEED_PHRASE environment variable is required');
     }
     
     try {
-      const privateKeyArray = JSON.parse(treasuryPrivateKey);
-      this.treasuryWallet = Keypair.fromSecretKey(new Uint8Array(privateKeyArray));
+      this.treasuryWallet = deriveKeypairFromSeedPhrase(treasurySeedPhrase);
+      console.log('Treasury wallet public key:', this.treasuryWallet.publicKey.toBase58());
     } catch (error) {
-      throw new Error('Invalid TREASURY_PRIVATE_KEY format. Expected JSON array of numbers.');
+      throw new Error('Invalid TREASURY_SEED_PHRASE provided');
     }
   }
 
@@ -341,7 +354,7 @@ export class SolanaRewardService {
       return {
         success: true,
         userRewardTx: signature,
-        burnTx: signature, // Same transaction contains both transfers
+        burnTx: '', // Placeholder, actual signature would be here
         userRewardAmount,
         burnAmount,
       };
@@ -369,11 +382,14 @@ export class SolanaRewardService {
       
       return {
         sol: solBalance / LAMPORTS_PER_SOL,
-        tokens: Number(tokenBalance.amount),
+        tokens: Number(tokenBalance.amount) / 1e9, // Assuming 9 decimals for ConvoAI tokens
       };
     } catch (error) {
       console.error('Failed to get treasury balance:', error);
-      return { sol: 0, tokens: 0 };
+      return {
+        sol: 0,
+        tokens: 0,
+      };
     }
   }
 
@@ -385,7 +401,7 @@ export class SolanaRewardService {
       );
       
       const tokenAccount = await getAccount(this.connection, userTokenAccount);
-      return Number(tokenAccount.amount);
+      return Number(tokenAccount.amount) / 1e9; // Assuming 9 decimals for ConvoAI tokens
     } catch (error) {
       // User doesn't have a token account yet
       return 0;
@@ -400,7 +416,7 @@ export class SolanaRewardService {
   async validateTreasuryWallet(): Promise<boolean> {
     try {
       const balance = await this.connection.getBalance(this.treasuryWallet.publicKey);
-      return balance > 0.01 * LAMPORTS_PER_SOL; // At least 0.01 SOL for fees
+      return balance >= 0.01 * LAMPORTS_PER_SOL; // Minimum 0.01 SOL for fees
     } catch (error) {
       console.error('Treasury wallet validation failed:', error);
       return false;
@@ -414,12 +430,7 @@ export class SolanaRewardService {
         { limit }
       );
       
-      return signatures.map(sig => ({
-        signature: sig.signature,
-        slot: sig.slot,
-        blockTime: sig.blockTime,
-        err: sig.err,
-      }));
+      return signatures;
     } catch (error) {
       console.error('Failed to get transaction history:', error);
       return [];

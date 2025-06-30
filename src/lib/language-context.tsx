@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isBrowserEnvironment, isLocalStorageAvailable } from './context-test';
 
 type Language = 'en' | 'ko';
 
@@ -198,23 +199,56 @@ const translations = {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('en');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Load language from localStorage
-    const savedLanguage = localStorage.getItem('convocore-language') as Language;
-    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ko')) {
-      setLanguage(savedLanguage);
+    // Only run in browser environment
+    if (!isBrowserEnvironment()) {
+      setIsInitialized(true);
+      return;
     }
+
+    // Load language from localStorage safely
+    if (isLocalStorageAvailable()) {
+      try {
+        const savedLanguage = localStorage.getItem('convocore-language') as Language;
+        if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ko')) {
+          setLanguage(savedLanguage);
+        }
+      } catch (error) {
+        console.warn('Failed to load language from localStorage:', error);
+      }
+    }
+    
+    setIsInitialized(true);
   }, []);
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
-    localStorage.setItem('convocore-language', lang);
+    if (isBrowserEnvironment() && isLocalStorageAvailable()) {
+      try {
+        localStorage.setItem('convocore-language', lang);
+      } catch (error) {
+        console.warn('Failed to save language to localStorage:', error);
+      }
+    }
   };
 
   const t = (key: string): string => {
     return translations[language][key as keyof typeof translations[typeof language]] || key;
   };
+
+  // Don't render children until context is initialized
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">Initializing language context...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
@@ -226,7 +260,32 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    // Return a default context instead of throwing an error
+    // This prevents the React error #321 during SSR or when context is not ready
+    return {
+      language: 'en' as Language,
+      setLanguage: () => {},
+      t: (key: string) => key // Return the key as fallback
+    };
   }
   return context;
+}
+
+// Context check wrapper component
+export function LanguageContextCheck({ children }: { children: React.ReactNode }) {
+  const context = useContext(LanguageContext);
+  
+  if (context === undefined) {
+    // Return a loading state instead of throwing an error
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
 } 

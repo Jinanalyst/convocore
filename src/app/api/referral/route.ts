@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token';
+import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory mock DB (replace with real DB integration)
 const referrals: Record<string, any[]> = {};

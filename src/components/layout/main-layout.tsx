@@ -1,13 +1,15 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { Header } from "@/components/layout/header";
+import dynamic from "next/dynamic";
 import { Sidebar } from "@/components/layout/sidebar";
 import { ChatArea } from "@/components/layout/chat-area";
 import { ResizablePanel } from "@/components/ui/resizable-panel";
 import { FloatingActionButton, ChatFocusMode } from "@/components/ui/floating-action-button";
 import { cn } from "@/lib/utils";
 import { getDefaultModelForTier } from "@/lib/ai-service";
+
+const Header = dynamic(() => import("@/components/layout/header").then(mod => ({ default: mod.Header })), { ssr: false });
 
 interface Chat {
   id: string;
@@ -178,11 +180,6 @@ export function MainLayout() {
             onSendMessage={(message: string, model: string, includeWebSearch?: boolean) => {
               console.log('Message sent:', { message, model, includeWebSearch });
               // Handle message sending here
-            }}
-            usage={{
-              used: 0,
-              limit: 100,
-              plan: 'free'
             }}
           />
         </div>

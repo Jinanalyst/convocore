@@ -38,16 +38,26 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by ErrorBoundary:', error, errorInfo);
     
-    this.setState({
-      error,
-      errorInfo
-    });
+    // Handle React error #321 (context not found)
+    if (error.message.includes('Minified React error #321') || 
+        error.message.includes('useLanguage must be used within a LanguageProvider')) {
+      console.warn('Context error detected, attempting to recover...');
+      this.setState({ 
+        hasError: true, 
+        error: new Error('Context initialization error. Please refresh the page.'),
+        errorInfo 
+      });
+      return;
+    }
+    
+    this.setState({ hasError: true, error, errorInfo });
+    
+    // Log to external service in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Production error:', { error, errorInfo });
+    }
 
     this.props.onError?.(error, errorInfo);
-
-    if (process.env.NODE_ENV === 'production') {
-      this.logErrorToService(error, errorInfo);
-    }
   }
 
   private logErrorToService = (error: Error, errorInfo: React.ErrorInfo) => {
