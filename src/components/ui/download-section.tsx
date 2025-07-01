@@ -19,13 +19,10 @@ export function DownloadSection() {
           // On mobile, try to open Play Store
           window.open('https://play.google.com/store/apps/details?id=com.convocore.app', '_blank');
         } else {
-          // On desktop, download APK directly
-          const link = document.createElement('a');
-          link.href = '/downloads/convocore-android.apk';
-          link.download = 'convocore-android.apk';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          // On desktop, show message that APK is being prepared
+          alert('Android APK is being prepared. Please check back soon or visit the Google Play Store.');
+          // Fallback to Play Store
+          window.open('https://play.google.com/store/apps/details?id=com.convocore.app', '_blank');
         }
       } else {
         // For desktop, download the web app or PWA
@@ -116,7 +113,7 @@ export function DownloadSection() {
                   ) : (
                     <span className="flex items-center justify-center gap-2">
                       <Download className="w-5 h-5" />
-                      Download for Android
+                      Get Android App
                     </span>
                   )}
                 </button>

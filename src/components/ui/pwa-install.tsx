@@ -208,18 +208,17 @@ export function PWAInstall() {
           >
             Later
           </button>
-          {/* Android APK Download Button */}
+          {/* Android App Button */}
           {isMobile && navigator.userAgent.toLowerCase().includes('android') && (
             <a
-              href="/downloads/convocore-android.apk"
+              href="https://play.google.com/store/apps/details?id=com.convocore.app"
               className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-2 rounded-md transition-colors flex items-center justify-center gap-2"
               style={{ textAlign: 'center' }}
-              download
               target="_blank"
               rel="noopener noreferrer"
             >
               <Download className="w-4 h-4" />
-              Download Android App
+              Get Android App
             </a>
           )}
         </div>
