@@ -180,6 +180,15 @@ export function PricingSection() {
                   <div className="w-full text-center whitespace-normal px-2 py-2 font-semibold text-purple-700 bg-purple-100 rounded-lg mt-3 mb-2">
                     {plan.buttonText}
                   </div>
+                  {/* TON Payment Option */}
+                  <div className="w-full text-center whitespace-normal px-2 py-2 font-semibold text-blue-700 bg-blue-100 rounded-lg mt-2 mb-2">
+                    <div>Pay <b>10 TON</b> to:</div>
+                    <div className="break-all font-mono text-xs mt-1">EQD5mxRgCuRNLxKxeOjG6r14iSroLF5FtomPnet-sgP5xNJb</div>
+                    <div className="mt-1">Memo: <b>165407698</b></div>
+                    <div className="mt-2 text-xs text-gray-500">After payment, enter your TON transaction hash below.</div>
+                    <input type="text" placeholder="TON transaction hash" className="w-full mt-2 px-2 py-1 rounded border border-gray-300" />
+                    <button className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded transition">Submit TON Payment</button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { verifyTonPayment } from '@/lib/multi-network-payment';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createServerComponentClient({ 
+      cookies: async () => await cookies() 
+    });
     
     // Get authenticated user
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -48,7 +51,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createServerComponentClient({ 
+      cookies: async () => await cookies() 
+    });
     
     // Get authenticated user
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -92,8 +97,18 @@ export async function POST(request: NextRequest) {
 
     // For demo purposes, we'll simulate payment verification
     // In production, you would verify the transaction on the blockchain
-    const verified = await simulatePaymentVerification(txHash, amount, network);
-    
+    let verified = false;
+    if (network === 'ton') {
+      // TON: verify with address, memo, and amount
+      verified = await verifyTonPayment(
+        txHash,
+        'EQD5mxRgCuRNLxKxeOjG6r14iSroLF5FtomPnet-sgP5xNJb',
+        '165407698',
+        10 // 10 TON
+      );
+    } else {
+      verified = await simulatePaymentVerification(txHash, amount, network);
+    }
     if (!verified) {
       return NextResponse.json(
         { error: 'Payment verification failed' },
@@ -171,7 +186,9 @@ async function simulatePaymentVerification(
 // New endpoint to check subscription status and expire if needed
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createServerComponentClient({ 
+      cookies: async () => await cookies() 
+    });
     
     // Get authenticated user
     const { data: { session }, error: authError } = await supabase.auth.getSession();
@@ -204,9 +221,9 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating subscription:', error);
+    console.error('Error in payments PUT:', error);
     return NextResponse.json(
-      { error: 'Failed to update subscription' },
+      { error: 'Failed to update subscription status' },
       { status: 500 }
     );
   }

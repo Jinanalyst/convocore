@@ -10,7 +10,7 @@ export interface NetworkConfig {
   rpcUrl: string;
   chainId?: number;
   blockExplorer: string;
-  type: 'evm' | 'tron' | 'solana' | 'paypal';
+  type: 'evm' | 'tron' | 'solana' | 'paypal' | 'ton';
   paypalUrl?: string;
 }
 
@@ -64,6 +64,16 @@ export const SUPPORTED_NETWORKS: NetworkConfig[] = [
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     blockExplorer: 'https://solscan.io',
     type: 'solana'
+  },
+  {
+    id: 'ton',
+    name: 'TON',
+    symbol: 'TON',
+    icon: '🔵',
+    recipientAddress: 'EQD5mxRgCuRNLxKxeOjG6r14iSroLF5FtomPnet-sgP5xNJb',
+    rpcUrl: 'https://toncenter.com/api/v2',
+    blockExplorer: 'https://tonscan.org',
+    type: 'ton'
   }
 ];
 
@@ -286,4 +296,25 @@ export class MultiNetworkPaymentService {
   }
 }
 
-export const multiNetworkPaymentService = MultiNetworkPaymentService.getInstance(); 
+export const multiNetworkPaymentService = MultiNetworkPaymentService.getInstance();
+
+// Add TON verification logic
+export async function verifyTonPayment(txHash: string, expectedAddress: string, expectedMemo: string, expectedAmount: number): Promise<boolean> {
+  // Example using tonapi.io (replace with your preferred TON API)
+  try {
+    const res = await fetch(`https://tonapi.io/v2/blockchain/transactions/${txHash}`);
+    if (!res.ok) return false;
+    const tx = await res.json();
+    // Check destination, memo, and amount
+    const to = tx.in_msg.destination;
+    const memo = tx.in_msg.comment || tx.in_msg.payload || '';
+    const amount = parseFloat(tx.in_msg.value) / 1e9; // TON has 9 decimals
+    return (
+      to === expectedAddress &&
+      memo.includes(expectedMemo) &&
+      amount >= expectedAmount
+    );
+  } catch (e) {
+    return false;
+  }
+} 
