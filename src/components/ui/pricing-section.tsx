@@ -176,6 +176,10 @@ export function PricingSection() {
                   >
                     {plan.buttonText}
                   </Button>
+                  {/* Payment Option Text (always visible, not cut off) */}
+                  <div className="w-full text-center whitespace-normal px-2 py-2 font-semibold text-purple-700 bg-purple-100 rounded-lg mt-3 mb-2">
+                    {plan.buttonText}
+                  </div>
                 </div>
               </div>
             ))}
