@@ -19,10 +19,18 @@ export function DownloadSection() {
           // On mobile, try to open Play Store
           window.open('https://play.google.com/store/apps/details?id=com.convocore.app', '_blank');
         } else {
-          // On desktop, show message that APK is being prepared
-          alert('Android APK is being prepared. Please check back soon or visit the Google Play Store.');
-          // Fallback to Play Store
-          window.open('https://play.google.com/store/apps/details?id=com.convocore.app', '_blank');
+          // On desktop, try to download APK, but fallback to Play Store if it fails
+          try {
+            const link = document.createElement('a');
+            link.href = '/downloads/convocore-android.apk';
+            link.download = 'convocore-android.apk';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } catch (error) {
+            // If download fails, redirect to Play Store
+            window.open('https://play.google.com/store/apps/details?id=com.convocore.app', '_blank');
+          }
         }
       } else {
         // For desktop, download the web app or PWA
