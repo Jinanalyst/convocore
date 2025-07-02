@@ -26,6 +26,10 @@ export const CONVOAI_TOKEN_MINT = new PublicKey('DHyRK8gue96rB8QxAg7d16ghDjxvRER
 export const BURN_ADDRESS = new PublicKey('11111111111111111111111111111111');
 export const SOLANA_NULL_ADDRESS = new PublicKey('11111111111111111111111111111111');
 
+// Admin Configuration
+export const ADMIN_ADDRESS = 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2';
+export const TREASURY_ADDRESS = 'DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2';
+
 // Network Configuration
 export const SOLANA_NETWORK = process.env.SOLANA_NETWORK === 'devnet' ? 'devnet' : 'mainnet-beta';
 export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 
@@ -139,17 +143,19 @@ export class SolanaRewardService {
     this.connection = new Connection(SOLANA_RPC_URL, 'confirmed');
     this.rateLimiter = new RateLimiter();
     
-    // Initialize treasury wallet from seed phrase
-    const treasurySeedPhrase = process.env.TREASURY_SEED_PHRASE;
-    if (!treasurySeedPhrase) {
-      throw new Error('TREASURY_SEED_PHRASE environment variable is required');
-    }
-    
+    // Initialize treasury wallet with the admin address DXMH7DLXRMHqpwSESmJ918uFhFQSxzvKEb7CA1ZDj1a2
     try {
-      this.treasuryWallet = deriveKeypairFromSeedPhrase(treasurySeedPhrase);
-      console.log('Treasury wallet public key:', this.treasuryWallet.publicKey.toBase58());
+      // For now, create a keypair with the correct public key
+      // In production, you'll need the actual private key for transactions
+      this.treasuryWallet = {
+        publicKey: new PublicKey(TREASURY_ADDRESS),
+        secretKey: new Uint8Array(32) // Placeholder - will need actual private key for real transactions
+      } as Keypair;
+      
+      console.log('✅ Treasury wallet initialized with admin address:', this.treasuryWallet.publicKey.toBase58());
+      console.log('⚠️  Note: Using placeholder private key - real transactions will require actual private key');
     } catch (error) {
-      throw new Error('Invalid TREASURY_SEED_PHRASE provided');
+      throw new Error('Failed to initialize treasury wallet');
     }
   }
 
@@ -410,6 +416,19 @@ export class SolanaRewardService {
 
   getDailyRewardInfo(userId: string): DailyRewardLimit | null {
     return this.rateLimiter.getDailyRewardInfo(userId);
+  }
+
+  // Admin functions
+  isAdminAddress(address: string): boolean {
+    return address === ADMIN_ADDRESS;
+  }
+
+  async getAdminInfo(): Promise<{ address: string; isAdmin: boolean; treasuryAddress: string }> {
+    return {
+      address: ADMIN_ADDRESS,
+      isAdmin: true,
+      treasuryAddress: TREASURY_ADDRESS
+    };
   }
 
   // Security and monitoring methods

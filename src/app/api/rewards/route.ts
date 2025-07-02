@@ -148,9 +148,23 @@ export async function GET(request: NextRequest) {
           data: history
         });
 
+      case 'admin-info':
+        // Check if the requesting user is an admin
+        if (!rewardService.isAdminAddress(userWalletAddress)) {
+          return NextResponse.json(
+            { error: 'Unauthorized: Admin access required' },
+            { status: 403 }
+          );
+        }
+        const adminInfo = await rewardService.getAdminInfo();
+        return NextResponse.json({
+          success: true,
+          data: adminInfo
+        });
+
       default:
         return NextResponse.json(
-          { error: 'Invalid action. Supported actions: balance, daily-limit, treasury-balance, transaction-history' },
+          { error: 'Invalid action. Supported actions: balance, daily-limit, treasury-balance, transaction-history, admin-info' },
           { status: 400 }
         );
     }
