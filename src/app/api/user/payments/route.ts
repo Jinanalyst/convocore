@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { verifyTonPayment } from '@/lib/multi-network-payment';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ 
+    const supabase = createRouteHandlerClient({ 
       cookies: async () => await cookies() 
     });
     
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ 
+    const supabase = createRouteHandlerClient({ 
       cookies: async () => await cookies() 
     });
     
@@ -186,7 +186,7 @@ async function simulatePaymentVerification(
 // New endpoint to check subscription status and expire if needed
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ 
+    const supabase = createRouteHandlerClient({ 
       cookies: async () => await cookies() 
     });
     
@@ -227,4 +227,7 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
+
+// Ensure this route is treated as dynamic so that accessing cookies is always allowed
+export const dynamic = 'force-dynamic'; 
