@@ -27,7 +27,8 @@ import {
   Image as ImageIcon,
   Code,
   Calculator,
-  Lightbulb
+  Lightbulb,
+  Coins
 } from 'lucide-react';
 import { VoiceModal } from '@/components/modals/voice-modal';
 import { SettingsModal } from '@/components/modals/settings-modal';
@@ -38,6 +39,8 @@ import { getRelativeTime } from '@/lib/date-utils';
 import { getDefaultModelForTier } from "@/lib/ai-service";
 import { usageService } from '@/lib/usage-service';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RewardNotification } from '@/components/ui/reward-notification';
+import { RewardBalance } from '@/components/ui/reward-balance';
 
 interface ChatInterfaceProps {
   className?: string;
@@ -251,6 +254,11 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
       description: "Engage with advanced AI models for natural, intelligent conversations"
     },
     {
+      icon: <Coins className="w-6 h-6" />,
+      title: "Earn CONVO Tokens",
+      description: "Get rewarded with CONVO tokens for every meaningful conversation"
+    },
+    {
       icon: <Code className="w-6 h-6" />,
       title: "Code Generation",
       description: "Get help with programming, debugging, and technical solutions"
@@ -259,11 +267,6 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
       icon: <Globe className="w-6 h-6" />,
       title: "Web Search",
       description: "Access real-time information from the web when needed"
-    },
-    {
-      icon: <FileText className="w-6 h-6" />,
-      title: "Document Analysis",
-      description: "Upload and analyze documents, images, and files"
     }
   ];
 
@@ -299,7 +302,7 @@ const WelcomeScreen: React.FC<{ onNewChat: () => void }> = ({ onNewChat }) => {
             transition={{ delay: 0.2 }}
             className="text-base sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
           >
-            AI chat with secure USDT payments on multiple blockchains. Start a conversation to unlock intelligent assistance.
+            AI chat with secure USDT payments on multiple blockchains. Start a conversation to unlock intelligent assistance and earn CONVO tokens!
           </motion.p>
         </div>
 
@@ -473,6 +476,8 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [rewardNotification, setRewardNotification] = useState<any>(null);
+  const [showRewardNotification, setShowRewardNotification] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -631,6 +636,17 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
         model: selectedModel
       };
 
+      // Handle reward notification if present
+      if (data.reward && data.reward.success) {
+        setRewardNotification(data.reward);
+        setShowRewardNotification(true);
+        
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => {
+          setShowRewardNotification(false);
+        }, 5000);
+      }
+
       // Add assistant message
       const finalSession = {
         ...updatedSession,
@@ -733,6 +749,13 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
 
   return (
     <div className={cn('relative flex flex-col h-full', className)}>
+      {/* Reward Notification */}
+      <RewardNotification
+        reward={rewardNotification}
+        isVisible={showRewardNotification}
+        onClose={() => setShowRewardNotification(false)}
+      />
+
       {/* Payment Required Modal */}
       <Dialog open={showPaymentModal} onOpenChange={() => {}}>
         <DialogContent className="max-w-md mx-auto">
@@ -885,6 +908,12 @@ export function ChatInterface({ className, onSendMessage }: ChatInterfaceProps) 
                     <span className="hidden sm:inline">Web Search</span>
                     <span className="sm:hidden">Web</span>
                   </Button>
+
+                  {/* Reward Balance Display */}
+                  <RewardBalance 
+                    walletAddress={walletAddress || undefined} 
+                    className="ml-auto"
+                  />
                 </div>
 
                 {/* Input Row with improved mobile input */}

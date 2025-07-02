@@ -3,6 +3,8 @@ import { aiService } from '@/lib/ai-service';
 import { usageService } from '@/lib/usage-service';
 import { chainScopeService } from '@/lib/chainscope-service';
 import { CONVO_AGENTS } from '@/lib/model-agents';
+import { getSolanaRewardService } from '@/lib/solana-reward-service';
+import { PublicKey } from '@solana/web3.js';
 
 // Simple language detection function
 function detectLanguage(text: string): string {
@@ -41,9 +43,9 @@ export async function POST(request: NextRequest) {
 
     // Determine user plan
     const subscription = usageService.getUserSubscription(userId);
-    const plan = subscription?.tier || 'free';
+    const plan = subscription?.tier || 'none';
     let selectedModel = model;
-    if (plan === 'free') {
+    if (plan === 'none') {
       selectedModel = 'convoq';
     }
 
@@ -132,6 +134,45 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
     }
+
+    // Process reward for wallet users
+    let rewardResult = null;
+    if (walletConnected && walletAddress) {
+      try {
+        console.log('🎯 Processing reward for wallet user:', walletAddress);
+        
+        // Calculate conversation length (user message + AI response)
+        const conversationLength = userMessage.content.length + aiResponse.length;
+        
+        // Calculate base reward (1 token per 100 characters)
+        const baseReward = Math.floor(conversationLength / 100);
+        
+        // Get reward service and process reward
+        const rewardService = getSolanaRewardService();
+        const rewardRequest = {
+          userWalletAddress: new PublicKey(walletAddress),
+          rewardAmount: baseReward,
+          conversationId: chatId || `chat_${Date.now()}`,
+          conversationLength,
+          timestamp: Date.now(),
+        };
+        
+        rewardResult = await rewardService.processReward(rewardRequest);
+        
+        if (rewardResult.success) {
+          console.log('✅ Reward processed successfully:', {
+            userReward: rewardResult.userRewardAmount,
+            burned: rewardResult.burnAmount,
+            transaction: rewardResult.userRewardTx
+          });
+        } else {
+          console.log('⚠️ Reward processing failed:', rewardResult.error);
+        }
+      } catch (rewardError) {
+        console.error('❌ Reward processing error:', rewardError);
+        // Don't fail the chat request if reward processing fails
+      }
+    }
     return NextResponse.json({
       response: aiResponse,
       content: aiResponse,
@@ -149,6 +190,14 @@ export async function POST(request: NextRequest) {
         thinkMode: think,
         webSearchMode: webSearchRequested,
       },
+      reward: rewardResult ? {
+        success: rewardResult.success,
+        userRewardAmount: rewardResult.userRewardAmount,
+        burnAmount: rewardResult.burnAmount,
+        userRewardTx: rewardResult.userRewardTx,
+        burnTx: rewardResult.burnTx,
+        conversationLength: userMessage.content.length + aiResponse.length,
+      } : null,
     });
   } catch (err: any) {
     console.error('API /chat/route.ts POST error:', err);
