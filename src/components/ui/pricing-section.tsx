@@ -22,14 +22,9 @@ export function PricingSection() {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'pro' | 'premium' | undefined>(undefined);
 
-  const handlePlanSelect = (plan: 'pro' | 'premium' | undefined) => {
-    if (plan) {
-      setSelectedPlan(plan);
-      setShowBillingModal(true);
-    } else {
-      // Handle free plan - redirect to signup
-      window.location.href = '/auth/signup';
-    }
+  const handlePlanSelect = (plan: 'pro' | 'premium') => {
+    setSelectedPlan(plan);
+    setShowBillingModal(true);
   };
 
   return (
@@ -166,9 +161,7 @@ export function PricingSection() {
                   <Button
                     onClick={() => handlePlanSelect(plan.plan)}
                     className={`w-full py-3 sm:py-4 text-sm sm:text-base font-medium transition-all duration-200 ${
-                      plan.buttonVariant === 'outline'
-                        ? 'border-2 border-gray-300 dark:border-zinc-600 hover:border-black dark:hover:border-white'
-                        : plan.popular
+                      plan.popular
                         ? 'bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl'
                         : 'bg-gray-900 hover:bg-black text-white'
                     }`}

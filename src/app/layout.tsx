@@ -117,23 +117,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "operatingSystem": "Web Browser",
               "offers": [
                 {
-                  "@type": "Offer",
-                  "name": "Free Plan",
-                  "price": "0",
-                  "priceCurrency": "USD",
-                  "description": "3 chats per day"
-                },
-                {
                   "@type": "Offer", 
                   "name": "Pro Plan",
-                  "price": "20",
+                  "price": "150",
                   "priceCurrency": "USDT",
                   "description": "Unlimited chats"
                 },
                 {
                   "@type": "Offer",
                   "name": "Premium Plan", 
-                  "price": "40",
+                  "price": "200",
                   "priceCurrency": "USDT",
                   "description": "All features plus priority support"
                 }

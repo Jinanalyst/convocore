@@ -7,7 +7,7 @@ import MobilePricingPage from '@/components/mobile/MobilePricingPage';
 
 export const metadata: Metadata = {
   title: "Pricing Plans - Affordable AI Chat with USDT Payments | Convocore",
-  description: "Choose the perfect AI chat plan for your needs. Pro plan at 150 USDT one-time, Premium at 200 USDT one-time. Secure blockchain payments, unlimited requests, advanced AI models including GPT-4 and Claude 3. Start with free plan today!",
+  description: "Choose the perfect AI chat plan for your needs. Pro plan at 150 USDT one-time, Premium at 200 USDT one-time. Secure blockchain payments, unlimited requests, advanced AI models including GPT-4 and Claude 3.",
   keywords: [
     "AI chat pricing",
     "USDT subscription",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Convocore Pricing - AI Chat Plans with USDT Payments | Pro & Premium",
-    description: "Transparent pricing for advanced AI chat. Pro plan 150 USDT one-time, Premium 200 USDT one-time. Pay with crypto, get unlimited AI access with GPT-4, Claude 3, and more. Free plan available!",
+    description: "Transparent pricing for advanced AI chat. Pro plan 150 USDT one-time, Premium 200 USDT one-time. Pay with crypto, get unlimited AI access with GPT-4, Claude 3, and more.",
     url: "https://convocore.site/pricing",
     type: "website",
   },

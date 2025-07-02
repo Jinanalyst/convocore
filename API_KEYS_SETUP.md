@@ -87,9 +87,8 @@ The application will automatically validate your API keys. You can check the sta
 | deepseek/deepseek-r1:free | OpenRouter | OPENROUTER_API_KEY | ✅ Available |
 | convoq | Groq | GROQ_API_KEY | ✅ Available |
 
-## Free Tier Limitations
+## Plan Limitations
 
-- **Free Plan:** Only ConvoQ model is available
 - **Pro Plan:** All models available
 - **Premium Plan:** All models + priority access
 

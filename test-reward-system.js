@@ -82,7 +82,6 @@ class MockRewardService {
       totalRewards: 0,
       totalBurned: 0,
       planBreakdown: {
-        free: { count: 0, total: 0 },
         pro: { count: 0, total: 0 },
         premium: { count: 0, total: 0 }
       }
@@ -101,20 +100,6 @@ class MockRewardService {
 
 // Test scenarios
 const testScenarios = [
-  {
-    name: 'Free Plan - Short Conversation',
-    plan: 'free',
-    conversationLength: 150,
-    modelUsed: 'convoq',
-    expectedMultiplier: 0.5
-  },
-  {
-    name: 'Free Plan - Long Conversation',
-    plan: 'free',
-    conversationLength: 500,
-    modelUsed: 'convoq',
-    expectedMultiplier: 0.5
-  },
   {
     name: 'Pro Plan - Short Conversation',
     plan: 'pro',
@@ -147,7 +132,6 @@ const testScenarios = [
 
 // Generate valid mainnet-compatible public keys for testing
 const testWallets = {
-  free: Keypair.generate().publicKey,
   pro: Keypair.generate().publicKey,
   premium: Keypair.generate().publicKey
 };
@@ -250,11 +234,6 @@ async function testRewardSystem() {
   // Verify plan-specific features
   console.log(`\n🔍 Plan Feature Verification:`);
   
-  // Check if free plan has limitations
-  const freeTests = results.filter(r => r.scenario.includes('Free Plan'));
-  const freeAvgReward = freeTests.reduce((sum, test) => sum + test.actual, 0) / freeTests.length;
-  console.log(`   Free Plan Average Reward: ${freeAvgReward.toFixed(2)} CONVO (should be lowest)`);
-  
   // Check if premium plan has highest rewards
   const premiumTests = results.filter(r => r.scenario.includes('Premium Plan'));
   const premiumAvgReward = premiumTests.reduce((sum, test) => sum + test.actual, 0) / premiumTests.length;
@@ -265,7 +244,7 @@ async function testRewardSystem() {
   const proAvgReward = proTests.reduce((sum, test) => sum + test.actual, 0) / proTests.length;
   console.log(`   Pro Plan Average Reward: ${proAvgReward.toFixed(2)} CONVO (should be in between)`);
 
-  const isHierarchyCorrect = freeAvgReward < proAvgReward && proAvgReward < premiumAvgReward;
+  const isHierarchyCorrect = proAvgReward < premiumAvgReward;
   console.log(`   Reward Hierarchy: ${isHierarchyCorrect ? '✅ Correct' : '❌ Incorrect'}`);
 
   console.log(`\n🎉 Test completed!`);

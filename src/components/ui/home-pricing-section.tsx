@@ -10,14 +10,9 @@ export function HomePricingSection() {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"pro" | "premium" | undefined>(undefined);
 
-  const handlePlanSelect = (plan: "pro" | "premium" | undefined) => {
-    if (plan) {
-      // Redirect to dedicated payment page with plan pre-selected
-      window.location.href = `/pricing?plan=${plan}`;
-    } else {
-      // Free plan: go straight to signup
-      window.location.href = "/auth/signup";
-    }
+  const handlePlanSelect = (plan: "pro" | "premium") => {
+    // Redirect to dedicated payment page with plan pre-selected
+    window.location.href = `/pricing?plan=${plan}`;
   };
 
   return (

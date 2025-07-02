@@ -97,8 +97,8 @@ async function testSubscriptionFlow() {
     
     if (expirationResult.success) {
       console.log('   ✅ Expired subscriptions handled correctly');
-      console.log('   ✅ User downgraded to FREE plan');
-      console.log('   ✅ API limits reset to 3 requests/day');
+      console.log('   ✅ User subscription expired');
+      console.log('   ✅ API access disabled');
     }
     console.log();
 
@@ -190,12 +190,12 @@ async function simulateExpiration() {
   return {
     success: true,
     subscription: {
-      tier: 'free',
+      tier: null,
       status: 'expired',
       expires_at: null,
       auto_renew: false,
       requests_used: 0,
-      requests_limit: 3,
+      requests_limit: 0,
       days_remaining: null
     }
   };
